@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
@@ -32,9 +33,18 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Opskrifter',
-                      style: Theme.of(context).textTheme.displayLarge,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Opskrifter',
+                          style: Theme.of(context).textTheme.displayLarge,
+                        ),
+                        IconButton(
+                          onPressed: () => GoRouter.of(context).push('/recipes/create'),
+                          icon: const Icon(Icons.add_circle_outline, size: 32, color: AppColors.primary),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     _SearchBar(),
@@ -59,11 +69,10 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final recipe = filteredRecipes[index];
-                    // Make the first item full width (Bento style)
-                    if (index == 0) {
-                      return _RecipeCard(recipe: recipe, isFeatured: true);
-                    }
-                    return _RecipeCard(recipe: recipe, isFeatured: false);
+                    return GestureDetector(
+                      onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
+                      child: _RecipeCard(recipe: recipe, isFeatured: index == 0),
+                    );
                   },
                   childCount: filteredRecipes.length,
                 ),

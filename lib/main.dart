@@ -6,6 +6,8 @@ import 'core/theme/app_theme.dart';
 import 'features/grocery/grocery_screen.dart';
 import 'features/meal_plan/meal_plan_screen.dart';
 import 'features/recipes/recipes_screen.dart';
+import 'features/recipes/recipe_detail_screen.dart';
+import 'features/recipes/create_recipe_screen.dart';
 
 void main() {
   // Initialize Firebase would go here
@@ -44,6 +46,19 @@ final _router = GoRouter(
             GoRoute(
               path: '/recipes',
               builder: (context, state) => const RecipesScreen(),
+              routes: [
+                GoRoute(
+                  path: 'create',
+                  builder: (context, state) => const CreateRecipeScreen(),
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return RecipeDetailScreen(recipeId: id);
+                  },
+                ),
+              ],
             ),
           ],
         ),

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'grocery_provider.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/add_grocery_item_sheet.dart';
 
 class GroceryScreen extends ConsumerWidget {
   const GroceryScreen({super.key});
@@ -74,7 +75,14 @@ class GroceryScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {}, // TODO: Open add item sheet
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const AddGroceryItemSheet(),
+          );
+        },
         backgroundColor: AppColors.primaryContainer,
         foregroundColor: AppColors.onPrimaryContainer,
         shape: const CircleBorder(),
