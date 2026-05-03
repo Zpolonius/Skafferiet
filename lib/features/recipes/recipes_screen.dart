@@ -20,74 +20,79 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   @override
   Widget build(BuildContext context) {
     final recipes = ref.watch(recipesProvider);
-    final filteredRecipes = selectedCategory == null
-        ? recipes
-        : recipes.where((r) => r.category == selectedCategory).toList();
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: recipes.when(
+          data: (recipeList) {
+            final filteredRecipes = selectedCategory == null
+                ? recipeList
+                : recipeList.where((r) => r.category == selectedCategory).toList();
+
+            return CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Opskrifter',
-                          style: Theme.of(context).textTheme.displayLarge,
-                        ),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            IconButton(
-                              onPressed: () => GoRouter.of(context).push('/recipes/create'),
-                              icon: const Icon(Icons.add_circle_outline, size: 28, color: AppColors.primary),
+                            Text(
+                              'Opskrifter',
+                              style: Theme.of(context).textTheme.displayLarge,
                             ),
-                            const SizedBox(width: 8),
-                            const ProfileAvatar(),
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () => GoRouter.of(context).push('/recipes/create'),
+                                  icon: const Icon(Icons.add_circle_outline, size: 28, color: AppColors.primary),
+                                ),
+                                const SizedBox(width: 8),
+                                const ProfileAvatar(),
+                              ],
+                            ),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+                        _SearchBar(),
+                        const SizedBox(height: 16),
+                        _CategoryFilter(
+                          selected: selectedCategory,
+                          onSelected: (cat) => setState(() => selectedCategory = cat),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _SearchBar(),
-                    const SizedBox(height: 16),
-                    _CategoryFilter(
-                      selected: selectedCategory,
-                      onSelected: (cat) => setState(() => selectedCategory = cat),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 1,
                     ),
-                  ],
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final recipe = filteredRecipes[index];
+                        return GestureDetector(
+                          onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
+                          child: _RecipeCard(recipe: recipe, isFeatured: index == 0),
+                        );
+                      },
+                      childCount: filteredRecipes.length,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final recipe = filteredRecipes[index];
-                    return GestureDetector(
-                      onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
-                      child: _RecipeCard(recipe: recipe, isFeatured: index == 0),
-                    );
-                  },
-                  childCount: filteredRecipes.length,
-                ),
-              ),
-            ),
-            // Custom layout for bento grid is a bit tricky with SliverGrid, 
-            // so I'll use a more flexible approach if needed, but for now let's use a Column for the first and Grid for rest.
-          ],
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Fejl: $err')),
         ),
       ),
     );

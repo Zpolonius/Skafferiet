@@ -7,6 +7,7 @@ import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/profile_avatar.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 
 class GroceryScreen extends ConsumerWidget {
   const GroceryScreen({super.key});
@@ -14,71 +15,84 @@ class GroceryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(groceryListProvider);
-    final categories = _groupItemsByCategory(items);
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: items.when(
+          data: (itemsList) {
+            if (itemsList.isEmpty) {
+              return const EmptyStateWidget(
+                title: 'Indkøbslisten er tom',
+                message: 'Tilføj varer manuelt eller fra en opskrift for at komme i gang.',
+                lottieUrl: 'https://lottie.host/819d6756-3c09-44d4-9d41-e94326588a70/kP9D8u9G5G.json',
+              );
+            }
+            final categories = _groupItemsByCategory(itemsList);
+            return CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Indkøbsliste',
-                          style: Theme.of(context).textTheme.displayLarge,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Indkøbsliste',
+                              style: Theme.of(context).textTheme.displayLarge,
+                            ),
+                            const ProfileAvatar(),
+                          ],
                         ),
-                        const ProfileAvatar(),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${itemsList.where((i) => !i.checked).length} ting tilbage at købe',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${items.where((i) => !i.checked).length} ting tilbage at købe',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    _ProgressBar(
-                      total: items.length,
-                      completed: items.where((i) => i.checked).length,
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
-            ...categories.entries.map((entry) {
-              return SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _CategoryHeader(title: entry.key),
-                      const SizedBox(height: 12),
-                      ...entry.value.map((item) => _GroceryItemTile(item: item)),
-                      const SizedBox(height: 16),
-                    ],
                   ),
                 ),
-              );
-            }),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        _ProgressBar(
+                          total: itemsList.length,
+                          completed: itemsList.where((i) => i.checked).length,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+                ...categories.entries.map((entry) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _CategoryHeader(title: entry.key),
+                          const SizedBox(height: 12),
+                          ...entry.value.map((item) => _GroceryItemTile(item: item)),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Fejl: $err')),
         ),
       ),
       floatingActionButton: FloatingActionButton(

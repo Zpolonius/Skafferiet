@@ -5,6 +5,7 @@ import 'meal_plan_provider.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
@@ -13,95 +14,113 @@ class MealPlanScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mealPlan = ref.watch(mealPlanProvider);
     final selectedDay = ref.watch(selectedDayProvider);
-    final dailyPlan = mealPlan.days[selectedDay] ?? DailyPlan.empty();
-
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: mealPlan.when(
+          data: (plan) {
+            if (plan.days.values.every((d) => d.breakfast.recipe == null && d.lunch.recipe == null && d.dinner.recipe == null)) {
+               return const EmptyStateWidget(
+                title: 'Madplanen er tom',
+                message: 'Gå til opskrifter for at planlægge din uge.',
+                lottieUrl: 'https://lottie.host/8e2f6943-34e4-4c47-976e-581d6f225e5a/pM1f3Z6nZ4.json',
+              );
+            }
+            final dailyPlan = plan.days[selectedDay] ?? DailyPlan.empty();
+            return CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Kitchen Harmony',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryContainer,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                        Row(
+                          children: [
+                            Image.asset('assets/images/logo.png', height: 32),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Skafferiet',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryContainer,
+                              ),
+                            ),
+                          ],
                         ),
                         const ProfileAvatar(),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _SearchBar(),
+                        const SizedBox(height: 24),
+                        _WeeklyCarousel(
+                          selectedDay: selectedDay,
+                          onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '$selectedDay\'s Madplan',
+                              style: Theme.of(context).textTheme.displayMedium,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryFixed,
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              child: Text(
+                                '1,850 kcal',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: AppColors.primary,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _SearchBar(),
-                    const SizedBox(height: 24),
-                    _WeeklyCarousel(
-                      selectedDay: selectedDay,
-                      onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '$selectedDay\'s Madplan',
-                          style: Theme.of(context).textTheme.displayMedium,
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryFixed,
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Text(
-                            '1,850 kcal',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppColors.primary,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _MealSection(
-                    title: 'Morgenmad',
-                    icon: Icons.wb_twilight,
-                    slot: dailyPlan.breakfast,
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _MealSection(
+                        title: 'Morgenmad',
+                        icon: Icons.wb_twilight,
+                        slot: dailyPlan.breakfast,
+                      ),
+                      _MealSection(
+                        title: 'Frokost',
+                        icon: Icons.light_mode,
+                        slot: dailyPlan.lunch,
+                      ),
+                      _MealSection(
+                        title: 'Aftensmad',
+                        icon: Icons.dark_mode,
+                        slot: dailyPlan.dinner,
+                      ),
+                      _MealSection(
+                        title: 'Snack',
+                        icon: Icons.cookie,
+                        slot: dailyPlan.snack,
+                      ),
+                      const SizedBox(height: 100),
+                    ]),
                   ),
-                  _MealSection(
-                    title: 'Frokost',
-                    icon: Icons.light_mode,
-                    slot: dailyPlan.lunch,
-                  ),
-                  _MealSection(
-                    title: 'Aftensmad',
-                    icon: Icons.dark_mode,
-                    slot: dailyPlan.dinner,
-                  ),
-                  _MealSection(
-                    title: 'Snack',
-                    icon: Icons.cookie,
-                    slot: dailyPlan.snack,
-                  ),
-                  const SizedBox(height: 100),
-                ]),
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Fejl: $err')),
         ),
       ),
     );

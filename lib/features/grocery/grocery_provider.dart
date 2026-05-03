@@ -1,33 +1,52 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
 
-class GroceryListNotifier extends StateNotifier<List<GroceryItem>> {
-  GroceryListNotifier() : super(_mockItems);
-
-  void toggleChecked(String id) {
-    state = [
-      for (final item in state)
-        if (item.id == id) item.copyWith(checked: !item.checked) else item,
-    ];
+class GroceryListNotifier extends AsyncNotifier<List<GroceryItem>> {
+  @override
+  Future<List<GroceryItem>> build() async {
+    // Dette simulerer et netværkskald
+    await Future.delayed(const Duration(milliseconds: 500));
+    return _mockItems;
   }
 
-  void removeItem(String id) {
-    state = state.where((item) => item.id != id).toList();
+  Future<void> toggleChecked(String id) async {
+    final currentItems = state.value ?? [];
+    state = AsyncValue.data(
+      currentItems.map((item) {
+        if (item.id == id) {
+          return item.copyWith(checked: !item.checked);
+        }
+        return item;
+      }).toList(),
+    );
   }
 
-  void addItem(GroceryItem item) {
-    state = [...state, item];
+  Future<void> removeItem(String id) async {
+    final currentItems = state.value ?? [];
+    state = AsyncValue.data(
+      currentItems.where((item) => item.id != id).toList(),
+    );
   }
 
-  void updateQuantity(String id, String newQuantity) {
-    state = [
-      for (final item in state)
-        if (item.id == id) item.copyWith(quantity: newQuantity) else item,
-    ];
+  Future<void> addItem(GroceryItem item) async {
+    final currentItems = state.value ?? [];
+    state = AsyncValue.data([...currentItems, item]);
+  }
+
+  Future<void> updateQuantity(String id, String newQuantity) async {
+    final currentItems = state.value ?? [];
+    state = AsyncValue.data(
+      currentItems.map((item) {
+        if (item.id == id) {
+          return item.copyWith(quantity: newQuantity);
+        }
+        return item;
+      }).toList(),
+    );
   }
 }
 
-final groceryListProvider = StateNotifierProvider<GroceryListNotifier, List<GroceryItem>>((ref) {
+final groceryListProvider = AsyncNotifierProvider<GroceryListNotifier, List<GroceryItem>>(() {
   return GroceryListNotifier();
 });
 

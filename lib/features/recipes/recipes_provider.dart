@@ -1,8 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
 
-final recipesProvider = Provider<List<Recipe>>((ref) {
-  return _mockRecipes;
+class RecipesNotifier extends AsyncNotifier<List<Recipe>> {
+  @override
+  Future<List<Recipe>> build() async {
+    // Simuler netværksforsinkelse
+    await Future.delayed(const Duration(milliseconds: 400));
+    return _mockRecipes;
+  }
+
+  Future<void> addRecipe(Recipe recipe) async {
+    final currentRecipes = state.value ?? [];
+    state = AsyncValue.data([...currentRecipes, recipe]);
+  }
+}
+
+final recipesProvider = AsyncNotifierProvider<RecipesNotifier, List<Recipe>>(() {
+  return RecipesNotifier();
 });
 
 final _mockRecipes = [

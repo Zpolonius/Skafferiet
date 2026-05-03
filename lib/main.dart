@@ -9,78 +9,92 @@ import 'features/recipes/recipes_screen.dart';
 import 'features/recipes/recipe_detail_screen.dart';
 import 'features/recipes/create_recipe_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/auth_provider.dart';
 
 void main() {
-  // Initialize Firebase would go here
-  // WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
   runApp(const ProviderScope(child: MyApp()));
 }
 
-final _router = GoRouter(
-  initialLocation: '/meal-plan',
-  routes: [
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return ScaffoldWithNavBar(navigationShell: navigationShell);
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
+    final router = GoRouter(
+      initialLocation: '/meal-plan',
+      redirect: (context, state) {
+        final isLoggingIn = state.matchedLocation == '/login';
+        if (!authState.isAuthenticated && !isLoggingIn) {
+          return '/login';
+        }
+        if (authState.isAuthenticated && isLoggingIn) {
+          return '/meal-plan';
+        }
+        return null;
       },
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/meal-plan',
-              builder: (context, state) => const MealPlanScreen(),
-            ),
-          ],
+      routes: [
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginScreen(),
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/grocery',
-              builder: (context, state) => const GroceryScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/recipes',
-              builder: (context, state) => const RecipesScreen(),
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) {
+            return ScaffoldWithNavBar(navigationShell: navigationShell);
+          },
+          branches: [
+            StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: 'create',
-                  builder: (context, state) => const CreateRecipeScreen(),
+                  path: '/meal-plan',
+                  builder: (context, state) => const MealPlanScreen(),
                 ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
                 GoRoute(
-                  path: ':id',
-                  builder: (context, state) {
-                    final id = state.pathParameters['id']!;
-                    return RecipeDetailScreen(recipeId: id);
-                  },
+                  path: '/grocery',
+                  builder: (context, state) => const GroceryScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/recipes',
+                  builder: (context, state) => const RecipesScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'create',
+                      builder: (context, state) => const CreateRecipeScreen(),
+                    ),
+                    GoRoute(
+                      path: ':id',
+                      builder: (context, state) {
+                        final id = state.pathParameters['id']!;
+                        return RecipeDetailScreen(recipeId: id);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
         ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
       ],
-    ),
-    GoRoute(
-      path: '/profile',
-      builder: (context, state) => const ProfileScreen(),
-    ),
-  ],
-);
+    );
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Skafferiet',
       theme: AppTheme.lightTheme,
-      routerConfig: _router,
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
   }
