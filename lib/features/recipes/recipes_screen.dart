@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/profile_avatar.dart';
 
 class RecipesScreen extends ConsumerStatefulWidget {
   const RecipesScreen({super.key});
@@ -40,9 +41,15 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                           'Opskrifter',
                           style: Theme.of(context).textTheme.displayLarge,
                         ),
-                        IconButton(
-                          onPressed: () => GoRouter.of(context).push('/recipes/create'),
-                          icon: const Icon(Icons.add_circle_outline, size: 32, color: AppColors.primary),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => GoRouter.of(context).push('/recipes/create'),
+                              icon: const Icon(Icons.add_circle_outline, size: 28, color: AppColors.primary),
+                            ),
+                            const SizedBox(width: 8),
+                            const ProfileAvatar(),
+                          ],
                         ),
                       ],
                     ),

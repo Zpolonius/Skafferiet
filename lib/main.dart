@@ -8,6 +8,7 @@ import 'features/meal_plan/meal_plan_screen.dart';
 import 'features/recipes/recipes_screen.dart';
 import 'features/recipes/recipe_detail_screen.dart';
 import 'features/recipes/create_recipe_screen.dart';
+import 'features/profile/profile_screen.dart';
 
 void main() {
   // Initialize Firebase would go here
@@ -63,6 +64,10 @@ final _router = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
     ),
   ],
 );

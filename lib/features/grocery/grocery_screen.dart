@@ -6,6 +6,7 @@ import 'grocery_provider.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
+import '../../shared/widgets/profile_avatar.dart';
 
 class GroceryScreen extends ConsumerWidget {
   const GroceryScreen({super.key});
@@ -25,9 +26,15 @@ class GroceryScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Indkøbsliste',
-                      style: Theme.of(context).textTheme.displayLarge,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Indkøbsliste',
+                          style: Theme.of(context).textTheme.displayLarge,
+                        ),
+                        const ProfileAvatar(),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(

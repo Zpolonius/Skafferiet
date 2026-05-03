@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'meal_plan_provider.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/profile_avatar.dart';
 
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
@@ -24,13 +25,19 @@ class MealPlanScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Kitchen Harmony',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryContainer,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Kitchen Harmony',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryContainer,
+                          ),
+                        ),
+                        const ProfileAvatar(),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     _SearchBar(),
