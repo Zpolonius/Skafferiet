@@ -12,6 +12,16 @@ class MealSlot {
       'directEntry': directEntry,
     };
   }
+
+  MealSlot copyWith({
+    Recipe? recipe,
+    String? directEntry,
+  }) {
+    return MealSlot(
+      recipe: recipe ?? this.recipe,
+      directEntry: directEntry ?? this.directEntry,
+    );
+  }
 }
 
 class DailyPlan {
@@ -35,6 +45,20 @@ class DailyPlan {
       snack: MealSlot(),
     );
   }
+
+  DailyPlan copyWith({
+    MealSlot? breakfast,
+    MealSlot? lunch,
+    MealSlot? dinner,
+    MealSlot? snack,
+  }) {
+    return DailyPlan(
+      breakfast: breakfast ?? this.breakfast,
+      lunch: lunch ?? this.lunch,
+      dinner: dinner ?? this.dinner,
+      snack: snack ?? this.snack,
+    );
+  }
 }
 
 class WeeklyMealPlan {
@@ -47,4 +71,16 @@ class WeeklyMealPlan {
     required this.weekStart,
     required this.days,
   });
+
+  WeeklyMealPlan copyWith({
+    String? id,
+    DateTime? weekStart,
+    Map<String, DailyPlan>? days,
+  }) {
+    return WeeklyMealPlan(
+      id: id ?? this.id,
+      weekStart: weekStart ?? this.weekStart,
+      days: days ?? this.days,
+    );
+  }
 }

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'meal_plan_provider.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/empty_state_widget.dart';
+import 'edit_meal_slot_sheet.dart';
+import '../grocery/grocery_provider.dart';
+import '../../core/models/grocery_item.dart';
+import 'package:uuid/uuid.dart';
+import 'meal_plan_provider.dart';
 
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
@@ -14,6 +18,7 @@ class MealPlanScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mealPlan = ref.watch(mealPlanProvider);
     final selectedDay = ref.watch(selectedDayProvider);
+
     return Scaffold(
       body: SafeArea(
         child: mealPlan.when(
@@ -37,21 +42,21 @@ class MealPlanScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                        Row(
-                          children: [
-                            Image.asset('assets/images/logo.png', height: 32),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Skafferiet',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryContainer,
-                              ),
+                            Row(
+                              children: [
+                                Image.asset('assets/images/logo.png', height: 32),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Skafferiet',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryContainer,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const ProfileAvatar(),
+                            const ProfileAvatar(),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -69,17 +74,14 @@ class MealPlanScreen extends ConsumerWidget {
                               '$selectedDay\'s Madplan',
                               style: Theme.of(context).textTheme.displayMedium,
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryFixed,
-                                borderRadius: BorderRadius.circular(100),
-                              ),
-                              child: Text(
-                                '1,850 kcal',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: AppColors.primary,
-                                    ),
+                            TextButton.icon(
+                              onPressed: () => _transferWeekToShopping(context, ref, plan),
+                              icon: const Icon(Icons.sync_alt, size: 18),
+                              label: const Text('Overfør til indkøb', style: TextStyle(fontSize: 12)),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                backgroundColor: AppColors.primaryFixed.withValues(alpha: 0.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
                               ),
                             ),
                           ],
@@ -96,21 +98,25 @@ class MealPlanScreen extends ConsumerWidget {
                         title: 'Morgenmad',
                         icon: Icons.wb_twilight,
                         slot: dailyPlan.breakfast,
+                        onTap: () => _showEditSlot(context, selectedDay, 'Morgenmad', dailyPlan.breakfast),
                       ),
                       _MealSection(
                         title: 'Frokost',
                         icon: Icons.light_mode,
                         slot: dailyPlan.lunch,
+                        onTap: () => _showEditSlot(context, selectedDay, 'Frokost', dailyPlan.lunch),
                       ),
                       _MealSection(
                         title: 'Aftensmad',
                         icon: Icons.dark_mode,
                         slot: dailyPlan.dinner,
+                        onTap: () => _showEditSlot(context, selectedDay, 'Aftensmad', dailyPlan.dinner),
                       ),
                       _MealSection(
                         title: 'Snack',
                         icon: Icons.cookie,
                         slot: dailyPlan.snack,
+                        onTap: () => _showEditSlot(context, selectedDay, 'Snack', dailyPlan.snack),
                       ),
                       const SizedBox(height: 100),
                     ]),
@@ -122,6 +128,48 @@ class MealPlanScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Fejl: $err')),
         ),
+      ),
+    );
+  }
+
+  void _showEditSlot(BuildContext context, String day, String type, MealSlot slot) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EditMealSlotSheet(day: day, slotType: type, currentSlot: slot),
+    );
+  }
+
+  void _transferWeekToShopping(BuildContext context, WidgetRef ref, WeeklyMealPlan plan) {
+    int count = 0;
+    for (final day in plan.days.values) {
+      final slots = [day.breakfast, day.lunch, day.dinner, day.snack];
+      for (final slot in slots) {
+        if (slot.recipe != null) {
+          for (final ing in slot.recipe!.ingredients) {
+            ref.read(groceryListProvider.notifier).addItem(
+              GroceryItem(
+                id: const Uuid().v4(),
+                name: ing.name,
+                category: ing.category,
+                quantity: ing.quantity.toString(),
+                unit: ing.unit,
+                source: 'meal_plan',
+                createdAt: DateTime.now(),
+              ),
+            );
+            count++;
+          }
+        }
+      }
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$count varer overført til indkøbslisten'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -147,47 +195,52 @@ class _WeeklyCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = ['Søn', 'Man', 'Tirs', 'Ons', 'Tors', 'Fre', 'Lør'];
-    final fullDays = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+    final days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
     
     return SizedBox(
-      height: 80,
+      height: 90,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
         itemBuilder: (context, index) {
-          final isSelected = selectedDay == fullDays[index];
+          final day = days[index];
+          final isSelected = day == selectedDay;
           return GestureDetector(
-            onTap: () => onDaySelected(fullDays[index]),
-            child: Container(
-              width: 64,
-              margin: const EdgeInsets.only(right: 8),
+            onTap: () => onDaySelected(day),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 65,
+              margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(20),
-                border: isSelected ? null : Border.all(color: AppColors.outlineVariant),
-                boxShadow: isSelected
-                    ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 8))]
-                    : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.outlineVariant,
+                ),
+                boxShadow: isSelected ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ] : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    days[index],
-                    style: GoogleFonts.beVietnamPro(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white.withValues(alpha: 0.9) : AppColors.onSurfaceVariant,
+                    day.substring(0, 3),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: isSelected ? Colors.white70 : AppColors.outline,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${11 + index}', // Mock date
+                    (DateTime.now().day + (index - 3)).toString(), // Just dummy date
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : AppColors.onSurfaceVariant,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : AppColors.onSurface,
                     ),
                   ),
                 ],
@@ -204,8 +257,14 @@ class _MealSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final MealSlot slot;
+  final VoidCallback onTap;
 
-  const _MealSection({required this.title, required this.icon, required this.slot});
+  const _MealSection({
+    required this.title,
+    required this.icon,
+    required this.slot,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -213,60 +272,55 @@ class _MealSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.tertiaryContainer),
+              Icon(icon, size: 18, color: AppColors.outline),
               const SizedBox(width: 8),
-              Text(
-                title.toUpperCase(),
-                style: GoogleFonts.beVietnamPro(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.tertiaryContainer,
-                  letterSpacing: 1.2,
-                ),
-              ),
+              Text(title, style: Theme.of(context).textTheme.labelSmall),
             ],
           ),
         ),
-        if (slot.recipe != null)
-          _FilledSlotCard(recipe: slot.recipe!)
-        else if (slot.directEntry != null)
-          _DirectEntryCard(text: slot.directEntry!)
-        else
-          _EmptySlotCard(title: title),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: slot.recipe != null
+              ? _FilledSlotCard(recipe: slot.recipe!)
+              : slot.directEntry != null
+                  ? _DirectEntryCard(text: slot.directEntry!)
+                  : _EmptySlotCard(title: title),
+        ),
       ],
     );
   }
 }
 
 class _FilledSlotCard extends StatelessWidget {
-  final dynamic recipe; // Recipe model
+  final dynamic recipe;
 
   const _FilledSlotCard({required this.recipe});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.surfaceVariant),
-        boxShadow: [
-          BoxShadow(color: AppColors.primaryContainer.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
+        border: Border.all(color: AppColors.outlineVariant),
       ),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              recipe.imageUrl ?? 'https://via.placeholder.com/88',
-              width: 88,
-              height: 88,
-              fit: BoxFit.cover,
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              image: DecorationImage(
+                image: NetworkImage(recipe.imageUrl ?? ''),
+                fit: BoxFit.cover,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -274,26 +328,13 @@ class _FilledSlotCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  recipe.title,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.schedule, size: 14, color: AppColors.onSurfaceVariant),
-                    const SizedBox(width: 4),
-                    Text('15m', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.local_fire_department, size: 14, color: AppColors.onSurfaceVariant),
-                    const SizedBox(width: 4),
-                    Text('420 cal', style: Theme.of(context).textTheme.labelSmall),
-                  ],
-                ),
+                Text(recipe.title, style: Theme.of(context).textTheme.bodyLarge),
+                Text('${recipe.calories} kcal • ${recipe.time}',
+                    style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
           ),
-          const Icon(Icons.more_vert, color: AppColors.outline),
+          const Icon(Icons.chevron_right, color: AppColors.outline),
         ],
       ),
     );
@@ -308,43 +349,20 @@ class _DirectEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.surfaceVariant),
+        border: Border.all(color: AppColors.outlineVariant),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                text,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.secondaryContainer, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  Text('Direkte indtastning', style: Theme.of(context).textTheme.labelSmall),
-                ],
-              ),
-            ],
-          ),
-          ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.shopping_basket, size: 18),
-            label: const Text('Tilføj'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.tertiaryFixed,
-              foregroundColor: AppColors.onTertiaryFixed,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
+          const Icon(Icons.edit_note, color: AppColors.primary),
+          const SizedBox(width: 16),
+          Text(text, style: Theme.of(context).textTheme.bodyLarge),
+          const Spacer(),
+          const Icon(Icons.chevron_right, color: AppColors.outline),
         ],
       ),
     );
@@ -360,40 +378,22 @@ class _EmptySlotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 104,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
+        color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant, style: BorderStyle.none), // Mocking dashed border with CustomPainter would be better
+        border: Border.all(color: AppColors.outlineVariant),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
-                child: const Icon(Icons.add, color: AppColors.primaryContainer),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tilføj opskrift til $title',
-                style: GoogleFonts.beVietnamPro(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
+      child: Row(
+        children: [
+          Icon(Icons.add_circle_outline, color: AppColors.outline.withValues(alpha: 0.5)),
+          const SizedBox(width: 16),
+          Text('Tilføj måltid',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.outline.withValues(alpha: 0.5),
+                  )),
+        ],
       ),
     );
   }
 }
-// Note: In a real app, I'd use a CustomPainter for the dashed border of the empty card.
