@@ -66,7 +66,10 @@ class MealPlanScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         _SearchBar(),
                         const SizedBox(height: 24),
+                        _WeekNavigation(),
+                        const SizedBox(height: 16),
                         _WeeklyCarousel(
+                          weekStart: mealPlan.value?.weekStart ?? DateTime.now(),
                           selectedDay: selectedDay,
                           onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
                         ),
@@ -175,10 +178,15 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _WeeklyCarousel extends StatelessWidget {
+  final DateTime weekStart;
   final String selectedDay;
   final ValueChanged<String> onDaySelected;
 
-  const _WeeklyCarousel({required this.selectedDay, required this.onDaySelected});
+  const _WeeklyCarousel({
+    required this.weekStart,
+    required this.selectedDay,
+    required this.onDaySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +200,8 @@ class _WeeklyCarousel extends StatelessWidget {
         itemBuilder: (context, index) {
           final day = days[index];
           final isSelected = day == selectedDay;
+          final date = weekStart.add(Duration(days: index));
+          
           return GestureDetector(
             onTap: () => onDaySelected(day),
             child: AnimatedContainer(
@@ -216,14 +226,16 @@ class _WeeklyCarousel extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    day.substring(0, 3),
+                    day.substring(0, 3).toUpperCase(),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: isSelected ? Colors.white70 : AppColors.outline,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    (DateTime.now().day + (index - 3)).toString(), // Just dummy date
+                    '${date.day}',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -235,6 +247,68 @@ class _WeeklyCarousel extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _WeekNavigation extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offset = ref.watch(weekOffsetProvider);
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1)).add(Duration(days: offset * 7));
+    
+    // Beregn ugenummer (simpel version)
+    final weekNum = ((weekStart.difference(DateTime(weekStart.year, 1, 1)).inDays) / 7).floor() + 1;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Uge $weekNum',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryContainer,
+          ),
+        ),
+        Row(
+          children: [
+            _NavBtn(
+              icon: Icons.chevron_left,
+              onTap: () => ref.read(weekOffsetProvider.notifier).state--,
+            ),
+            const SizedBox(width: 8),
+            _NavBtn(
+              icon: Icons.chevron_right,
+              onTap: () => ref.read(weekOffsetProvider.notifier).state++,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _NavBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _NavBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.outlineVariant),
+        ),
+        child: Icon(icon, size: 20, color: AppColors.primary),
       ),
     );
   }

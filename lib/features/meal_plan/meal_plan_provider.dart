@@ -8,26 +8,48 @@ import '../../core/models/grocery_item.dart';
 import '../profile/household_provider.dart';
 import 'package:uuid/uuid.dart';
 
+final weekOffsetProvider = StateProvider<int>((ref) => 0);
+
 class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  DateTime _getWeekStart(DateTime date) {
+    // Finder mandagen i den uge, som 'date' tilhører
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  String _getWeekId(DateTime date) {
+    final start = _getWeekStart(date);
+    return '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
+  }
 
   @override
   Future<WeeklyMealPlan> build() async {
     final householdId = ref.watch(householdProvider).householdId;
+    final offset = ref.watch(weekOffsetProvider);
+    
+    final weekStart = _getWeekStart(DateTime.now()).add(Duration(days: offset * 7));
+    final weekId = _getWeekId(weekStart);
+
     if (householdId == null) {
-      return WeeklyMealPlan(id: 'empty', weekStart: DateTime.now(), days: {});
+      return WeeklyMealPlan(id: 'empty', weekStart: weekStart, days: {});
     }
 
-    final doc = await _firestore.collection('households').doc(householdId).collection('meal_plans').doc('current').get();
+    final doc = await _firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('meal_plans')
+        .doc(weekId)
+        .get();
     
     if (!doc.exists) {
-      return WeeklyMealPlan(id: 'current', weekStart: DateTime.now(), days: {});
+      return WeeklyMealPlan(id: weekId, weekStart: weekStart, days: {});
     }
 
-    return _mapDocToPlan(doc);
+    return _mapDocToPlan(doc, weekStart);
   }
 
-  WeeklyMealPlan _mapDocToPlan(DocumentSnapshot doc) {
+  WeeklyMealPlan _mapDocToPlan(DocumentSnapshot doc, DateTime weekStart) {
     final data = doc.data() as Map<String, dynamic>;
     final daysData = data['days'] as Map<String, dynamic>? ?? {};
     final recipes = ref.read(recipesProvider).value ?? [];
@@ -44,7 +66,7 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
 
     return WeeklyMealPlan(
       id: doc.id,
-      weekStart: DateTime.now(), // Kunne gemmes rigtigt
+      weekStart: weekStart,
       days: days,
     );
   }
@@ -65,7 +87,11 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
     final householdId = ref.read(householdProvider).householdId;
     if (householdId == null) return;
 
-    final planDoc = _firestore.collection('households').doc(householdId).collection('meal_plans').doc('current');
+    final offset = ref.read(weekOffsetProvider);
+    final weekStart = _getWeekStart(DateTime.now()).add(Duration(days: offset * 7));
+    final weekId = _getWeekId(weekStart);
+
+    final planDoc = _firestore.collection('households').doc(householdId).collection('meal_plans').doc(weekId);
     
     final slotData = {
       'recipeId': recipe?.id,
@@ -74,7 +100,7 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
 
     await planDoc.set({
       'days': {
-        day: {
+        day.toLowerCase(): {
           slotType.toLowerCase(): slotData,
         }
       }

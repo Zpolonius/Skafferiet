@@ -34,13 +34,15 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   @override
   void initState() {
     super.initState();
-    _weekDates = _generateWeekDates();
+    final offset = ref.read(weekOffsetProvider);
+    _weekDates = _generateWeekDates(offset);
+    _selectedDate = _weekDates[0]; // Vælg mandag som standard
   }
 
-  List<DateTime> _generateWeekDates() {
+  List<DateTime> _generateWeekDates(int offset) {
     final now = DateTime.now();
-    // Start from today and show next 7 days
-    return List.generate(7, (i) => now.add(Duration(days: i)));
+    final weekStart = now.subtract(Duration(days: now.weekday - 1)).add(Duration(days: offset * 7));
+    return List.generate(7, (i) => weekStart.add(Duration(days: i)));
   }
 
   @override
