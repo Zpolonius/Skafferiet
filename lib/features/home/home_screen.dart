@@ -20,6 +20,7 @@ class HomeScreen extends ConsumerWidget {
     
     final userName = authState.user?.displayName?.split(' ').first ?? 'Mette';
     final today = DateFormat('EEEE, d. MMMM', 'da_DK').format(DateTime.now()).toUpperCase();
+    final greeting = _getGreeting();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -32,7 +33,7 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(today, userName),
+                  _buildHeader(today, userName, greeting),
                   const Gap(24),
                   _buildQuickActions(context),
                   const Gap(32),
@@ -49,6 +50,15 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 10) return 'Godmorgen';
+    if (hour >= 10 && hour < 12) return 'Godformiddag';
+    if (hour >= 12 && hour < 17) return 'Godeftermiddag';
+    if (hour >= 17 && hour < 22) return 'Godaften';
+    return 'Godnat';
   }
 
   Widget _buildAppBar(BuildContext context, AuthState auth) {
@@ -86,7 +96,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(String date, String name) {
+  Widget _buildHeader(String date, String name, String greeting) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -107,7 +117,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         const Gap(8),
         Text(
-          'Godmorgen, $name!',
+          '$greeting, $name!',
           style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,

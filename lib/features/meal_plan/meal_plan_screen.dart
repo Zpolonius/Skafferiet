@@ -6,10 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import 'edit_meal_slot_sheet.dart';
-import '../grocery/grocery_provider.dart';
-import '../meal_plan/meal_plan_provider.dart';
-import '../grocery/grocery_provider.dart';
 import 'meal_plan_provider.dart';
+import '../grocery/grocery_provider.dart';
 
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
