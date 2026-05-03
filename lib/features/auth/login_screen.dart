@@ -59,6 +59,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 48),
                 
+                if (!_isLogin) ...[
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Fulde navn',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                
                 TextField(
                   controller: _emailController,
                   decoration: const InputDecoration(
