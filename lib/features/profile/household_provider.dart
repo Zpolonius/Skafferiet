@@ -7,12 +7,14 @@ class HouseholdState {
   final String? householdId;
   final String? householdName;
   final List<String> members;
+  final List<Map<String, dynamic>> invitations;
   final bool isLoading;
 
   HouseholdState({
     this.householdId,
     this.householdName,
     this.members = const [],
+    this.invitations = const [],
     this.isLoading = false,
   });
 
@@ -20,12 +22,14 @@ class HouseholdState {
     String? householdId,
     String? householdName,
     List<String>? members,
+    List<Map<String, dynamic>>? invitations,
     bool? isLoading,
   }) {
     return HouseholdState(
       householdId: householdId ?? this.householdId,
       householdName: householdName ?? this.householdName,
       members: members ?? this.members,
+      invitations: invitations ?? this.invitations,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -43,9 +47,26 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     _auth.authStateChanges().listen((user) {
       if (user != null) {
         _listenToUserHousehold(user.uid);
+        _listenToInvitations(user.email);
       } else {
         state = HouseholdState();
       }
+    });
+  }
+
+  void _listenToInvitations(String? email) {
+    if (email == null) return;
+    _firestore
+        .collection('invitations')
+        .where('toUserEmail', isEqualTo: email)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .listen((snapshot) {
+      final invites = snapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data(),
+      }).toList();
+      state = state.copyWith(invitations: invites);
     });
   }
 
@@ -70,7 +91,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     _firestore.collection('households').doc(householdId).snapshots().listen((doc) {
       if (doc.exists) {
         final data = doc.data()!;
-        state = HouseholdState(
+        state = state.copyWith(
           householdId: householdId,
           householdName: data['name'],
           members: List<String>.from(data['members'] ?? []),
@@ -118,7 +139,6 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       }, SetOptions(merge: true));
     } else {
       state = state.copyWith(isLoading: false);
-      // Her kunne vi tilføje en fejlbesked
     }
   }
 
@@ -132,6 +152,48 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     });
     await _firestore.collection('users').doc(user.uid).update({
       'householdId': FieldValue.delete(),
+    });
+  }
+
+  Future<void> sendInvitation(String email) async {
+    final user = _auth.currentUser;
+    if (user == null || state.householdId == null) return;
+
+    final cleanEmail = email.trim().toLowerCase();
+    print('DEBUG: Sender invitation til $cleanEmail fra husstand ${state.householdId}');
+
+    await _firestore.collection('invitations').add({
+      'fromHouseholdId': state.householdId,
+      'fromHouseholdName': state.householdName,
+      'fromUserName': user.displayName ?? user.email,
+      'toUserEmail': cleanEmail,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> acceptInvitation(String invitationId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final inviteDoc = await _firestore.collection('invitations').doc(invitationId).get();
+    if (!inviteDoc.exists) return;
+
+    final data = inviteDoc.data()!;
+    final householdId = data['fromHouseholdId'];
+
+    // Join the household
+    await joinHousehold(householdId);
+
+    // Mark invitation as accepted
+    await _firestore.collection('invitations').doc(invitationId).update({
+      'status': 'accepted',
+    });
+  }
+
+  Future<void> declineInvitation(String invitationId) async {
+    await _firestore.collection('invitations').doc(invitationId).update({
+      'status': 'declined',
     });
   }
 }

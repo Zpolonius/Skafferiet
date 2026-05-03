@@ -8,7 +8,14 @@ import '../recipes/recipes_provider.dart';
 import 'meal_plan_provider.dart';
 
 class AddCustomMealSheet extends ConsumerStatefulWidget {
-  const AddCustomMealSheet({super.key});
+  final String? initialDay;
+  final String? initialCategory;
+
+  const AddCustomMealSheet({
+    super.key,
+    this.initialDay,
+    this.initialCategory,
+  });
 
   @override
   ConsumerState<AddCustomMealSheet> createState() => _AddCustomMealSheetState();
@@ -20,7 +27,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   // Form fields for "Eget måltid"
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
-  RecipeCategory _selectedCategory = RecipeCategory.Aftensmad;
+  late RecipeCategory _selectedCategory;
   int _portions = 4;
   final List<Map<String, String>> _ingredients = [
     {'name': '', 'amount': ''},
@@ -28,7 +35,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   bool _saveAsRecipe = false;
   
   // Date selection
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   late List<DateTime> _weekDates;
 
   @override
@@ -36,7 +43,31 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     super.initState();
     final offset = ref.read(weekOffsetProvider);
     _weekDates = _generateWeekDates(offset);
-    _selectedDate = _weekDates[0]; // Vælg mandag som standard
+    
+    // Brug initialDay hvis den findes, ellers mandag
+    if (widget.initialDay != null) {
+      final index = _getDayIndex(widget.initialDay!);
+      _selectedDate = _weekDates[index];
+    } else {
+      _selectedDate = _weekDates[0];
+    }
+
+    // Brug initialCategory hvis den findes
+    if (widget.initialCategory != null) {
+      _selectedCategory = _mapStringToCategory(widget.initialCategory!);
+    } else {
+      _selectedCategory = RecipeCategory.Aftensmad;
+    }
+  }
+
+
+  RecipeCategory _mapStringToCategory(String cat) {
+    switch (cat.toLowerCase()) {
+      case 'morgenmad': return RecipeCategory.Morgenmad;
+      case 'frokost': return RecipeCategory.Frokost;
+      case 'snack': return RecipeCategory.Snack;
+      default: return RecipeCategory.Aftensmad;
+    }
   }
 
   List<DateTime> _generateWeekDates(int offset) {
@@ -475,8 +506,13 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     if (mounted) Navigator.pop(context);
   }
 
+  int _getDayIndex(String day) {
+    final days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+    return days.indexOf(day).clamp(0, 6);
+  }
+
   String _getDayName(DateTime date) {
-    final days = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+    final days = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
     return days[date.weekday % 7];
   }
 }

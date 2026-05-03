@@ -144,7 +144,7 @@ class MealPlanScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EditMealSlotSheet(day: day, slotType: type, currentSlot: slot),
+      builder: (context) => AddCustomMealSheet(initialDay: day, initialCategory: type),
     );
   }
 

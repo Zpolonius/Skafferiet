@@ -100,7 +100,7 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
 
     await planDoc.set({
       'days': {
-        day.toLowerCase(): {
+        day: {
           slotType.toLowerCase(): slotData,
         }
       }
