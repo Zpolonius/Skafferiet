@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/grocery/grocery_screen.dart';
 import 'features/meal_plan/meal_plan_screen.dart';
@@ -12,8 +14,23 @@ import 'features/profile/profile_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
 
-void main() {
-  runApp(const ProviderScope(child: MyApp()));
+import 'features/home/home_screen.dart';
+
+import 'package:intl/date_symbol_data_local.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await initializeDateFormatting('da_DK', null);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerWidget {
@@ -24,14 +41,16 @@ class MyApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     final router = GoRouter(
-      initialLocation: '/meal-plan',
+      initialLocation: '/',
       redirect: (context, state) {
+        if (authState.isLoading) return null; // Vent på Firebase
+        
         final isLoggingIn = state.matchedLocation == '/login';
         if (!authState.isAuthenticated && !isLoggingIn) {
           return '/login';
         }
         if (authState.isAuthenticated && isLoggingIn) {
-          return '/meal-plan';
+          return '/';
         }
         return null;
       },
@@ -45,6 +64,14 @@ class MyApp extends ConsumerWidget {
             return ScaffoldWithNavBar(navigationShell: navigationShell);
           },
           branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/',
+                  builder: (context, state) => const HomeScreen(),
+                ),
+              ],
+            ),
             StatefulShellBranch(
               routes: [
                 GoRoute(
@@ -131,22 +158,28 @@ class ScaffoldWithNavBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavBarItem(
-                  icon: Icons.calendar_today,
-                  label: 'Madplan',
+                  icon: Icons.home_outlined,
+                  label: 'Hjem',
                   isActive: navigationShell.currentIndex == 0,
                   onTap: () => navigationShell.goBranch(0),
                 ),
                 _NavBarItem(
-                  icon: Icons.shopping_basket,
-                  label: 'Indkøb',
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Madplan',
                   isActive: navigationShell.currentIndex == 1,
                   onTap: () => navigationShell.goBranch(1),
                 ),
                 _NavBarItem(
-                  icon: Icons.restaurant_menu,
-                  label: 'Opskrifter',
+                  icon: Icons.shopping_basket_outlined,
+                  label: 'Indkøb',
                   isActive: navigationShell.currentIndex == 2,
                   onTap: () => navigationShell.goBranch(2),
+                ),
+                _NavBarItem(
+                  icon: Icons.restaurant_menu_outlined,
+                  label: 'Opskrifter',
+                  isActive: navigationShell.currentIndex == 3,
+                  onTap: () => navigationShell.goBranch(3),
                 ),
               ],
             ),

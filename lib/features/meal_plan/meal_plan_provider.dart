@@ -1,63 +1,86 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../../core/models/grocery_item.dart';
+import '../profile/household_provider.dart';
 import 'package:uuid/uuid.dart';
 
 class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   Future<WeeklyMealPlan> build() async {
-    final recipesAsync = ref.watch(recipesProvider);
+    final householdId = ref.watch(householdProvider).householdId;
+    if (householdId == null) {
+      return WeeklyMealPlan(id: 'empty', weekStart: DateTime.now(), days: {});
+    }
+
+    final doc = await _firestore.collection('households').doc(householdId).collection('meal_plans').doc('current').get();
     
-    return recipesAsync.when(
-      data: (recipes) => WeeklyMealPlan(
-        id: 'week1',
-        weekStart: DateTime.now(),
-        days: {
-          'Mandag': DailyPlan(
-            breakfast: MealSlot(recipe: recipes[0]),
-            lunch: MealSlot(recipe: recipes[1]),
-            dinner: MealSlot(),
-            snack: MealSlot(directEntry: 'Mandler & Æbler'),
-          ),
-          'Tirsdag': DailyPlan.empty(),
-          'Onsdag': DailyPlan.empty(),
-          'Torsdag': DailyPlan.empty(),
-          'Fredag': DailyPlan.empty(),
-          'Lørdag': DailyPlan.empty(),
-          'Søndag': DailyPlan.empty(),
-        },
-      ),
-      loading: () => throw Exception('Henter opskrifter...'),
-      error: (err, stack) => throw err,
+    if (!doc.exists) {
+      return WeeklyMealPlan(id: 'current', weekStart: DateTime.now(), days: {});
+    }
+
+    return _mapDocToPlan(doc);
+  }
+
+  WeeklyMealPlan _mapDocToPlan(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final daysData = data['days'] as Map<String, dynamic>? ?? {};
+    final recipes = ref.read(recipesProvider).value ?? [];
+
+    final Map<String, DailyPlan> days = {};
+    daysData.forEach((key, value) {
+      days[key] = DailyPlan(
+        breakfast: _mapSlot(value['breakfast'], recipes),
+        lunch: _mapSlot(value['lunch'], recipes),
+        dinner: _mapSlot(value['dinner'], recipes),
+        snack: _mapSlot(value['snack'], recipes),
+      );
+    });
+
+    return WeeklyMealPlan(
+      id: doc.id,
+      weekStart: DateTime.now(), // Kunne gemmes rigtigt
+      days: days,
+    );
+  }
+
+  MealSlot _mapSlot(Map<String, dynamic>? data, List<Recipe> recipes) {
+    if (data == null) return MealSlot();
+    Recipe? recipe;
+    if (data['recipeId'] != null) {
+      recipe = recipes.firstWhere((r) => r.id == data['recipeId'], orElse: () => recipes.first);
+    }
+    return MealSlot(
+      recipe: recipe,
+      directEntry: data['directEntry'],
     );
   }
 
   Future<void> updateSlot(String day, String slotType, {Recipe? recipe, String? directEntry}) async {
-    if (state.value == null) return;
-    
-    final currentPlan = state.value!;
-    final dayPlan = currentPlan.days[day] ?? DailyPlan.empty();
-    
-    final newSlot = MealSlot(recipe: recipe, directEntry: directEntry);
-    
-    final newDays = Map<String, DailyPlan>.from(currentPlan.days);
-    final updatedDayPlan = _updateDayPlanWithSlot(dayPlan, slotType, newSlot);
-    newDays[day] = updatedDayPlan;
-    
-    state = AsyncValue.data(currentPlan.copyWith(days: newDays));
-  }
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null) return;
 
-  DailyPlan _updateDayPlanWithSlot(DailyPlan dayPlan, String slotType, MealSlot slot) {
-    switch (slotType) {
-      case 'Morgenmad': return dayPlan.copyWith(breakfast: slot);
-      case 'Frokost': return dayPlan.copyWith(lunch: slot);
-      case 'Aftensmad': return dayPlan.copyWith(dinner: slot);
-      case 'Snack': return dayPlan.copyWith(snack: slot);
-      default: return dayPlan;
-    }
+    final planDoc = _firestore.collection('households').doc(householdId).collection('meal_plans').doc('current');
+    
+    final slotData = {
+      'recipeId': recipe?.id,
+      'directEntry': directEntry,
+    };
+
+    await planDoc.set({
+      'days': {
+        day: {
+          slotType.toLowerCase(): slotData,
+        }
+      }
+    }, SetOptions(merge: true));
+    
+    ref.invalidateSelf();
   }
 
   Future<int> transferToShoppingList(GroceryListNotifier groceryNotifier) async {
@@ -70,7 +93,7 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
       for (final slot in slots) {
         if (slot.recipe != null) {
           for (final ing in slot.recipe!.ingredients) {
-            groceryNotifier.addItem(
+            await groceryNotifier.addItem(
               GroceryItem(
                 id: const Uuid().v4(),
                 name: ing.name,

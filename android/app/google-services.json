@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "556462067340",
+    "project_id": "siet-8630a",
+    "storage_bucket": "siet-8630a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:556462067340:android:7cfd7835965ff5663bf5a9",
+        "android_client_info": {
+          "package_name": "com.skafferiet.skafferiet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfFi9GncYHLhBIqGvYdXCQmxxDS5DPkLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

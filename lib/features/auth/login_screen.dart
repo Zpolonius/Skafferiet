@@ -19,6 +19,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
+    // Vis fejl hvis den findes
+    if (authState.error != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authState.error!), backgroundColor: Colors.red),
+        );
+      });
+    }
+
     return Scaffold(
       body: Container(
         width: double.infinity,

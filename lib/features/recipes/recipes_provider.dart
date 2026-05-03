@@ -1,83 +1,84 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
 
 class RecipesNotifier extends AsyncNotifier<List<Recipe>> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   Future<List<Recipe>> build() async {
-    // Simuler netværkskald
-    await Future.delayed(const Duration(milliseconds: 800));
-    return _mockRecipes;
+    // Vi henter alle opskrifter (kunne senere filtreres på husholdning)
+    final snapshot = await _firestore.collection('recipes').get();
+    
+    if (snapshot.docs.isEmpty) {
+      // Hvis databasen er helt tom, kan vi uploade vores mock data én gang
+      // Men for nu returnerer vi bare en tom liste eller mock data hvis man vil
+      return []; 
+    }
+
+    return snapshot.docs.map((doc) => _mapDocToRecipe(doc)).toList();
+  }
+
+  Recipe _mapDocToRecipe(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Recipe(
+      id: doc.id,
+      title: data['title'] ?? '',
+      imageUrl: data['imageUrl'],
+      calories: data['calories'] ?? 0,
+      time: data['time'] ?? '',
+      category: RecipeCategory.values.firstWhere(
+        (e) => e.toString() == data['category'],
+        orElse: () => RecipeCategory.Aftensmad,
+      ),
+      ingredients: (data['ingredients'] as List? ?? []).map((i) => Ingredient(
+        name: i['name'],
+        quantity: (i['quantity'] as num).toDouble(),
+        unit: i['unit'],
+        category: i['category'],
+      )).toList(),
+      instructions: List<String>.from(data['instructions'] ?? []),
+    );
   }
 
   Future<void> addRecipe(Recipe recipe) async {
-    if (state.value == null) return;
-    state = AsyncValue.data([...state.value!, recipe]);
+    await _firestore.collection('recipes').add({
+      'title': recipe.title,
+      'imageUrl': recipe.imageUrl,
+      'calories': recipe.calories,
+      'time': recipe.time,
+      'category': recipe.category.toString(),
+      'ingredients': recipe.ingredients.map((i) => {
+        'name': i.name,
+        'quantity': i.quantity,
+        'unit': i.unit,
+        'category': i.category,
+      }).toList(),
+      'instructions': recipe.instructions,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    ref.invalidateSelf();
   }
 
   Future<void> updateRecipe(Recipe updatedRecipe) async {
-    if (state.value == null) return;
-    final currentRecipes = List<Recipe>.from(state.value!);
-    final index = currentRecipes.indexWhere((r) => r.id == updatedRecipe.id);
-    if (index != -1) {
-      currentRecipes[index] = updatedRecipe;
-      state = AsyncValue.data(currentRecipes);
-    }
+    await _firestore.collection('recipes').doc(updatedRecipe.id).update({
+      'title': updatedRecipe.title,
+      'imageUrl': updatedRecipe.imageUrl,
+      'calories': updatedRecipe.calories,
+      'time': updatedRecipe.time,
+      'category': updatedRecipe.category.toString(),
+      'ingredients': updatedRecipe.ingredients.map((i) => {
+        'name': i.name,
+        'quantity': i.quantity,
+        'unit': i.unit,
+        'category': i.category,
+      }).toList(),
+      'instructions': updatedRecipe.instructions,
+    });
+    ref.invalidateSelf();
   }
 }
 
 final recipesProvider = AsyncNotifierProvider<RecipesNotifier, List<Recipe>>(() {
   return RecipesNotifier();
 });
-
-final _mockRecipes = [
-  Recipe(
-    id: '1',
-    title: 'Avocado Toast med Spejlæg',
-    category: RecipeCategory.Morgenmad,
-    imageUrl: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=800',
-    calories: 350,
-    time: '15 min',
-    ingredients: [
-      Ingredient(name: 'Avocado', quantity: 1, unit: 'stk', category: 'Frugt & Grønt'),
-      Ingredient(name: 'Rugbrød', quantity: 2, unit: 'skiver', category: 'Brød'),
-      Ingredient(name: 'Æg', quantity: 1, unit: 'stk', category: 'Mejeri'),
-    ],
-  ),
-  Recipe(
-    id: '2',
-    title: 'Grillet Kyllingesalat',
-    category: RecipeCategory.Frokost,
-    imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800',
-    calories: 450,
-    time: '20 min',
-    ingredients: [
-      Ingredient(name: 'Kyllingebryst', quantity: 200, unit: 'g', category: 'Kød & Fisk'),
-      Ingredient(name: 'Salat', quantity: 1, unit: 'hoved', category: 'Frugt & Grønt'),
-      Ingredient(name: 'Tomat', quantity: 4, unit: 'stk', category: 'Frugt & Grønt'),
-    ],
-  ),
-  Recipe(
-    id: '3',
-    title: 'Klassisk Lasagne',
-    category: RecipeCategory.Aftensmad,
-    imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800',
-    calories: 700,
-    time: '60 min',
-    ingredients: [
-      Ingredient(name: 'Hakket oksekød', quantity: 500, unit: 'g', category: 'Kød & Fisk'),
-      Ingredient(name: 'Lasagneplader', quantity: 12, unit: 'stk', category: 'Kolonial'),
-    ],
-  ),
-  Recipe(
-    id: '4',
-    title: 'Grillet Laks med Urter',
-    category: RecipeCategory.Aftensmad,
-    imageUrl: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=800',
-    calories: 550,
-    time: '25 min',
-    ingredients: [
-      Ingredient(name: 'Lakseside', quantity: 600, unit: 'g', category: 'Kød & Fisk'),
-      Ingredient(name: 'Citron', quantity: 1, unit: 'stk', category: 'Frugt & Grønt'),
-    ],
-  ),
-];

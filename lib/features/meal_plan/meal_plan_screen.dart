@@ -7,8 +7,8 @@ import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import 'edit_meal_slot_sheet.dart';
 import '../grocery/grocery_provider.dart';
-import '../../core/models/grocery_item.dart';
-import 'package:uuid/uuid.dart';
+import '../meal_plan/meal_plan_provider.dart';
+import '../grocery/grocery_provider.dart';
 import 'meal_plan_provider.dart';
 
 class MealPlanScreen extends ConsumerWidget {
