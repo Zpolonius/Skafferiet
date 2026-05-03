@@ -36,6 +36,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
     final allCategories = {...categories, ...existingCategories}.toList();
 
     return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         top: 24,
@@ -46,120 +47,153 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Tilføj vare',
-            style: Theme.of(context).textTheme.displayMedium,
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Hvad skal du bruge?',
-              prefixIcon: Icon(Icons.shopping_cart_outlined),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _quantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Mængde'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 3,
-                child: DropdownButtonFormField<String>(
-                  value: _selectedUnit,
-                  decoration: const InputDecoration(labelText: 'Enhed'),
-                  items: units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                  onChanged: (v) => setState(() => _selectedUnit = v!),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text('Kategori', style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ...allCategories.map((cat) {
-                  final isSelected = _selectedCategory == cat && !_isAddingCustomCategory;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(cat),
-                      selected: isSelected,
-                      onSelected: (val) {
-                        setState(() {
-                          _selectedCategory = cat;
-                          _isAddingCustomCategory = false;
-                        });
-                      },
+                Text(
+                  'Tilføj vare',
+                  style: Theme.of(context).textTheme.displayMedium,
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nameController,
+                    autofocus: true,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      hintText: 'Hvad skal du bruge? (f.eks. Mælk)',
+                      prefixIcon: Icon(Icons.shopping_cart_outlined),
+                      alignLabelWithHint: true,
                     ),
-                  );
-                }),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: const Text('+ Ny'),
-                    selected: _isAddingCustomCategory,
-                    onSelected: (val) {
-                      setState(() {
-                        _isAddingCustomCategory = true;
-                      });
-                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () {
+                    // TODO: Implement actual image picker logic
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Billedvælger åbner...')),
+                    );
+                  },
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
                   ),
                 ),
               ],
             ),
-          ),
-          if (_isAddingCustomCategory) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Mængde'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedUnit,
+                    decoration: const InputDecoration(labelText: 'Enhed'),
+                    items: units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                    onChanged: (v) => setState(() => _selectedUnit = v!),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text('Kategori', style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 12),
-            TextField(
-              controller: _customCategoryController,
-              decoration: const InputDecoration(
-                hintText: 'Navn på ny kategori...',
-                prefixIcon: Icon(Icons.label_outline),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ...allCategories.map((cat) {
+                  final isSelected = _selectedCategory == cat && !_isAddingCustomCategory;
+                  return ChoiceChip(
+                    label: Text(cat),
+                    selected: isSelected,
+                    onSelected: (val) {
+                      setState(() {
+                        _selectedCategory = cat;
+                        _isAddingCustomCategory = false;
+                      });
+                    },
+                  );
+                }),
+                ChoiceChip(
+                  label: const Text('+ Ny'),
+                  selected: _isAddingCustomCategory,
+                  onSelected: (val) {
+                    setState(() {
+                      _isAddingCustomCategory = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+            if (_isAddingCustomCategory) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customCategoryController,
+                decoration: const InputDecoration(
+                  hintText: 'Navn på ny kategori...',
+                  prefixIcon: Icon(Icons.label_outline),
+                ),
+                onChanged: (val) => setState(() => _selectedCategory = val),
               ),
-              onChanged: (val) => setState(() => _selectedCategory = val),
+            ],
+            const SizedBox(height: 32),
+            FilledButton(
+              onPressed: () {
+                if (_nameController.text.isNotEmpty) {
+                  ref.read(groceryListProvider.notifier).addItem(
+                    GroceryItem(
+                      id: const Uuid().v4(),
+                      name: _nameController.text,
+                      category: _selectedCategory,
+                      quantity: _quantityController.text,
+                      unit: _selectedUnit,
+                      source: 'manual',
+                      createdAt: DateTime.now(),
+                      imageUrl: null, // Placeholder for selected image
+                    ),
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text('Tilføj til liste'),
             ),
           ],
-          const SizedBox(height: 32),
-          FilledButton(
-            onPressed: () {
-              if (_nameController.text.isNotEmpty) {
-                ref.read(groceryListProvider.notifier).addItem(
-                  GroceryItem(
-                    id: const Uuid().v4(),
-                    name: _nameController.text,
-                    category: _selectedCategory,
-                    quantity: _quantityController.text,
-                    unit: _selectedUnit,
-                    source: 'manual',
-                    createdAt: DateTime.now(),
-                  ),
-                );
-                Navigator.pop(context);
-              }
-            },
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text('Tilføj til liste'),
-          ),
-        ],
+        ),
       ),
     );
   }
