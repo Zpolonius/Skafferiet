@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html lang="da"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Importér fra madplan - Kitchen Harmony</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#191c1d",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-fixed-dim": "#95d4b3",
+                        "on-secondary-fixed-variant": "#683d00",
+                        "outline-variant": "#bfc9c1",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d9dadb",
+                        "background": "#f8f9fa",
+                        "secondary": "#895100",
+                        "on-tertiary-fixed": "#151e0f",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "surface": "#f8f9fa",
+                        "on-surface-variant": "#404943",
+                        "tertiary-fixed": "#dbe7cd",
+                        "on-surface": "#191c1d",
+                        "surface-variant": "#e1e3e4",
+                        "on-primary": "#ffffff",
+                        "primary": "#0f5238",
+                        "outline": "#707973",
+                        "surface-container": "#edeeef",
+                        "tertiary": "#404a38",
+                        "tertiary-fixed-dim": "#bfcab2",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#e1e3e4",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-primary-container": "#a8e7c5",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2e3132",
+                        "secondary-fixed-dim": "#ffb86b",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#57624e",
+                        "on-primary-fixed": "#002114",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#2c694e",
+                        "on-secondary-container": "#663b00",
+                        "on-tertiary-fixed-variant": "#3f4a37",
+                        "surface-bright": "#f8f9fa",
+                        "primary-container": "#2d6a4f",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#b1f0ce",
+                        "on-tertiary-container": "#d1ddc4",
+                        "secondary-fixed": "#ffdcbc",
+                        "surface-container-high": "#e7e8e9",
+                        "secondary-container": "#fd9d1a",
+                        "inverse-primary": "#95d4b3",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#2c1700"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "40px",
+                        "unit": "4px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "md": "16px",
+                        "container-margin": "20px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Plus Jakarta Sans"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "h2": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["13px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hide scrollbar for horizontal scrolling but keep functionality */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen pb-[120px]">
+<!-- TopAppBar Shared Component -->
+<header class="bg-white dark:bg-gray-950 text-green-800 dark:text-green-400 font-['Plus_Jakarta_Sans'] font-semibold fixed top-0 w-full z-50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-5 h-16 w-full">
+<button aria-label="Back" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-200">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<span class="text-lg font-bold text-green-700 dark:text-green-500 tracking-tight">Kitchen Harmony</span>
+<button aria-label="Options" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-200">
+<span class="material-symbols-outlined text-[24px]">more_vert</span>
+</button>
+</header>
+<main class="pt-[80px]">
+<header class="px-container-margin mb-lg">
+<h1 class="font-h2 text-h2 text-primary-container">Importér fra madplan</h1>
+<p class="font-body-md text-body-md text-outline mt-unit">Vælg dage for at hente planlagte måltider.</p>
+</header>
+<!-- Date Picker Horizontal Scroll -->
+<section class="px-container-margin mb-xl">
+<div class="flex gap-sm overflow-x-auto no-scrollbar pb-sm snap-x">
+<!-- Selected Day -->
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-primary text-on-primary rounded-xl flex flex-col items-center justify-center shadow-[0_4px_8px_rgba(45,106,79,0.2)] snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-80 uppercase tracking-widest">Man</span>
+<span class="font-h2 text-h2 mt-unit">12</span>
+</button>
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-surface-container-lowest text-on-surface-variant border border-outline-variant rounded-xl flex flex-col items-center justify-center snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-70 uppercase tracking-widest">Tir</span>
+<span class="font-h2 text-h2 mt-unit">13</span>
+</button>
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-surface-container-lowest text-on-surface-variant border border-outline-variant rounded-xl flex flex-col items-center justify-center snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-70 uppercase tracking-widest">Ons</span>
+<span class="font-h2 text-h2 mt-unit">14</span>
+</button>
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-surface-container-lowest text-on-surface-variant border border-outline-variant rounded-xl flex flex-col items-center justify-center snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-70 uppercase tracking-widest">Tor</span>
+<span class="font-h2 text-h2 mt-unit">15</span>
+</button>
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-surface-container-lowest text-on-surface-variant border border-outline-variant rounded-xl flex flex-col items-center justify-center snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-70 uppercase tracking-widest">Fre</span>
+<span class="font-h2 text-h2 mt-unit">16</span>
+</button>
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-surface-container-lowest text-on-surface-variant border border-outline-variant rounded-xl flex flex-col items-center justify-center snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-70 uppercase tracking-widest">Lør</span>
+<span class="font-h2 text-h2 mt-unit">17</span>
+</button>
+<button class="flex-shrink-0 w-[64px] h-[80px] bg-surface-container-lowest text-on-surface-variant border border-outline-variant rounded-xl flex flex-col items-center justify-center snap-start transition-transform active:scale-95">
+<span class="font-label-sm text-label-sm opacity-70 uppercase tracking-widest">Søn</span>
+<span class="font-h2 text-h2 mt-unit">18</span>
+</button>
+</div>
+</section>
+<!-- Meal List Section -->
+<section class="px-container-margin flex flex-col gap-sm">
+<!-- List Item (Checked state) -->
+<label class="relative flex items-center justify-between bg-surface-container-lowest p-md rounded-xl shadow-[0_2px_4px_rgba(45,106,79,0.05)] cursor-pointer overflow-hidden active:scale-[0.99] transition-transform">
+<input checked="" class="peer absolute opacity-0 w-0 h-0" type="checkbox"/>
+<div class="flex flex-col peer-checked:opacity-50 peer-checked:line-through transition-all duration-300">
+<span class="font-label-sm text-label-sm text-on-background">Klassisk Bolognese</span>
+<span class="font-body-md text-[14px] text-outline mt-xs">Aftensmad • 4 portioner</span>
+</div>
+<div class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-[16px] text-on-primary opacity-0 peer-checked:opacity-100 transition-opacity duration-200" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</label>
+<!-- List Item (Unchecked state) -->
+<label class="relative flex items-center justify-between bg-surface-container-lowest p-md rounded-xl shadow-[0_2px_4px_rgba(45,106,79,0.05)] cursor-pointer overflow-hidden active:scale-[0.99] transition-transform">
+<input class="peer absolute opacity-0 w-0 h-0" type="checkbox"/>
+<div class="flex flex-col peer-checked:opacity-50 peer-checked:line-through transition-all duration-300">
+<span class="font-label-sm text-label-sm text-on-background">Avocadomadder med æg</span>
+<span class="font-body-md text-[14px] text-outline mt-xs">Frokost • 2 portioner</span>
+</div>
+<div class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-[16px] text-on-primary opacity-0 peer-checked:opacity-100 transition-opacity duration-200" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</label>
+<!-- List Item (Checked state) -->
+<label class="relative flex items-center justify-between bg-surface-container-lowest p-md rounded-xl shadow-[0_2px_4px_rgba(45,106,79,0.05)] cursor-pointer overflow-hidden active:scale-[0.99] transition-transform">
+<input checked="" class="peer absolute opacity-0 w-0 h-0" type="checkbox"/>
+<div class="flex flex-col peer-checked:opacity-50 peer-checked:line-through transition-all duration-300">
+<span class="font-label-sm text-label-sm text-on-background">Bagt Laks med Grøntsager</span>
+<span class="font-body-md text-[14px] text-outline mt-xs">Aftensmad • 2 portioner</span>
+</div>
+<div class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-[16px] text-on-primary opacity-0 peer-checked:opacity-100 transition-opacity duration-200" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</label>
+<!-- List Item (Unchecked state) -->
+<label class="relative flex items-center justify-between bg-surface-container-lowest p-md rounded-xl shadow-[0_2px_4px_rgba(45,106,79,0.05)] cursor-pointer overflow-hidden active:scale-[0.99] transition-transform">
+<input class="peer absolute opacity-0 w-0 h-0" type="checkbox"/>
+<div class="flex flex-col peer-checked:opacity-50 peer-checked:line-through transition-all duration-300">
+<span class="font-label-sm text-label-sm text-on-background">Havregrød med æble</span>
+<span class="font-body-md text-[14px] text-outline mt-xs">Morgenmad • 1 portion</span>
+</div>
+<div class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-[16px] text-on-primary opacity-0 peer-checked:opacity-100 transition-opacity duration-200" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</label>
+</section>
+</main>
+<!-- Fixed Bottom Button Area -->
+<div class="fixed bottom-[80px] w-full px-container-margin pb-md pt-lg bg-gradient-to-t from-background via-background/95 to-transparent z-40 pointer-events-none">
+<button class="w-full h-[56px] bg-primary text-on-primary rounded-full flex items-center justify-center gap-sm shadow-[0_8px_16px_rgba(45,106,79,0.25)] pointer-events-auto active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+<span class="font-label-sm text-label-sm text-[15px]">Importér valgte ingredienser</span>
+</button>
+</div>
+<!-- BottomNavBar Shared Component -->
+<nav class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-green-700 dark:text-green-500 font-['Plus_Jakarta_Sans'] text-[11px] font-medium fixed bottom-0 w-full z-50 rounded-t-2xl border-t border-gray-100 dark:border-gray-800 shadow-[0_-4px_12px_rgba(45,106,79,0.05)] flex justify-around items-center h-20 px-4 pb-safe w-full md:hidden">
+<!-- Planner (Inactive) -->
+<a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 px-3 py-1 hover:text-green-600 dark:hover:text-green-300 active:scale-95 transition-transform duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform">calendar_today</span>
+<span>Planner</span>
+</a>
+<!-- Groceries (Active) -->
+<a class="flex flex-col items-center justify-center text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded-xl px-3 py-1 hover:text-green-600 dark:hover:text-green-300 active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span>Groceries</span>
+</a>
+<!-- Recipes (Inactive) -->
+<a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 px-3 py-1 hover:text-green-600 dark:hover:text-green-300 active:scale-95 transition-transform duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform">restaurant</span>
+<span>Recipes</span>
+</a>
+<!-- Pantry (Inactive) -->
+<a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 px-3 py-1 hover:text-green-600 dark:hover:text-green-300 active:scale-95 transition-transform duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform">inventory_2</span>
+<span>Pantry</span>
+</a>
+</nav>
+</body></html>

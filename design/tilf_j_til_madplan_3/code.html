@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html lang="da"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tilføj til madplan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#f0f1f2",
+                        "outline": "#707973",
+                        "inverse-surface": "#2e3132",
+                        "tertiary-fixed-dim": "#bfcab2",
+                        "on-surface-variant": "#404943",
+                        "surface-container-low": "#f3f4f5",
+                        "on-background": "#191c1d",
+                        "surface": "#f8f9fa",
+                        "tertiary-container": "#57624e",
+                        "primary-container": "#2d6a4f",
+                        "on-secondary-fixed-variant": "#683d00",
+                        "tertiary-fixed": "#dbe7cd",
+                        "on-tertiary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary": "#404a38",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#bfc9c1",
+                        "secondary-fixed-dim": "#ffb86b",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#d9dadb",
+                        "primary-fixed": "#b1f0ce",
+                        "on-primary-fixed": "#002114",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-container": "#edeeef",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#151e0f",
+                        "surface-bright": "#f8f9fa",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e1e3e4",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#191c1d",
+                        "primary": "#0f5238",
+                        "on-secondary-container": "#663b00",
+                        "secondary-fixed": "#ffdcbc",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "surface-tint": "#2c694e",
+                        "secondary-container": "#fd9d1a",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-tertiary-container": "#d1ddc4",
+                        "primary-fixed-dim": "#95d4b3",
+                        "on-tertiary-fixed-variant": "#3f4a37",
+                        "on-primary-container": "#a8e7c5",
+                        "inverse-primary": "#95d4b3",
+                        "secondary": "#895100",
+                        "on-secondary-fixed": "#2c1700",
+                        "background": "#f8f9fa"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "40px",
+                        "gutter": "16px",
+                        "lg": "24px",
+                        "container-margin": "20px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "unit": "4px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Plus Jakarta Sans"],
+                        "h1": ["Plus Jakarta Sans"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "label-sm": ["13px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style></head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md antialiased pb-24">
+<!-- TopAppBar from JSON Component -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-5 h-16 bg-stone-50 border-b border-stone-200">
+<button aria-label="Close" class="text-emerald-700 hover:bg-stone-100 p-2 rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">close</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-semibold text-xl text-emerald-800">Kitchen Harmony</h1>
+<button aria-label="More options" class="text-stone-500 hover:bg-stone-100 p-2 rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_vert</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow pt-16 px-container-margin w-full max-w-2xl mx-auto flex flex-col gap-lg mt-md">
+<!-- Screen Title -->
+<div>
+<h2 class="font-h1 text-h1 text-on-background">Tilføj til madplan</h2>
+</div>
+<!-- Segmented Control (Tabs) -->
+<div class="flex bg-surface-container-low p-1 rounded-xl w-full border border-surface-variant">
+<button class="flex-1 py-2 px-4 rounded-lg bg-surface text-primary font-label-sm text-label-sm shadow-[0_2px_4px_rgba(0,0,0,0.05)] border border-surface-variant">
+                Søg opskrifter
+            </button>
+<button class="flex-1 py-2 px-4 rounded-lg text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+                Eget måltid
+            </button>
+</div>
+<!-- Tab Content: Søg opskrifter -->
+<div class="flex flex-col gap-md">
+<!-- Search Bar -->
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-3 pl-12 pr-4 text-body-md text-on-background placeholder:text-outline focus:ring-2 focus:ring-primary focus:bg-surface transition-colors" placeholder="Søg efter opskrifter..." type="text"/>
+</div>
+<!-- Recent/Popular Recipes List -->
+<div class="flex flex-col gap-sm">
+<h3 class="font-h2 text-body-lg text-on-surface-variant mb-xs">Populære opskrifter</h3>
+<!-- Recipe Item 1 -->
+<div class="flex items-center gap-md p-3 bg-surface rounded-xl shadow-[0_2px_8px_rgba(45,106,79,0.05)] border border-surface-variant cursor-pointer hover:border-primary-fixed-dim transition-colors">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-surface-container-highest">
+<img alt="Recipe thumbnail" class="w-full h-full object-cover" data-alt="A close-up, appetizing shot of a vibrant, healthy green salad bowl with mixed greens, avocado, nuts, and a light dressing. The lighting is bright and natural, creating a fresh and inviting mood typical of a modern culinary lifestyle brand. The background is a slightly blurred, clean marble countertop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLXnQ8Ou7WmhJmuycgqOcyhjtL6cmMNL-IK3o1DDjUCf08TQp4lrdbMSLOL6x4yIHoby5NSnXLmogN60mgLdUdPx08MnUg9j-6ji8C7mDXcMUDyEe4rkUcFDuKV9YFRneeyxT_y17xBh5ETeVo48dMRKWl91XRjlQt4ByXA97MybU91UDhtKDLm2erCaGlDixKXOb2jmLC5EOGvLSxgJ93f_BS1HuaoxU2_elBzttNIsaCAdja3A7hYy_TcBZgm_jgb8nrA4COGpI"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-h2 text-body-md text-on-background line-clamp-1">Kyllingesalat med avokado</h4>
+<div class="flex items-center gap-1 text-on-surface-variant mt-1">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0;">schedule</span>
+<span class="font-label-sm text-label-sm">15 min</span>
+</div>
+</div>
+<button class="p-2 text-primary hover:bg-primary-container/10 rounded-full transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add_circle</span>
+</button>
+</div>
+<!-- Recipe Item 2 -->
+<div class="flex items-center gap-md p-3 bg-surface rounded-xl shadow-[0_2px_8px_rgba(45,106,79,0.05)] border border-surface-variant cursor-pointer hover:border-primary-fixed-dim transition-colors">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-surface-container-highest">
+<img alt="Recipe thumbnail" class="w-full h-full object-cover" data-alt="A warm, overhead shot of a rustic bowl filled with creamy pasta dish garnished with fresh herbs and parmesan cheese. The scene is lit with soft, warm daylight, emphasizing the rich textures and comforting nature of the meal. The setting is a minimalist wooden dining table, aligning with a fresh, wholesome aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1RVpIu67EQeJcCO3i3KOtSpvuETikrm945frp6mDFEkZE7gR0sEb2l2mlGzYfTQBQT2BpD5vEtB1Ayrw3h4e8B1-OqiW7BttDSAz3B0PclzqlwgNrwktabHuIPeYqTqFxwtvifAy1F4jLNr8h7jURIurvivNbXTyLAA_N5MCkPub-6fnJAhdpKwC1ctgERpDaitD-2YdNrcgTSJfOrRj267XX5Z3040A7aFsDBu-WUaqaqTbleewvwtdXwL_p0bd4Q2lMtAZ7ZZc"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-h2 text-body-md text-on-background line-clamp-1">Cremet svampepasta</h4>
+<div class="flex items-center gap-1 text-on-surface-variant mt-1">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0;">schedule</span>
+<span class="font-label-sm text-label-sm">25 min</span>
+</div>
+</div>
+<button class="p-2 text-primary hover:bg-primary-container/10 rounded-full transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add_circle</span>
+</button>
+</div>
+</div>
+</div><div class="flex flex-col gap-sm">
+<h3 class="font-h2 text-body-lg text-on-surface-variant">Noter</h3>
+<div class="relative w-full">
+<textarea class="w-full bg-surface-container-low border-none rounded-xl p-4 text-body-md text-on-background placeholder:text-outline focus:ring-2 focus:ring-primary focus:bg-surface transition-colors min-h-[100px] resize-none" placeholder="F.eks. husk at tage kødet ud af fryseren..."></textarea>
+</div>
+</div>
+<hr class="border-surface-variant my-2"/>
+<!-- Global Selection: Vælg måltid -->
+<div class="flex flex-col gap-sm">
+<h3 class="font-h2 text-body-lg text-on-surface-variant">Vælg måltid</h3>
+<div class="flex flex-wrap gap-sm">
+<!-- Selected Chip -->
+<button class="px-4 py-2 rounded-full border border-primary bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+                    Aftensmad
+                </button>
+<!-- Unselected Chips -->
+<button class="px-4 py-2 rounded-full border border-outline-variant bg-surface text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-low transition-colors">
+                    Morgenmad
+                </button>
+<button class="px-4 py-2 rounded-full border border-outline-variant bg-surface text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-low transition-colors">
+                    Frokost
+                </button>
+<button class="px-4 py-2 rounded-full border border-outline-variant bg-surface text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-low transition-colors">
+                    Snack
+                </button>
+</div>
+</div><!-- Quantity & Unit Selection -->
+<div class="flex flex-col gap-sm">
+<h3 class="font-h2 text-body-lg text-on-surface-variant">Mængde</h3>
+<div class="flex gap-4">
+<!-- Quantity Picker (Custom Component) -->
+<div class="flex-1">
+<div class="flex items-center justify-between bg-surface border border-outline-variant rounded-lg p-2 shadow-sm shadow-primary/5 h-[58px]">
+<button class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors active:scale-95" type="button">
+<span class="material-symbols-outlined text-[20px]">remove</span>
+</button>
+<input aria-label="Mængde" class="w-16 text-center font-body-lg text-body-lg text-on-surface bg-transparent border-none focus:ring-0 p-0" type="number" value="2"/>
+<button class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors active:scale-95" type="button">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+</div>
+</div>
+<!-- Unit Selector -->
+<div class="flex-1">
+<div class="relative w-full h-full">
+<select class="w-full h-[58px] bg-surface border border-outline-variant rounded-lg px-4 appearance-none font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm shadow-primary/5 cursor-pointer" id="item-unit">
+<option value="pers">pers.</option>
+<option value="portioner">portioner</option>
+<option value="stk">stk</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
+<span class="material-symbols-outlined text-outline-variant">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Global Selection: Vælg dag -->
+<div class="flex flex-col gap-sm">
+<h3 class="font-h2 text-body-lg text-on-surface-variant">Vælg dag</h3>
+<div class="flex overflow-x-auto no-scrollbar gap-sm pb-2 -mx-container-margin px-container-margin">
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1">Man</span>
+<span class="font-h2 text-h2">12</span>
+</button>
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1">Tir</span>
+<span class="font-h2 text-h2">13</span>
+</button>
+<!-- Selected Day -->
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-primary bg-primary-fixed text-on-primary-fixed shadow-[0_2px_8px_rgba(45,106,79,0.15)] transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1 text-primary">Ons</span>
+<span class="font-h2 text-h2 text-primary">14</span>
+</button>
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1">Tor</span>
+<span class="font-h2 text-h2">15</span>
+</button>
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1">Fre</span>
+<span class="font-h2 text-h2">16</span>
+</button>
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1">Lør</span>
+<span class="font-h2 text-h2">17</span>
+</button>
+<button class="flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors shrink-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wider mb-1">Søn</span>
+<span class="font-h2 text-h2">18</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Bottom Action Area -->
+<div class="fixed bottom-0 left-0 w-full bg-surface/90 backdrop-blur-md border-t border-surface-variant p-container-margin pb-[env(safe-area-inset-bottom,20px)] z-40">
+<div class="max-w-2xl mx-auto">
+<button class="w-full bg-primary text-on-primary font-h2 text-body-lg h-12 rounded-xl shadow-[0_4px_12px_rgba(45,106,79,0.2)] hover:bg-primary-container hover:text-on-primary-container transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add</span>
+                Tilføj til madplan
+            </button>
+</div>
+</div>
+</body></html>

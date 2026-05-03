@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kitchen Harmony - Recipes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-container": "#a8e7c5",
+                      "on-tertiary-fixed": "#151e0f",
+                      "outline": "#707973",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f3f4f5",
+                      "surface-tint": "#2c694e",
+                      "inverse-surface": "#2e3132",
+                      "on-surface-variant": "#404943",
+                      "tertiary-fixed": "#dbe7cd",
+                      "on-surface": "#191c1d",
+                      "error-container": "#ffdad6",
+                      "secondary": "#895100",
+                      "on-secondary-container": "#663b00",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed-dim": "#ffb86b",
+                      "on-tertiary": "#ffffff",
+                      "background": "#f8f9fa",
+                      "tertiary": "#404a38",
+                      "on-primary-fixed-variant": "#0e5138",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-primary-fixed": "#002114",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#b1f0ce",
+                      "surface-container-high": "#e7e8e9",
+                      "primary-container": "#2d6a4f",
+                      "outline-variant": "#bfc9c1",
+                      "primary": "#0f5238",
+                      "surface-container": "#edeeef",
+                      "tertiary-container": "#57624e",
+                      "on-error": "#ffffff",
+                      "primary-fixed-dim": "#95d4b3",
+                      "surface-variant": "#e1e3e4",
+                      "inverse-primary": "#95d4b3",
+                      "surface-container-highest": "#e1e3e4",
+                      "secondary-container": "#fd9d1a",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#191c1d",
+                      "on-secondary": "#ffffff",
+                      "surface-dim": "#d9dadb",
+                      "secondary-fixed": "#ffdcbc",
+                      "on-tertiary-fixed-variant": "#3f4a37",
+                      "on-secondary-fixed-variant": "#683d00",
+                      "surface-bright": "#f8f9fa",
+                      "on-tertiary-container": "#d1ddc4",
+                      "tertiary-fixed-dim": "#bfcab2",
+                      "on-secondary-fixed": "#2c1700",
+                      "surface": "#f8f9fa"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "container-margin": "20px",
+                      "gutter": "16px",
+                      "xs": "4px",
+                      "sm": "8px",
+                      "unit": "4px",
+                      "xl": "40px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "h1": ["Plus Jakarta Sans"],
+                      "label-sm": ["Be Vietnam Pro"],
+                      "h2": ["Plus Jakarta Sans"],
+                      "body-md": ["Be Vietnam Pro"],
+                      "body-lg": ["Be Vietnam Pro"]
+              },
+              "fontSize": {
+                      "h1": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "label-sm": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                      "h2": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+        /* Hide scrollbar for category list */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen">
+<!-- TopAppBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-16 bg-[#F8F9FA] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 pt-safe">
+<button class="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:opacity-70 transition-opacity p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="font-['Plus_Jakarta_Sans'] text-lg font-semibold tracking-tight text-[#2D6A4F] dark:text-emerald-400 font-bold text-xl">
+            Kitchen Harmony
+        </div>
+<button class="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:opacity-70 transition-opacity p-2 rounded-full flex items-center justify-center overflow-hidden h-9 w-9 bg-surface-container-high">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="person">person</span>
+</button>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-[88px] pb-[104px] px-container-margin">
+<!-- Search -->
+<div class="w-full bg-surface-container-low rounded-full h-12 flex items-center px-4 border border-transparent focus-within:border-primary-container focus-within:bg-surface-container-lowest shadow-sm transition-all duration-200">
+<span class="material-symbols-outlined text-outline" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full ml-sm text-on-surface font-body-md placeholder-outline-variant h-full outline-none" placeholder="Search recipes, ingredients..." type="text"/>
+<button class="p-1 text-outline hover:text-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+</button>
+</div>
+<!-- Categories (Chips) -->
+<div class="flex gap-sm overflow-x-auto no-scrollbar py-4 snap-x mt-sm">
+<button class="snap-start shrink-0 h-10 px-4 rounded-full bg-primary-container text-on-primary border border-primary-container font-label-sm flex items-center justify-center shadow-sm">
+                All Recipes
+            </button>
+<button class="snap-start shrink-0 h-10 px-4 rounded-full bg-surface-container-lowest text-on-surface-variant border border-outline-variant font-label-sm flex items-center justify-center shadow-sm hover:bg-surface-container-low transition-colors">
+                Breakfast
+            </button>
+<button class="snap-start shrink-0 h-10 px-4 rounded-full bg-surface-container-lowest text-on-surface-variant border border-outline-variant font-label-sm flex items-center justify-center shadow-sm hover:bg-surface-container-low transition-colors">
+                Lunch
+            </button>
+<button class="snap-start shrink-0 h-10 px-4 rounded-full bg-surface-container-lowest text-on-surface-variant border border-outline-variant font-label-sm flex items-center justify-center shadow-sm hover:bg-surface-container-low transition-colors">
+                Dinner
+            </button>
+<button class="snap-start shrink-0 h-10 px-4 rounded-full bg-surface-container-lowest text-on-surface-variant border border-outline-variant font-label-sm flex items-center justify-center shadow-sm hover:bg-surface-container-low transition-colors">
+                Snack
+            </button>
+</div>
+<!-- Recipe Bento Grid -->
+<div class="grid grid-cols-2 gap-gutter mt-sm">
+<!-- Featured Card (Full Width) -->
+<article class="col-span-2 aspect-[16/9] relative rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(45,106,79,0.08)] bg-surface-container group">
+<img alt="Avocado Toast" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A beautifully plated avocado toast topped with a perfectly poached egg, microgreens, and a sprinkle of chili flakes. The dish is presented on a rustic, artisanal ceramic plate, resting on a clean, sun-drenched wooden table. The lighting is soft and natural, embodying a fresh, modern culinary aesthetic with vibrant greens and warm tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXlDY0KHKo0QlZ9zhblyoNKUAjhPrqbuNQTBYZ20yC9njtzMexYQYvfjaquPFdVZgQ9LqiNwq_oy7CoyapEVOLxgphP2mKJN59ZXZkBao8Ixq7MTtBpYq2TenR7iY3rWp7UMYyipKELFfTrvL1Dm_O9ali0CFfghLVD3IT9_nWrHx_I56MDyD-6kXpym4GoX8qfzBdI0OejG9h1s5whGm37u6SB9lvcVDOV_mjPh3wXuHTzOPF1nVeWJNWCVlH7JWqN2BXmq_05Pc"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+<button class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/40 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="favorite_border">favorite_border</span>
+</button>
+<div class="absolute bottom-0 left-0 w-full p-4 flex flex-col justify-end">
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-primary-container/90 text-on-primary-container px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">Breakfast</span>
+<span class="text-white/80 font-label-sm text-[11px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span> 15 min
+                        </span>
+</div>
+<h3 class="font-h2 text-h2 text-white line-clamp-2 drop-shadow-md">Avocado Toast with Poached Egg</h3>
+</div>
+</article>
+<!-- Square Card 1 -->
+<article class="col-span-1 aspect-square relative rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(45,106,79,0.08)] bg-surface-container group">
+<img alt="Fresh Salad Bowl" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A vibrant, fresh salad bowl featuring crisp romaine lettuce, cherry tomatoes, sliced cucumbers, and grilled chicken breast strips. The bowl is set against a clean, bright white background, illuminated by soft studio lighting that highlights the natural colors and textures of the healthy ingredients, capturing a sense of wellness and fresh minimalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSw0h-TEm5D8CS4qKOgpqg6C53zNnoF9koCiJzfJIwt8SPi56eVPpZrcYCMV5iPttiNS9ooJRQeu_HTBWPxhlCm31EdCreCyY3I6PDc2zTkTtD3qWsb6v5bkqvhh819Z-DZa0cE0tfmxF7OJLRyd3y5QGO63VOHFz-lFr_cbGqjKFSG4LYNXaRNUbkGp9R1zUhpdnHfwLVsZvsQkFdgQy5XtLfzrGhrNhicbYHjdSAbw2hDIHIfBvua0QCSoZV2aZHbmkL9wj5h3Y"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-3">
+<span class="text-white/80 font-label-sm text-[10px] mb-1 block">Lunch</span>
+<h3 class="font-body-md text-body-md text-white font-semibold line-clamp-2 leading-tight">Grilled Chicken Garden Salad</h3>
+</div>
+</article>
+<!-- Square Card 2 -->
+<article class="col-span-1 aspect-square relative rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(45,106,79,0.08)] bg-surface-container group">
+<img alt="Hearty Soup" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A comforting, steaming bowl of hearty minestrone soup filled with vibrant vegetables and pasta, garnished with fresh basil. The bowl sits on a light linen napkin over a smooth marble countertop. The scene is warmly lit, evoking a cozy, wholesome family dinner atmosphere while maintaining a clean, contemporary visual style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuOQBXv2wdfW2keXY4a2dpQH8yaAyLxmyXBhELCLsUi6UhHse0fA8wIbRx14Bj--HfadoPlmerFyRFMJ1sGeC9-ySwrxb1X5A0ywXnPAA1CDlnI7CJ5AbO5y1ey0gGq5kZrHXYfgju5UKqsXQWtvKfosASwvwCaulAlrseZFAJHAlq5JDGkHH--Hd1-6OuvMwAJZYvpsw3W0Tz34LCcudBC4aX0rAX9Sbgp4AJEwePjQd-NnsHFEp4q-6YteQeksOBFEb528dWG9Q"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-3">
+<span class="text-white/80 font-label-sm text-[10px] mb-1 block">Dinner</span>
+<h3 class="font-body-md text-body-md text-white font-semibold line-clamp-2 leading-tight">Hearty Minestrone Soup</h3>
+</div>
+</article>
+<!-- Wide Card (Snack) -->
+<article class="col-span-2 flex items-center bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(45,106,79,0.06)] border border-outline-variant/30 p-2 gap-3">
+<div class="w-20 h-20 shrink-0 rounded-lg overflow-hidden relative">
+<img alt="Mixed Nuts Snack" class="absolute inset-0 w-full h-full object-cover" data-alt="A top-down view of a small ceramic bowl filled with mixed nuts, including almonds, walnuts, and cashews, alongside a few fresh berries. The bowl is placed on a bright, minimalist kitchen counter. The lighting is crisp and even, highlighting the textures of the nuts, promoting a healthy, quick, and organized lifestyle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXsL7NgSyhqLyDXV26fwhfNDybL5cITmugoa5NUcq-vASTHqEmfBm5rN4Sb00OJk29eATZtdmYlJeN-ysQMgRqJPvV8dNkBDq1L9-JVIYPNEfjk4k1fgFHJ7Hvj5btqHKknE0So7ApEJ23xnThUBZiZPkMrSVaSTRPqfXMQYtQkN0vFE1_WXs6_pbyjxgSxuTbugng4-ZzifDz97QUFyR0NWmyv7Q3a_ugf2PxxlAt-V0XxnRkbu9Op7T9l_mtWFBRvuTJhioqhxg"/>
+</div>
+<div class="flex flex-col justify-center flex-1 py-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-primary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">Snack</span>
+<span class="text-outline font-label-sm text-[11px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="bolt">bolt</span> Quick
+                        </span>
+</div>
+<h3 class="font-body-md text-body-md text-on-surface font-semibold line-clamp-1">Energy Boosting Nut Mix</h3>
+</div>
+</article>
+<!-- Another Full Width to show scrolling -->
+<article class="col-span-2 aspect-[21/9] relative rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(45,106,79,0.08)] bg-surface-container group mt-2">
+<img alt="Grilled Salmon" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A beautifully arranged piece of grilled salmon resting on a bed of quinoa and steamed asparagus. The plating is elegant and precise, set against a pristine white plate. The lighting is bright and directional, casting soft shadows that emphasize the fresh ingredients and the rich, appetizing colors of the healthy dinner option." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWLaTImfB3o_PGBJ24ezpqBsHd5O1F-edIgW9llmR7ORA6tAlwA0IQzYde388g1iiy6l_zWeKn16WbdCf0qLoCP_Ec029rGFxlGvX4Ip8WNcHeD_Iw8hXOdLPHjhhwXHZYsB9j69cPjJi1w9Lu5PAdemmFJsE5AcJvZ5PU2omCjwRZbyoL_z7I-zonUnuSQegplbCsPXxuPPUA7V9u37Q7TB5sp65GKbCGZuP_WF2jNe4VcXEQjQI9BLYp-P6l7kA-dCnmMYXYteo"/>
+<div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
+<div class="absolute inset-y-0 left-0 w-2/3 p-4 flex flex-col justify-center">
+<span class="text-white/80 font-label-sm text-[10px] mb-1 block">Dinner</span>
+<h3 class="font-h2 text-h2 text-white line-clamp-2 drop-shadow-md mb-2">Lemon Herb Grilled Salmon</h3>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded-full border border-white/40 text-white text-[10px] font-medium backdrop-blur-sm">High Protein</span>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-20 pb-safe bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_12px_rgba(45,106,79,0.08)]">
+<!-- Item 1: Meal Plan (Inactive) -->
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-1 hover:text-[#2D6A4F] dark:hover:text-emerald-300 transition-colors active:scale-95 duration-200 ease-out group">
+<span class="material-symbols-outlined text-[24px] mb-1 group-hover:scale-110 transition-transform" data-icon="calendar_today">calendar_today</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Meal Plan</span>
+</button>
+<!-- Item 2: Grocery List (Inactive) -->
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-1 hover:text-[#2D6A4F] dark:hover:text-emerald-300 transition-colors active:scale-95 duration-200 ease-out group">
+<span class="material-symbols-outlined text-[24px] mb-1 group-hover:scale-110 transition-transform" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Grocery List</span>
+</button>
+<!-- Item 3: Recipes (Active based on prompt logic) -->
+<button class="flex flex-col items-center justify-center bg-emerald-50 dark:bg-emerald-900/30 text-[#2D6A4F] dark:text-emerald-300 rounded-xl px-5 py-1 active:scale-95 duration-200 ease-out">
+<span class="material-symbols-outlined text-[24px] mb-1" data-icon="restaurant_menu" data-weight="fill" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Recipes</span>
+</button>
+</nav>
+</body></html>

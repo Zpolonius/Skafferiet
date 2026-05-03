@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Kitchen Harmony - Grocery List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&amp;family=Be+Vietnam+Pro:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Safe Area Utilities */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .pt-safe { padding-top: env(safe-area-inset-top, 20px); }
+        
+        /* Hide scrollbar for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-container": "#a8e7c5",
+                      "on-tertiary-fixed": "#151e0f",
+                      "outline": "#707973",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f3f4f5",
+                      "surface-tint": "#2c694e",
+                      "inverse-surface": "#2e3132",
+                      "on-surface-variant": "#404943",
+                      "tertiary-fixed": "#dbe7cd",
+                      "on-surface": "#191c1d",
+                      "error-container": "#ffdad6",
+                      "secondary": "#895100",
+                      "on-secondary-container": "#663b00",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed-dim": "#ffb86b",
+                      "on-tertiary": "#ffffff",
+                      "background": "#f8f9fa",
+                      "tertiary": "#404a38",
+                      "on-primary-fixed-variant": "#0e5138",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-primary-fixed": "#002114",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#b1f0ce",
+                      "surface-container-high": "#e7e8e9",
+                      "primary-container": "#2d6a4f",
+                      "outline-variant": "#bfc9c1",
+                      "primary": "#0f5238",
+                      "surface-container": "#edeeef",
+                      "tertiary-container": "#57624e",
+                      "on-error": "#ffffff",
+                      "primary-fixed-dim": "#95d4b3",
+                      "surface-variant": "#e1e3e4",
+                      "inverse-primary": "#95d4b3",
+                      "surface-container-highest": "#e1e3e4",
+                      "secondary-container": "#fd9d1a",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#191c1d",
+                      "on-secondary": "#ffffff",
+                      "surface-dim": "#d9dadb",
+                      "secondary-fixed": "#ffdcbc",
+                      "on-tertiary-fixed-variant": "#3f4a37",
+                      "on-secondary-fixed-variant": "#683d00",
+                      "surface-bright": "#f8f9fa",
+                      "on-tertiary-container": "#d1ddc4",
+                      "tertiary-fixed-dim": "#bfcab2",
+                      "on-secondary-fixed": "#2c1700",
+                      "surface": "#f8f9fa"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "container-margin": "20px",
+                      "gutter": "16px",
+                      "xs": "4px",
+                      "sm": "8px",
+                      "unit": "4px",
+                      "xl": "40px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "h1": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-sm": [
+                              "Be Vietnam Pro"
+                      ],
+                      "h2": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-md": [
+                              "Be Vietnam Pro"
+                      ],
+                      "body-lg": [
+                              "Be Vietnam Pro"
+                      ]
+              },
+              "fontSize": {
+                      "h1": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "h2": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      }
+              }
+            },
+          }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col pt-safe">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-16 bg-[#F8F9FA] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 pt-safe">
+<button class="w-10 h-10 flex items-center justify-center text-[#2D6A4F] dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:opacity-70 transition-opacity rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="flex-1 flex justify-center">
+<span class="text-[#2D6A4F] dark:text-emerald-400 font-bold text-xl font-['Plus_Jakarta_Sans'] tracking-tight">Kitchen Harmony</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center overflow-hidden rounded-full border-2 border-surface-container hover:bg-slate-100 dark:hover:bg-slate-800 active:opacity-70 transition-opacity">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A close-up portrait of a smiling young woman with natural makeup and shoulder-length hair. The lighting is soft and natural, evoking a fresh, healthy lifestyle aesthetic typical of modern wellness apps. The background is slightly blurred and neutral." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAK0kFR34vqBTpAuNuNplsJiNDgMGxEBinBeP34Nt8QIJg1O2xtF6iaOL4lHIxHXpW9FckVweWzChY1Ii7ZBTKA2xWq0ri8QgpCXS7Fxggn4SDdodHdBC8rSEvD8BUvWhS-cixlCZsh-KsKvpQy6Y7yTQBTtblWd2XDlGa5lyZrp8Q9BrxasTD27sO8DaWjRzt1sh7KhhXLHFZ4eB7qY3YwmZpLI_gqPGCSu09bSakmf3tHa43BdZdlXvzNmQyo8X1hegV1pKWsWdM"/>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 mt-[70px] mb-[100px] px-container-margin overflow-y-auto no-scrollbar">
+<!-- Header Section -->
+<div class="py-lg flex justify-between items-end mb-md">
+<div>
+<h1 class="font-h1 text-h1 text-on-background">Grocery List</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">12 items left to buy</p>
+</div>
+</div>
+<!-- Filter/Tags -->
+<div class="flex space-x-sm overflow-x-auto no-scrollbar pb-md">
+<button class="px-md py-sm rounded-full bg-primary text-on-primary font-label-sm text-label-sm whitespace-nowrap">All Items</button>
+<button class="px-md py-sm rounded-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap">Produce</button>
+<button class="px-md py-sm rounded-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap">Dairy</button>
+<button class="px-md py-sm rounded-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap">Bakery</button>
+</div>
+<!-- Progress Bar -->
+<div class="bg-surface-container-high rounded-full h-2 mb-lg overflow-hidden">
+<div class="bg-primary h-full w-1/3 rounded-full"></div>
+</div>
+<!-- List Content -->
+<div class="space-y-xl">
+<!-- Category: Produce -->
+<section>
+<h2 class="font-h2 text-h2 text-primary-container mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-xl" data-icon="nutrition">nutrition</span>
+                    Produce
+                </h2>
+<div class="space-y-sm">
+<!-- Item: Hass Avocados (Normal State) -->
+<div class="relative bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(45,106,79,0.08)] flex items-center p-md min-h-[80px]">
+<!-- Background action hints (visible when swiping, mocked here conceptually as layers) -->
+<div class="absolute inset-y-0 left-0 w-full flex justify-between px-md items-center pointer-events-none -z-10">
+<div class="flex items-center text-primary-container"><span class="material-symbols-outlined filled">check_circle</span></div>
+<div class="flex items-center text-error"><span class="material-symbols-outlined">delete</span></div>
+</div>
+<!-- Card Surface -->
+<div class="w-full bg-surface-container-lowest flex items-center gap-md z-10">
+<button class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center text-transparent hover:border-primary transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</button>
+<img alt="Hass Avocados" class="w-12 h-12 rounded-lg object-cover bg-surface-container" data-alt="A vibrant, high-quality close-up of fresh Hass avocados cut in half on a light surface. The lighting is bright and natural, highlighting the rich green texture of the avocado flesh, fitting a fresh minimalism food app aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBm8tRJdk1gOXHHx3vE6l2WFwaaqJAvKewp0MWFV0SDUxnPpU8gWVbunVEY1gwR0nhS36xz8wrVorW8sDXmrtGvQufbCekkKExyihOB4o8tBPqZ_o_KMmiwcIOL_31XQwdCLiw_YkCBL4tsXbFHe7_xhqOWNXPJyuEU1g3EP9JC70NV8XhzYiEX9h_SiY3yh1izXPOas8gpzMQVdcOsE-nQDPPhNgOu1zC_p0oPylZ7IICB47MgpnnpMVKknUPt9NMl-xG2wM5mIrM"/>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Hass Avocados</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">Organic, Ripe</p>
+</div>
+<div class="flex items-center gap-sm bg-surface-container-low rounded-full px-sm py-[2px] flex-shrink-0">
+<button class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-lg">-</button>
+<span class="font-label-sm text-label-sm w-4 text-center">4</span>
+<button class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg">+</button>
+</div>
+</div>
+</div>
+<!-- Item: Cherry Tomatoes (Swipe Check Demo) -->
+<div class="relative bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(45,106,79,0.08)] flex items-center p-md min-h-[80px]">
+<!-- Background action hints -->
+<div class="absolute inset-y-0 left-0 w-full flex justify-between px-md items-center bg-primary-fixed-dim -z-10">
+<div class="flex items-center text-primary gap-sm">
+<span class="material-symbols-outlined filled">check_circle</span>
+<span class="font-label-sm text-label-sm">Got it!</span>
+</div>
+</div>
+<!-- Card Surface (Shifted Right) -->
+<div class="w-full bg-surface-container-lowest flex items-center gap-md z-10 transform translate-x-[80px] transition-transform">
+<button class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center text-transparent flex-shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</button>
+<img alt="Cherry Tomatoes" class="w-12 h-12 rounded-lg object-cover bg-surface-container" data-alt="A cluster of bright red cherry tomatoes on the vine, resting on a clean, light countertop. Soft, diffused lighting enhances the glossy skin and fresh, vibrant red color, aligning with a healthy, minimalist kitchen aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPmouMKaZ8V9dwjFQrCnNQVWZb67KF41h1-yluVcmTdi9pwi5wu8ef53XLCIzlgQsBXBgoWuJwGfkY7znv-nWKE4GEY9OHRbW2ry0SkfUU3pyKacrr3lHm9Tk9bqNlw429DKUM0sjIxzaRUl9f2diVtoqO94WasswcLUuZcAVUzF0p3g_6NRCyzuXlmnfLudfdJ0OzmUzB056YfimRNdujjTvfvEvew851KUmfWRqt5EicqyJi3StDNGeW_iR70btQtc9OGUqklZA"/>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Cherry Tomatoes</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">Vine-ripened</p>
+</div>
+<div class="flex items-center gap-sm bg-surface-container-low rounded-full px-sm py-[2px] flex-shrink-0">
+<button class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-lg">-</button>
+<span class="font-label-sm text-label-sm w-4 text-center">1</span>
+<button class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg">+</button>
+</div>
+</div>
+</div>
+<!-- Item: Spinach (Checked State) -->
+<div class="relative bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(45,106,79,0.08)] flex items-center p-md min-h-[80px] opacity-50">
+<div class="w-full bg-surface-container-lowest flex items-center gap-md z-10">
+<button class="w-6 h-6 rounded-md bg-primary flex items-center justify-center text-on-primary flex-shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</button>
+<img alt="Baby Spinach" class="w-12 h-12 rounded-lg object-cover bg-surface-container grayscale" data-alt="A bowl of fresh green baby spinach leaves on a minimalist white background. The image is evenly lit, showing the crisp texture of the leaves, suitable for a clean, modern food photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCLlJKRKUv_Gu4iJf4hyLv1qdWKVazQY3RLLezgv-K6apRxNk56TkDgIhJMPer0KJMxniXQWx_QJvtIvHgDKfO0lNCY2i1IWlZtDa7JjmnJBnNbf26NeT9-VPlfCHome2ACG2DDGcBvzGqHC2fPkUjGCNunOODp5HFrgxHHbZ5PJJT4Z-79bIBetptcC4TWd4sK_302RVP04wj_bE9SPVI0RiFp66AEZIlvj0prgCZDuG3CBdsOJSpOcJBN6oBn2FZOfJcQI96D2Q"/>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate line-through">Baby Spinach</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">Pre-washed</p>
+</div>
+<div class="flex items-center gap-sm flex-shrink-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 bags</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Category: Dairy -->
+<section>
+<h2 class="font-h2 text-h2 text-secondary-container mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-xl" data-icon="water_drop">water_drop</span>
+                    Dairy
+                </h2>
+<div class="space-y-sm">
+<!-- Item: Almond Milk (Swipe Delete Demo) -->
+<div class="relative bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(45,106,79,0.08)] flex items-center p-md min-h-[80px]">
+<!-- Background action hints -->
+<div class="absolute inset-y-0 left-0 w-full flex justify-end px-md items-center bg-error-container -z-10">
+<div class="flex items-center text-error gap-sm">
+<span class="font-label-sm text-label-sm">Delete</span>
+<span class="material-symbols-outlined">delete</span>
+</div>
+</div>
+<!-- Card Surface (Shifted Left) -->
+<div class="w-full bg-surface-container-lowest flex items-center gap-md z-10 transform -translate-x-[80px] transition-transform">
+<button class="w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center text-transparent flex-shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</button>
+<img alt="Almond Milk" class="w-12 h-12 rounded-lg object-cover bg-surface-container" data-alt="A glass bottle or carton of fresh almond milk sitting on a light wooden table. Soft morning sunlight creates a warm, healthy, and inviting atmosphere, characteristic of a premium wellness brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCe-nXtwbDlLPsxqZfKDoAgpFkWyd6jg3J2E-grq8AxBjQuSNpt-1FuJ4puiqAfmWCFPAE-Fjrs3uqUMTPE7RA8SHrguIYuz-nrBLLMWh4HEHnRMgDYuoWaLJujHxVJi_WSVQtUy_GmfGwm6EFvMs8Zn-Ky-vWhih_UVYjK4cXWQgHZlO1iHi8JQfwUnNfvfiFrolvrWl3sKj7G7PA4OblEsVJ4dA5aGx5AmovFJVIrkfDNZzln1ELxiqsoat5xHbiE6fkhQRUVPlk"/>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Unsweetened Almond Milk</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">Vanilla flavor</p>
+</div>
+<div class="flex items-center gap-sm bg-surface-container-low rounded-full px-sm py-[2px] flex-shrink-0">
+<button class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-lg">-</button>
+<span class="font-label-sm text-label-sm w-4 text-center">1</span>
+<button class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg">+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<div class="fixed bottom-[100px] right-6 flex flex-col gap-4 items-end z-50">
+<!-- Import Button as Secondary FAB -->
+<button class="flex items-center gap-2 px-4 h-12 rounded-full bg-secondary-container text-on-secondary-container shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-xl">calendar_add_on</span>
+<span class="font-label-sm text-label-sm font-semibold">Importér</span>
+</button>
+<!-- Primary Add FAB -->
+<button class="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
+</button>
+</div><nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-20 pb-safe bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-t-2xl shadow-[0_-4px_12px_rgba(45,106,79,0.08)]">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-1 hover:text-[#2D6A4F] dark:hover:text-emerald-300 transition-colors active:scale-95 duration-200 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="calendar_today">calendar_today</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Meal Plan</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-emerald-50 dark:bg-emerald-900/30 text-[#2D6A4F] dark:text-emerald-300 rounded-xl px-5 py-1 hover:text-[#2D6A4F] dark:hover:text-emerald-300 transition-colors active:scale-95 duration-200 ease-out" href="#">
+<span class="material-symbols-outlined mb-1 filled" data-icon="shopping_basket">shopping_basket</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Grocery List</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-1 hover:text-[#2D6A4F] dark:hover:text-emerald-300 transition-colors active:scale-95 duration-200 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium">Recipes</span>
+</a>
+</nav>
+</body></html>
