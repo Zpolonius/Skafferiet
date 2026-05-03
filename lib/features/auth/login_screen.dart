@@ -11,6 +11,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
@@ -48,9 +49,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 60),
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: 80,
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: 80,
+                      width: 80,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Text(
@@ -70,6 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 
                 if (!_isLogin) ...[
                   TextField(
+                    controller: _nameController,
                     decoration: const InputDecoration(
                       labelText: 'Fulde navn',
                       prefixIcon: Icon(Icons.person_outline),
@@ -110,10 +130,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 FilledButton(
                   onPressed: authState.isLoading 
                     ? null 
-                    : () => ref.read(authProvider.notifier).login(
-                        _emailController.text, 
-                        _passwordController.text,
-                      ),
+                    : () {
+                        print('DEBUG: Button pressed. Mode isLogin: $_isLogin');
+                        if (_isLogin) {
+                          print('DEBUG: Attempting login for ${_emailController.text}');
+                          ref.read(authProvider.notifier).login(
+                            _emailController.text, 
+                            _passwordController.text,
+                          );
+                        } else {
+                          print('DEBUG: Attempting signup for ${_emailController.text} with name: ${_nameController.text}');
+                          ref.read(authProvider.notifier).signUp(
+                            _emailController.text, 
+                            _passwordController.text,
+                            _nameController.text.isEmpty ? 'Bruger' : _nameController.text,
+                          );
+                        }
+                      },
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

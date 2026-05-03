@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skafferiet/features/home/home_screen.dart';
-import 'package:skafferiet/features/auth/auth_provider.dart';
-import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
-import 'package:skafferiet/features/grocery/grocery_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
@@ -21,8 +18,9 @@ void main() {
       ),
     );
 
-    // Da vi bruger mock data i providers, forventer vi "Godmorgen/dag/aften, Mette!"
-    // (Vi kan ikke nemt styre DateTime.now() i en simpel test, men vi kan tjekke for én af hilsnerne)
+    // Vent på at alle animationer og data er færdige
+    await tester.pumpAndSettle();
+
     expect(find.textContaining('Mette!'), findsOneWidget);
     expect(find.text('Her er dit overblik for i dag.'), findsOneWidget);
   });
@@ -35,6 +33,8 @@ void main() {
         ),
       ),
     );
+
+    await tester.pumpAndSettle();
 
     expect(find.text('Tilføj måltid'), findsOneWidget);
     expect(find.text('Tilføj vare'), findsOneWidget);
