@@ -21,13 +21,6 @@ class MealPlanScreen extends ConsumerWidget {
       body: SafeArea(
         child: mealPlan.when(
           data: (plan) {
-            if (plan.days.values.every((d) => d.breakfast.recipe == null && d.lunch.recipe == null && d.dinner.recipe == null)) {
-               return const EmptyStateWidget(
-                title: 'Madplanen er tom',
-                message: 'Gå til opskrifter for at planlægge din uge.',
-                lottieUrl: 'https://lottie.host/8e2f6943-34e4-4c47-976e-581d6f225e5a/pM1f3Z6nZ4.json',
-              );
-            }
             final dailyPlan = plan.days[selectedDay] ?? DailyPlan.empty();
             return CustomScrollView(
               slivers: [
@@ -363,16 +356,33 @@ class _EmptySlotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.5),
+          style: BorderStyle.solid,
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.add_circle_outline, color: AppColors.outline.withValues(alpha: 0.5)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.add_circle_outline, 
+              color: AppColors.primary.withValues(alpha: 0.4),
+              size: 20,
+            ),
+          ),
           const SizedBox(width: 16),
-          Text('Tilføj måltid',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.outline.withValues(alpha: 0.5),
-                  )),
+          Text(
+            'Tilføj ${title.toLowerCase()}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.outline.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
         ],
       ),
     );

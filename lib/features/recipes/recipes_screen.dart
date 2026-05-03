@@ -6,6 +6,7 @@ import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 
 class RecipesScreen extends ConsumerStatefulWidget {
   const RecipesScreen({super.key});
@@ -15,6 +16,7 @@ class RecipesScreen extends ConsumerStatefulWidget {
 }
 
 class _RecipesScreenState extends ConsumerState<RecipesScreen> {
+  String searchQuery = '';
   RecipeCategory? selectedCategory;
 
   @override
@@ -23,51 +25,67 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: recipes.when(
-          data: (recipeList) {
-            final filteredRecipes = selectedCategory == null
-                ? recipeList
-                : recipeList.where((r) => r.category == selectedCategory).toList();
-
-            return CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Opskrifter',
-                              style: Theme.of(context).textTheme.displayLarge,
-                            ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () => GoRouter.of(context).push('/recipes/create'),
-                                  icon: const Icon(Icons.add_circle_outline, size: 28, color: AppColors.primary),
-                                ),
-                                const SizedBox(width: 8),
-                                const ProfileAvatar(),
-                              ],
-                            ),
-                          ],
+                        Text(
+                          'Opskrifter',
+                          style: Theme.of(context).textTheme.displayLarge,
                         ),
-                        const SizedBox(height: 16),
-                        _SearchBar(),
-                        const SizedBox(height: 16),
-                        _CategoryFilter(
-                          selected: selectedCategory,
-                          onSelected: (cat) => setState(() => selectedCategory = cat),
-                        ),
+                        const ProfileAvatar(),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    _SearchBar(
+                      onChanged: (val) => setState(() => searchQuery = val),
+                    ),
+                    const SizedBox(height: 24),
+                    _CategoryFilter(
+                      selected: selectedCategory,
+                      onSelected: (cat) => setState(() => selectedCategory = cat),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-                SliverPadding(
+              ),
+            ),
+            recipes.when(
+              data: (recipeList) {
+                final results = recipeList.where((r) {
+                  final matchesQuery = r.title.toLowerCase().contains(searchQuery.toLowerCase());
+                  final matchesCategory = selectedCategory == null || r.category == selectedCategory;
+                  return matchesQuery && matchesCategory;
+                }).toList();
+
+                if (results.isEmpty) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 1,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _GhostRecipeCard(
+                          onTap: () => context.push('/recipes/create'),
+                        ),
+                        childCount: 4,
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -78,31 +96,46 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final recipe = filteredRecipes[index];
+                        final recipe = results[index];
                         return GestureDetector(
                           onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
                           child: _RecipeCard(recipe: recipe, isFeatured: index == 0),
                         );
                       },
-                      childCount: filteredRecipes.length,
+                      childCount: results.length,
                     ),
                   ),
-                ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Fejl: $err')),
+                );
+              },
+              loading: () => const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (err, stack) => SliverFillRemaining(
+                child: Center(child: Text('Fejl: $err')),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/recipes/create'),
+        label: const Text('Opret opskrift'),
+        icon: const Icon(Icons.add),
       ),
     );
   }
 }
 
 class _SearchBar extends StatelessWidget {
+  final ValueChanged<String> onChanged;
+
+  const _SearchBar({required this.onChanged});
+
   @override
   Widget build(BuildContext context) {
     return TextField(
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: 'Søg i opskrifter, ingredienser...',
         prefixIcon: const Icon(Icons.search, color: AppColors.outline),
@@ -284,6 +317,55 @@ class _RecipeCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GhostRecipeCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _GhostRecipeCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColors.outlineVariant.withValues(alpha: 0.5),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.add_rounded,
+                color: AppColors.primary.withValues(alpha: 0.4),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tilføj opskrift',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppColors.outline.withValues(alpha: 0.6),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

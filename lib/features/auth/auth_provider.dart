@@ -47,6 +47,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       // Opdater profil med navn
       await credential.user?.updateDisplayName(name);
+      // Tving Firebase til at hente de nye profil-data (som navnet)
+      await credential.user?.reload();
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(isLoading: false, error: _mapError(e));
     }

@@ -52,7 +52,7 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   MealSlot _mapSlot(Map<String, dynamic>? data, List<Recipe> recipes) {
     if (data == null) return MealSlot();
     Recipe? recipe;
-    if (data['recipeId'] != null) {
+    if (data['recipeId'] != null && recipes.isNotEmpty) {
       recipe = recipes.firstWhere((r) => r.id == data['recipeId'], orElse: () => recipes.first);
     }
     return MealSlot(

@@ -67,16 +67,16 @@ class MyApp extends ConsumerWidget {
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/',
-                  builder: (context, state) => const HomeScreen(),
+                  path: '/meal-plan',
+                  builder: (context, state) => const MealPlanScreen(),
                 ),
               ],
             ),
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/meal-plan',
-                  builder: (context, state) => const MealPlanScreen(),
+                  path: '/',
+                  builder: (context, state) => const HomeScreen(),
                 ),
               ],
             ),
@@ -158,14 +158,14 @@ class ScaffoldWithNavBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavBarItem(
-                  icon: Icons.home_outlined,
-                  label: 'Hjem',
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Madplan',
                   isActive: navigationShell.currentIndex == 0,
                   onTap: () => navigationShell.goBranch(0),
                 ),
                 _NavBarItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Madplan',
+                  icon: Icons.home_outlined,
+                  label: 'Hjem',
                   isActive: navigationShell.currentIndex == 1,
                   onTap: () => navigationShell.goBranch(1),
                 ),
