@@ -36,9 +36,19 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Opskrifter',
-                          style: Theme.of(context).textTheme.displayLarge,
+                        Row(
+                          children: [
+                            Image.asset('assets/images/logo.png', height: 32),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Opskrifter',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryContainer,
+                              ),
+                            ),
+                          ],
                         ),
                         const ProfileAvatar(),
                       ],

@@ -10,6 +10,7 @@ import '../../core/models/meal_plan.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'package:gap/gap.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -71,14 +72,14 @@ class HomeScreen extends ConsumerWidget {
       centerTitle: false,
       title: Row(
         children: [
-          Image.asset('assets/images/logo.png', height: 28),
+          Image.asset('assets/images/logo.png', height: 32),
           const Gap(12),
           Text(
             'Skafferiet',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: GoogleFonts.plusJakartaSans(
               color: const Color(0xFF0F5238),
               fontWeight: FontWeight.bold,
-              fontSize: 18,
+              fontSize: 24,
             ),
           ),
         ],

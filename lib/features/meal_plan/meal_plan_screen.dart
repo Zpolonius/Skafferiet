@@ -9,6 +9,8 @@ import 'edit_meal_slot_sheet.dart';
 import 'meal_plan_provider.dart';
 import '../grocery/grocery_provider.dart';
 
+import 'add_custom_meal_sheet.dart';
+
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
 
@@ -18,6 +20,17 @@ class MealPlanScreen extends ConsumerWidget {
     final selectedDay = ref.watch(selectedDayProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => const AddCustomMealSheet(),
+        ),
+        label: const Text('Tilføj måltid'),
+        icon: const Icon(Icons.add),
+        backgroundColor: const Color(0xFF0F5238),
+        foregroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: mealPlan.when(
           data: (plan) {
@@ -38,9 +51,9 @@ class MealPlanScreen extends ConsumerWidget {
                                 Image.asset('assets/images/logo.png', height: 32),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'Skafferiet',
+                                  'Madplan',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 20,
+                                    fontSize: 24,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.primaryContainer,
                                   ),

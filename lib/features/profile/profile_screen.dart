@@ -108,11 +108,21 @@ class ProfileScreen extends ConsumerWidget {
           if (household.householdId != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: TextButton.icon(
-                onPressed: () => ref.read(householdProvider.notifier).leaveHousehold(),
-                icon: const Icon(Icons.exit_to_app, size: 16),
-                label: const Text('Forlad husholdning'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _showJoinDialog(context, ref),
+                    icon: const Icon(Icons.group_add_outlined, size: 16),
+                    label: const Text('Deltag i en anden'),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => ref.read(householdProvider.notifier).leaveHousehold(),
+                    icon: const Icon(Icons.exit_to_app, size: 16),
+                    label: const Text('Forlad husholdning'),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                  ),
+                ],
               ),
             ),
           
@@ -146,6 +156,36 @@ class ProfileScreen extends ConsumerWidget {
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJoinDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deltag i husholdning'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Indtast kode (f.eks. SK-1234)',
+          ),
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuller'),
+          ),
+          FilledButton(
+            onPressed: () {
+              ref.read(householdProvider.notifier).joinHousehold(controller.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Deltag'),
           ),
         ],
       ),
@@ -232,32 +272,8 @@ class _NoHouseholdCard extends ConsumerWidget {
   }
 
   void _showJoinDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Deltag i husholdning'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Indtast kode (f.eks. SK-1234)',
-          ),
-          textCapitalization: TextCapitalization.characters,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuller'),
-          ),
-          FilledButton(
-            onPressed: () {
-              ref.read(householdProvider.notifier).joinHousehold(controller.text);
-              Navigator.pop(context);
-            },
-            child: const Text('Deltag'),
-          ),
-        ],
-      ),
-    );
+    // Denne er nu overflødig her, da den er flyttet til ProfileScreen
+    // Men vi beholder den hvis den bliver kaldt internt, eller lader den kalde ProfileScreen versionen
+    // For nu sletter vi den og lader _NoHouseholdCard kalde ProfileScreen.
   }
 }

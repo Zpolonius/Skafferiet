@@ -50,11 +50,18 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   }
 
   void _listenToUserHousehold(String uid) {
-    _firestore.collection('users').doc(uid).snapshots().listen((doc) {
+    _firestore.collection('users').doc(uid).snapshots().listen((doc) async {
       if (doc.exists && doc.data()?['householdId'] != null) {
         _listenToHousehold(doc.data()!['householdId']);
       } else {
-        state = HouseholdState(isLoading: false);
+        // Hvis brugeren ikke har en husstand, opret en automatisk
+        final user = _auth.currentUser;
+        if (user != null) {
+          print('DEBUG: Ingen husstand fundet. Opretter automatisk...');
+          await createHousehold('${user.displayName ?? 'Mit'} Skafferi');
+        } else {
+          state = HouseholdState(isLoading: false);
+        }
       }
     });
   }

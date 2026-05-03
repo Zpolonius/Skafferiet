@@ -32,7 +32,20 @@ class GroceryScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Indkøbsliste', style: Theme.of(context).textTheme.displayLarge),
+                            Row(
+                              children: [
+                                Image.asset('assets/images/logo.png', height: 32),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Indkøb',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryContainer,
+                                  ),
+                                ),
+                              ],
+                            ),
                             const ProfileAvatar(),
                           ],
                         ),
