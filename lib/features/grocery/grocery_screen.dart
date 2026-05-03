@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'grocery_provider.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/empty_state_widget.dart';
+import 'grocery_provider.dart';
 
 class GroceryScreen extends ConsumerWidget {
   const GroceryScreen({super.key});
@@ -39,54 +39,42 @@ class GroceryScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Indkøbsliste',
-                              style: Theme.of(context).textTheme.displayLarge,
-                            ),
+                            Text('Indkøbsliste', style: Theme.of(context).textTheme.displayLarge),
                             const ProfileAvatar(),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${itemsList.where((i) => !i.checked).length} ting tilbage at købe',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                        ),
+                        const SizedBox(height: 16),
+                        _SearchBar(),
                       ],
                     ),
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        _ProgressBar(
-                          total: itemsList.length,
-                          completed: itemsList.where((i) => i.checked).length,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ),
-                ...categories.entries.map((entry) {
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _CategoryHeader(title: entry.key),
-                          const SizedBox(height: 12),
-                          ...entry.value.map((item) => _GroceryItemTile(item: item)),
-                          const SizedBox(height: 16),
-                        ],
+                for (final category in categories.keys) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Text(
+                        category,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
-                  );
-                }),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = categories[category]![index];
+                          return _GroceryItemTile(item: item);
+                        },
+                        childCount: categories[category]!.length,
+                      ),
+                    ),
+                  ),
+                ],
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             );
@@ -95,86 +83,49 @@ class GroceryScreen extends ConsumerWidget {
           error: (err, stack) => Center(child: Text('Fejl: $err')),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => const AddGroceryItemSheet(),
-          );
-        },
-        backgroundColor: AppColors.primaryContainer,
-        foregroundColor: AppColors.onPrimaryContainer,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddItemSheet(context),
+        label: const Text('Tilføj vare'),
+        icon: const Icon(Icons.add),
       ),
     );
   }
 
   Map<String, List<GroceryItem>> _groupItemsByCategory(List<GroceryItem> items) {
-    final Map<String, List<GroceryItem>> grouped = {};
+    final Map<String, List<GroceryItem>> categories = {};
     for (final item in items) {
-      grouped.putIfAbsent(item.category, () => []).add(item);
+      if (!categories.containsKey(item.category)) {
+        categories[item.category] = [];
+      }
+      categories[item.category]!.add(item);
     }
-    return grouped;
+    return categories;
   }
-}
 
-class _ProgressBar extends StatelessWidget {
-  final int total;
-  final int completed;
-
-  const _ProgressBar({required this.total, required this.completed});
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = total == 0 ? 0.0 : completed / total;
-    return Container(
-      height: 8,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: progress,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-      ),
+  void _showAddItemSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddGroceryItemSheet(),
     );
   }
 }
 
-class _CategoryHeader extends StatelessWidget {
-  final String title;
-
-  const _CategoryHeader({required this.title});
-
+class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          title == 'Grønt' ? Icons.eco : Icons.water_drop,
-          size: 20,
-          color: AppColors.primaryContainer,
+    return TextField(
+      decoration: InputDecoration(
+        hintText: 'Søg i din indkøbsliste...',
+        prefixIcon: const Icon(Icons.search, color: AppColors.outline),
+        filled: true,
+        fillColor: AppColors.surfaceContainerLowest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primaryContainer,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -187,105 +138,100 @@ class _GroceryItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Slidable(
         key: ValueKey(item.id),
-        startActionPane: ActionPane(
-          extentRatio: 0.25,
-          motion: const ScrollMotion(),
-          children: [
-            SlidableAction(
-              onPressed: (_) => ref.read(groceryListProvider.notifier).toggleChecked(item.id),
-              backgroundColor: AppColors.primaryFixed,
-              foregroundColor: AppColors.primary,
-              icon: Icons.check_circle,
-              label: 'Købt',
-            ),
-          ],
-        ),
         endActionPane: ActionPane(
+          motion: const DrawerMotion(),
           extentRatio: 0.25,
-          motion: const ScrollMotion(),
           children: [
             SlidableAction(
               onPressed: (_) => ref.read(groceryListProvider.notifier).removeItem(item.id),
               backgroundColor: AppColors.errorContainer,
               foregroundColor: AppColors.error,
-              icon: Icons.delete,
+              icon: Icons.delete_outline,
               label: 'Slet',
+              borderRadius: BorderRadius.circular(16),
             ),
           ],
         ),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.surfaceVariant),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.outlineVariant),
           ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => ref.read(groceryListProvider.notifier).toggleChecked(item.id),
-                child: Container(
-                  width: 24,
-                  height: 24,
+          child: InkWell(
+            onTap: () => ref.read(groceryListProvider.notifier).toggleItem(item.id),
+            child: Row(
+              children: [
+                // Image or Category Icon
+                Container(
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: item.checked ? AppColors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: item.checked ? AppColors.primary : AppColors.outlineVariant,
-                      width: 2,
-                    ),
+                    color: AppColors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    image: item.imageUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(item.imageUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  child: item.checked
-                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  child: item.imageUrl == null
+                      ? Icon(
+                          _getCategoryIcon(item.category),
+                          color: AppColors.primary,
+                          size: 24,
+                        )
                       : null,
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            decoration: item.checked ? TextDecoration.lineThrough : null,
-                            color: item.checked ? AppColors.outline : AppColors.onSurface,
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                    if (!item.checked)
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'Økologisk, moden', // Mock subtext
+                        item.name,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              decoration: item.isChecked ? TextDecoration.lineThrough : null,
+                              color: item.isChecked ? AppColors.outline : AppColors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      Text(
+                        item.category,
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (!item.checked)
-                _QuantityPicker(
-                  quantity: item.quantity,
-                  onChanged: (val) => ref.read(groceryListProvider.notifier).updateQuantity(item.id, val),
-                )
-              else
-                Text(
-                  '${item.quantity} ${item.unit}',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-            ],
+                if (!item.isChecked)
+                  _QuantityPicker(
+                    quantity: item.quantity,
+                    onChanged: (val) => ref.read(groceryListProvider.notifier).updateQuantity(item.id, val),
+                  )
+                else
+                  const Icon(Icons.check_circle, color: AppColors.primary),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Frugt & Grønt': return Icons.apple;
+      case 'Mejeri': return Icons.egg_alt;
+      case 'Kød & Fisk': return Icons.restaurant;
+      case 'Frost': return Icons.ac_unit;
+      case 'Drikkevarer': return Icons.local_drink;
+      default: return Icons.shopping_basket;
+    }
   }
 }
 
@@ -298,78 +244,17 @@ class _QuantityPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(100),
+        color: AppColors.primaryFixed,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _CircleButton(
-            icon: Icons.remove,
-            onTap: () {
-              final val = int.tryParse(quantity) ?? 1;
-              if (val > 1) onChanged((val - 1).toString());
-            },
-            color: AppColors.surfaceContainerHighest,
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 16,
-            child: Text(
-              quantity,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.onSurface,
-                  ),
+      child: Text(
+        quantity,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
             ),
-          ),
-          const SizedBox(width: 8),
-          _CircleButton(
-            icon: Icons.add,
-            onTap: () {
-              final val = int.tryParse(quantity) ?? 1;
-              onChanged((val + 1).toString());
-            },
-            color: AppColors.primaryContainer,
-            iconColor: AppColors.onPrimary,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CircleButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color color;
-  final Color? iconColor;
-
-  const _CircleButton({
-    required this.icon,
-    required this.onTap,
-    required this.color,
-    this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          size: 16,
-          color: iconColor ?? AppColors.onSurface,
-        ),
       ),
     );
   }

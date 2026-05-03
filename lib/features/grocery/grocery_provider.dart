@@ -9,12 +9,12 @@ class GroceryListNotifier extends AsyncNotifier<List<GroceryItem>> {
     return _mockItems;
   }
 
-  Future<void> toggleChecked(String id) async {
+  Future<void> toggleItem(String id) async {
     final currentItems = state.value ?? [];
     state = AsyncValue.data(
       currentItems.map((item) {
         if (item.id == id) {
-          return item.copyWith(checked: !item.checked);
+          return item.copyWith(isChecked: !item.isChecked);
         }
         return item;
       }).toList(),
@@ -53,17 +53,18 @@ final groceryListProvider = AsyncNotifierProvider<GroceryListNotifier, List<Groc
 final _mockItems = [
   GroceryItem(
     id: '1',
-    name: 'Hass Avocados',
-    category: 'Grønt',
+    name: 'Hass Avocado',
+    category: 'Frugt & Grønt',
     quantity: '4',
     unit: 'stk',
     source: 'manual',
     createdAt: DateTime.now(),
+    imageUrl: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=200',
   ),
   GroceryItem(
     id: '2',
     name: 'Cherrytomater',
-    category: 'Grønt',
+    category: 'Frugt & Grønt',
     quantity: '1',
     unit: 'bakke',
     source: 'manual',
@@ -72,10 +73,10 @@ final _mockItems = [
   GroceryItem(
     id: '3',
     name: 'Spinat',
-    category: 'Grønt',
+    category: 'Frugt & Grønt',
     quantity: '2',
     unit: 'poser',
-    checked: true,
+    isChecked: true,
     source: 'manual',
     createdAt: DateTime.now(),
   ),

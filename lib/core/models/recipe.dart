@@ -1,4 +1,4 @@
-enum RecipeCategory { breakfast, lunch, dinner, snack }
+enum RecipeCategory { Morgenmad, Frokost, Aftensmad, Snack }
 
 class Ingredient {
   final String name;
@@ -13,21 +13,17 @@ class Ingredient {
     required this.category,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'quantity': quantity,
-      'unit': unit,
-      'category': category,
-    };
-  }
-
-  factory Ingredient.fromMap(Map<String, dynamic> map) {
+  Ingredient copyWith({
+    String? name,
+    double? quantity,
+    String? unit,
+    String? category,
+  }) {
     return Ingredient(
-      name: map['name'] ?? '',
-      quantity: (map['quantity'] ?? 0.0).toDouble(),
-      unit: map['unit'] ?? '',
-      category: map['category'] ?? '',
+      name: name ?? this.name,
+      quantity: quantity ?? this.quantity,
+      unit: unit ?? this.unit,
+      category: category ?? this.category,
     );
   }
 }
@@ -35,44 +31,43 @@ class Ingredient {
 class Recipe {
   final String id;
   final String title;
+  final String? imageUrl;
+  final int calories;
+  final String time;
   final RecipeCategory category;
   final List<Ingredient> ingredients;
-  final String? imageUrl;
-  final String createdBy;
+  final List<String> instructions;
 
   Recipe({
     required this.id,
     required this.title,
-    required this.category,
-    required this.ingredients,
     this.imageUrl,
-    required this.createdBy,
+    required this.calories,
+    required this.time,
+    required this.category,
+    this.ingredients = const [],
+    this.instructions = const [],
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'category': category.name,
-      'ingredients': ingredients.map((x) => x.toMap()).toList(),
-      'imageUrl': imageUrl,
-      'createdBy': createdBy,
-    };
-  }
-
-  factory Recipe.fromMap(Map<String, dynamic> map, String id) {
+  Recipe copyWith({
+    String? id,
+    String? title,
+    String? imageUrl,
+    int? calories,
+    String? time,
+    RecipeCategory? category,
+    List<Ingredient>? ingredients,
+    List<String>? instructions,
+  }) {
     return Recipe(
-      id: id,
-      title: map['title'] ?? '',
-      category: RecipeCategory.values.firstWhere(
-        (e) => e.name == map['category'],
-        orElse: () => RecipeCategory.dinner,
-      ),
-      ingredients: List<Ingredient>.from(
-        (map['ingredients'] ?? []).map((x) => Ingredient.fromMap(x)),
-      ),
-      imageUrl: map['imageUrl'],
-      createdBy: map['createdBy'] ?? '',
+      id: id ?? this.id,
+      title: title ?? this.title,
+      imageUrl: imageUrl ?? this.imageUrl,
+      calories: calories ?? this.calories,
+      time: time ?? this.time,
+      category: category ?? this.category,
+      ingredients: ingredients ?? this.ingredients,
+      instructions: instructions ?? this.instructions,
     );
   }
 }

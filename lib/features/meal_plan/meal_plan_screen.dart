@@ -141,37 +141,20 @@ class MealPlanScreen extends ConsumerWidget {
     );
   }
 
-  void _transferWeekToShopping(BuildContext context, WidgetRef ref, WeeklyMealPlan plan) {
-    int count = 0;
-    for (final day in plan.days.values) {
-      final slots = [day.breakfast, day.lunch, day.dinner, day.snack];
-      for (final slot in slots) {
-        if (slot.recipe != null) {
-          for (final ing in slot.recipe!.ingredients) {
-            ref.read(groceryListProvider.notifier).addItem(
-              GroceryItem(
-                id: const Uuid().v4(),
-                name: ing.name,
-                category: ing.category,
-                quantity: ing.quantity.toString(),
-                unit: ing.unit,
-                source: 'meal_plan',
-                createdAt: DateTime.now(),
-              ),
-            );
-            count++;
-          }
-        }
-      }
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$count varer overført til indkøbslisten'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
+  Future<void> _transferWeekToShopping(BuildContext context, WidgetRef ref, WeeklyMealPlan plan) async {
+    final count = await ref.read(mealPlanProvider.notifier).transferToShoppingList(
+      ref.read(groceryListProvider.notifier),
     );
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$count varer overført til indkøbslisten'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 

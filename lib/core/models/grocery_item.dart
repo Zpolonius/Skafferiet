@@ -3,10 +3,10 @@ class GroceryItem {
   final String name;
   final String category;
   final String quantity;
-  final String unit;
+  final String? unit;
   final String? imageUrl;
-  final bool checked;
-  final String source; // manual, recipe, mealplan
+  final bool isChecked;
+  final String source; // 'manual' or 'meal_plan'
   final DateTime createdAt;
 
   GroceryItem({
@@ -14,9 +14,9 @@ class GroceryItem {
     required this.name,
     required this.category,
     required this.quantity,
-    required this.unit,
+    this.unit,
     this.imageUrl,
-    this.checked = false,
+    this.isChecked = false,
     required this.source,
     required this.createdAt,
   });
@@ -28,7 +28,7 @@ class GroceryItem {
     String? quantity,
     String? unit,
     String? imageUrl,
-    bool? checked,
+    bool? isChecked,
     String? source,
     DateTime? createdAt,
   }) {
@@ -39,7 +39,7 @@ class GroceryItem {
       quantity: quantity ?? this.quantity,
       unit: unit ?? this.unit,
       imageUrl: imageUrl ?? this.imageUrl,
-      checked: checked ?? this.checked,
+      isChecked: isChecked ?? this.isChecked,
       source: source ?? this.source,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -52,7 +52,7 @@ class GroceryItem {
       'quantity': quantity,
       'unit': unit,
       'imageUrl': imageUrl,
-      'checked': checked,
+      'isChecked': isChecked,
       'source': source,
       'createdAt': createdAt.millisecondsSinceEpoch,
     };
@@ -64,9 +64,9 @@ class GroceryItem {
       name: map['name'] ?? '',
       category: map['category'] ?? 'Andet',
       quantity: map['quantity'] ?? '',
-      unit: map['unit'] ?? '',
+      unit: map['unit'],
       imageUrl: map['imageUrl'],
-      checked: map['checked'] ?? false,
+      isChecked: map['isChecked'] ?? false,
       source: map['source'] ?? 'manual',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? DateTime.now().millisecondsSinceEpoch),
     );

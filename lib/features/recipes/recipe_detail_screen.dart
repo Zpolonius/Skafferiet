@@ -8,6 +8,8 @@ import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_to_meal_plan_sheet.dart';
 import 'package:uuid/uuid.dart';
+import 'recipes_provider.dart';
+import 'edit_recipe_screen.dart';
 
 class RecipeDetailScreen extends ConsumerWidget {
   final String recipeId;
@@ -43,6 +45,21 @@ class RecipeDetailScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircleAvatar(
+                  backgroundColor: Colors.white.withValues(alpha: 0.9),
+                  child: IconButton(
+                    icon: const Icon(Icons.edit, color: AppColors.onSurface),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EditRecipeScreen(recipe: recipe)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           
           SliverPadding(

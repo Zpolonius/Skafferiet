@@ -4,24 +4,35 @@ import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
 import 'recipes_provider.dart';
 
-class CreateRecipeScreen extends ConsumerStatefulWidget {
-  const CreateRecipeScreen({super.key});
+class EditRecipeScreen extends ConsumerStatefulWidget {
+  final Recipe recipe;
+  const EditRecipeScreen({super.key, required this.recipe});
 
   @override
-  ConsumerState<CreateRecipeScreen> createState() => _CreateRecipeScreenState();
+  ConsumerState<EditRecipeScreen> createState() => _EditRecipeScreenState();
 }
 
-class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
-  final _titleController = TextEditingController();
-  final _caloriesController = TextEditingController();
-  final _timeController = TextEditingController();
-  RecipeCategory _selectedCategory = RecipeCategory.Aftensmad;
-  final List<Ingredient> _ingredients = [];
+class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
+  late TextEditingController _titleController;
+  late TextEditingController _caloriesController;
+  late TextEditingController _timeController;
+  late RecipeCategory _selectedCategory;
+  late List<Ingredient> _ingredients;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.recipe.title);
+    _caloriesController = TextEditingController(text: widget.recipe.calories.toString());
+    _timeController = TextEditingController(text: widget.recipe.time);
+    _selectedCategory = widget.recipe.category;
+    _ingredients = List.from(widget.recipe.ingredients);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ny opskrift')),
+      appBar: AppBar(title: const Text('Rediger opskrift')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -87,6 +98,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       child: TextField(
                         decoration: const InputDecoration(hintText: 'Navn'),
                         onChanged: (val) => _ingredients[idx] = ing.copyWith(name: val),
+                        controller: TextEditingController(text: ing.name),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -95,6 +107,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       child: TextField(
                         decoration: const InputDecoration(hintText: 'Mængde'),
                         onChanged: (val) => _ingredients[idx] = ing.copyWith(quantity: double.tryParse(val) ?? 0),
+                        controller: TextEditingController(text: ing.quantity.toString()),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -103,6 +116,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       child: TextField(
                         decoration: const InputDecoration(hintText: 'Enh.'),
                         onChanged: (val) => _ingredients[idx] = ing.copyWith(unit: val),
+                        controller: TextEditingController(text: ing.unit),
                       ),
                     ),
                     IconButton(
@@ -117,7 +131,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             FilledButton(
               onPressed: _saveRecipe,
               style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 56)),
-              child: const Text('Opret opskrift'),
+              child: const Text('Gem ændringer'),
             ),
           ],
         ),
@@ -139,8 +153,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   }
 
   void _saveRecipe() {
-    final recipe = Recipe(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final updatedRecipe = widget.recipe.copyWith(
       title: _titleController.text,
       calories: int.tryParse(_caloriesController.text) ?? 0,
       time: _timeController.text,
@@ -148,7 +161,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       ingredients: _ingredients,
     );
     
-    ref.read(recipesProvider.notifier).addRecipe(recipe);
+    ref.read(recipesProvider.notifier).updateRecipe(updatedRecipe);
     Navigator.pop(context);
   }
 }

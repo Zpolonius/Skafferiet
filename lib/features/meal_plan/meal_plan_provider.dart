@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
+import '../grocery/grocery_provider.dart';
+import '../../core/models/grocery_item.dart';
+import 'package:uuid/uuid.dart';
 
 class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   @override
@@ -55,6 +58,35 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
       case 'Snack': return dayPlan.copyWith(snack: slot);
       default: return dayPlan;
     }
+  }
+
+  Future<int> transferToShoppingList(GroceryListNotifier groceryNotifier) async {
+    if (state.value == null) return 0;
+    final plan = state.value!;
+    int count = 0;
+    
+    for (final day in plan.days.values) {
+      final slots = [day.breakfast, day.lunch, day.dinner, day.snack];
+      for (final slot in slots) {
+        if (slot.recipe != null) {
+          for (final ing in slot.recipe!.ingredients) {
+            groceryNotifier.addItem(
+              GroceryItem(
+                id: const Uuid().v4(),
+                name: ing.name,
+                category: ing.category,
+                quantity: ing.quantity.toString(),
+                unit: ing.unit,
+                source: 'meal_plan',
+                createdAt: DateTime.now(),
+              ),
+            );
+            count++;
+          }
+        }
+      }
+    }
+    return count;
   }
 }
 

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html class="light" lang="da"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kitchen Harmony - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed": "#dbe7cd",
+                      "primary-fixed": "#b1f0ce",
+                      "outline-variant": "#bfc9c1",
+                      "on-primary-fixed": "#002114",
+                      "tertiary-fixed-dim": "#bfcab2",
+                      "surface-tint": "#2c694e",
+                      "on-surface": "#191c1d",
+                      "on-surface-variant": "#404943",
+                      "surface-dim": "#d9dadb",
+                      "secondary-fixed": "#ffdcbc",
+                      "surface-container-low": "#f3f4f5",
+                      "primary-fixed-dim": "#95d4b3",
+                      "on-error": "#ffffff",
+                      "on-secondary-fixed": "#2c1700",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-container": "#57624e",
+                      "on-secondary-container": "#663b00",
+                      "on-error-container": "#93000a",
+                      "surface-bright": "#f8f9fa",
+                      "on-tertiary-fixed": "#151e0f",
+                      "tertiary": "#404a38",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#ffb86b",
+                      "inverse-primary": "#95d4b3",
+                      "background": "#f8f9fa",
+                      "surface-container-highest": "#e1e3e4",
+                      "inverse-surface": "#2e3132",
+                      "error": "#ba1a1a",
+                      "on-background": "#191c1d",
+                      "primary": "#0f5238",
+                      "secondary-container": "#fd9d1a",
+                      "on-secondary-fixed-variant": "#683d00",
+                      "on-secondary": "#ffffff",
+                      "surface": "#f8f9fa",
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#a8e7c5",
+                      "on-primary-fixed-variant": "#0e5138",
+                      "inverse-on-surface": "#f0f1f2",
+                      "outline": "#707973",
+                      "primary-container": "#2d6a4f",
+                      "surface-container": "#edeeef",
+                      "surface-container-high": "#e7e8e9",
+                      "secondary": "#895100",
+                      "on-tertiary-container": "#d1ddc4",
+                      "error-container": "#ffdad6",
+                      "surface-variant": "#e1e3e4",
+                      "on-tertiary-fixed-variant": "#3f4a37"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "lg": "24px",
+                      "xl": "40px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "container-margin": "20px",
+                      "unit": "4px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Be Vietnam Pro"
+                      ],
+                      "h1": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "h2": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-lg": [
+                              "Be Vietnam Pro"
+                      ],
+                      "label-sm": [
+                              "Be Vietnam Pro"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "h1": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "h2": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        .custom-checkbox:checked {
+            background-color: theme('colors.primary');
+            border-color: theme('colors.primary');
+        }
+        .custom-checkbox:checked + label {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+        body {
+            background-color: theme('colors.surface-container-low'); /* Mist equivalent */
+            padding-bottom: 80px; /* Space for bottom nav */
+            padding-top: 64px; /* Space for top nav */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface antialiased font-body-md text-body-md flex flex-col min-h-screen">
+<!-- TopAppBar from JSON -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-emerald-950/80 backdrop-blur-md border-b border-gray-100 dark:border-emerald-900/50">
+<div class="flex items-center justify-between px-5 h-16 w-full max-w-4xl mx-auto">
+<div class="flex items-center gap-3">
+<img alt="User profile photo" class="w-8 h-8 rounded-full object-cover border-2 border-primary-fixed" data-alt="A close up, well lit portrait of a smiling woman in her 30s with natural makeup. The background is a soft, blurred bright kitchen interior with white cabinets and a hint of a green houseplant. The lighting is sunny and optimistic, reflecting a morning routine. The style is modern, approachable, and fresh." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7-0KpS-erjv4pM10iSLRk034qv1hNG7ZUw9IhTs1Ccwei0-q4fJbEYnlTyuv_qNuNKjq_83HE4g68rnXNP9Jsn2Uho61k1cHd-Ys_MO0F9mxww-KbiCYK11yZ5kFYAaKEMjqH7NIDqgdBLaTG9uBhfwbG7rG8loB_xRHONUgvwwsXmefHQOn5MWDHHZvQfPNjOfYtka2oz0iyu7pIScz7N3w_ythn28UiFCS-tS4GH680j4vRjLHSzdlp62VwTLHAWr0kZ7UtSzk"/>
+<h1 class="font-['Plus_Jakarta_Sans'] font-semibold text-lg text-emerald-800 dark:text-emerald-400 font-bold tracking-tight">Kitchen Harmony</h1>
+</div>
+<button class="text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</div>
+</header>
+<main class="flex-grow px-container-margin md:px-lg max-w-4xl mx-auto w-full pt-md pb-xl">
+<!-- Greeting Section -->
+<section class="mb-lg">
+<div class="flex items-center gap-2 mb-sm">
+<span class="material-symbols-outlined text-secondary-container" style="font-variation-settings: 'FILL' 1;">light_mode</span>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Torsdag, 12. Oktober</p>
+</div>
+<h2 class="font-h1 text-h1 text-on-surface">Godmorgen, Mette!</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-sm">Her er dit overblik for i dag.</p>
+</section>
+<!-- Quick Actions (Bento style) -->
+<section class="grid grid-cols-2 gap-sm mb-xl">
+<button class="bg-primary text-on-primary rounded-xl p-md flex flex-col items-center justify-center gap-sm min-h-[100px] hover:bg-primary-container active:scale-95 transition-all shadow-[0_4px_12px_rgba(15,82,56,0.15)] border border-transparent">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">restaurant_menu</span>
+<span class="font-label-sm text-label-sm font-semibold">Tilføj måltid</span>
+</button>
+<button class="bg-primary-fixed text-on-primary-fixed rounded-xl p-md flex flex-col items-center justify-center gap-sm min-h-[100px] hover:bg-primary-fixed-dim active:scale-95 transition-all shadow-[0_4px_12px_rgba(177,240,206,0.3)] border border-transparent">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">shopping_basket</span>
+<span class="font-label-sm text-label-sm font-semibold">Tilføj vare</span>
+</button>
+</section>
+<!-- Daily Meal Plan -->
+<section class="mb-xl">
+<div class="flex justify-between items-end mb-md">
+<h3 class="font-h2 text-h2 text-on-surface">Dagens Plan</h3>
+<button class="text-primary font-label-sm text-label-sm hover:underline">Se hele ugen</button>
+</div>
+<div class="flex flex-col gap-sm">
+<!-- Morgenmad -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex items-center gap-md shadow-[0_2px_4px_rgba(44,105,78,0.05)] border border-outline-variant/30">
+<img alt="Green Goddess Bowl" class="w-16 h-16 rounded-lg object-cover" data-alt="A top-down view of a vibrant, healthy green goddess bowl in a white ceramic dish. It is filled with fresh spinach, sliced avocado, edamame beans, and a sprinkle of sesame seeds. The lighting is bright, natural morning light casting soft shadows on a light wooden table. The aesthetic is clean, fresh, and highly appetizing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYnCdD3tbSw37_1tIz8bfDqLJweY-TlIgylRgV1aSIuYx67PGwkOP4Y9Ggp6Dx_8f20FBWqerhue874ge7wkBusyWcR680CzAcm8l23vQFAylbCZvHh7-Cj1am39_Qp03pX5KN9obbY-Lcki7AaobTeIgwohWxP92J3plU9bmkSOZzVKfnhTuGbxpR5LBSj6QFn6t9oUbv3AzreJeiLiSE8wCyQCs40Pd8XOjOtgefJ97kk7f2n0eweKwSZ0TM-B4Jj3bXLM1GUEI"/>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-primary uppercase tracking-wider mb-xs">Morgenmad</p>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Green Goddess Bowl</h4>
+<div class="flex items-center gap-3 mt-xs text-on-surface-variant font-label-sm text-[11px]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 10 min</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">local_fire_department</span> 350 kcal</span>
+</div>
+</div>
+</div>
+<!-- Frokost -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex items-center gap-md shadow-[0_2px_4px_rgba(44,105,78,0.05)] border border-outline-variant/30">
+<img alt="Kyllingesalat" class="w-16 h-16 rounded-lg object-cover" data-alt="A beautifully plated chicken salad in a wide bowl. It features grilled chicken breast slices on a bed of mixed greens, cherry tomatoes, and cucumber, drizzled with a light vinaigrette. The photo is taken from a slight angle under bright, diffuse daylight. The setting is a modern kitchen counter with a light, airy, and healthy vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdlvu_-QP1OrCJJEjAKM0uK-X3iZCajPLvxMD_7e0ONGKbpU_cW_WVIXnpBFXufXzqw03FZ-3N8K9GwIDbmRKEQoIylRVojEPVAWpMXdVGZz6CYuwiFm6r4e6ZwIwOEmV5t0I7uKnOZ7kAodGtm1HHSMoHZAMTzYOZfwkoAwvkX8h6l4JZAIAwB7UiypmRdj4nKBexfMKGmFXjKjwYcxq-eK4CmGby2R4d_kjVZkBNsRIPWQ8qaJmmUAHY_oiN761KMj46I5tT-j8"/>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-primary uppercase tracking-wider mb-xs">Frokost</p>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Kyllingesalat</h4>
+<div class="flex items-center gap-3 mt-xs text-on-surface-variant font-label-sm text-[11px]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 15 min</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">local_fire_department</span> 420 kcal</span>
+</div>
+</div>
+</div>
+<!-- Aftensmad -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex items-center gap-md shadow-[0_2px_4px_rgba(44,105,78,0.05)] border border-outline-variant/30">
+<img alt="Grillet Laks" class="w-16 h-16 rounded-lg object-cover" data-alt="A close-up shot of a perfectly grilled salmon fillet with grill marks, served alongside steamed asparagus and a lemon wedge on a dark slate plate. The lighting highlights the glossy texture of the fish. The background is slightly out of focus, suggesting a sophisticated yet homey dinner setting. Rich, warm colors dominate the fresh composition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBi3v_vxCQFAEc7xQRhykrjduWLBnpnoF_ZzzB9B7ERYVVm4eZLkPGWLZbmJO1g22x65tnx2d3Qym1SMx0QGxzgDj1SslRFs11SSeUFRWo3zvH_e_EVVNJRNm3zQx1oxjhZRJMp2Zf5a9wWAKf-pIz0W_X1CGUBnjUsyg8kIB2pXhN_LbZgFuGL45eS-stNrQWLbVVuZzWZq8AVb1pnaIyaA6kq1X0xdqZZlqK2ic6WRBLHpg_KD9gnwsKfOaOrHbpgJnOeS129Oqg"/>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-primary uppercase tracking-wider mb-xs">Aftensmad</p>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Grillet Laks</h4>
+<div class="flex items-center gap-3 mt-xs text-on-surface-variant font-label-sm text-[11px]">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 25 min</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">local_fire_department</span> 580 kcal</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Grocery Summary -->
+<section class="bg-surface-container-lowest rounded-2xl p-md shadow-[0_2px_8px_rgba(44,105,78,0.05)] border border-outline-variant/20 mb-md">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-h2 text-[20px] font-semibold text-on-surface">3 vigtige ting at huske</h3>
+<span class="material-symbols-outlined text-outline">shopping_cart</span>
+</div>
+<ul class="space-y-sm">
+<li class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors">
+<input class="custom-checkbox w-5 h-5 rounded border-outline text-primary focus:ring-primary focus:ring-offset-0 bg-transparent cursor-pointer transition-all" id="item1" type="checkbox"/>
+<label class="font-body-md text-body-md text-on-surface cursor-pointer flex-grow select-none transition-all" for="item1">Økologisk Mælk</label>
+</li>
+<li class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors">
+<input class="custom-checkbox w-5 h-5 rounded border-outline text-primary focus:ring-primary focus:ring-offset-0 bg-transparent cursor-pointer transition-all" id="item2" type="checkbox"/>
+<label class="font-body-md text-body-md text-on-surface cursor-pointer flex-grow select-none transition-all" for="item2">Æg (Bakke med 10)</label>
+</li>
+<li class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors">
+<input class="custom-checkbox w-5 h-5 rounded border-outline text-primary focus:ring-primary focus:ring-offset-0 bg-transparent cursor-pointer transition-all" id="item3" type="checkbox"/>
+<label class="font-body-md text-body-md text-on-surface cursor-pointer flex-grow select-none transition-all" for="item3">Frisk Spinat</label>
+</li>
+</ul>
+<button class="w-full mt-md py-2 text-center text-primary font-label-sm text-label-sm font-semibold hover:bg-tertiary-fixed rounded-lg transition-colors">
+                Åbn fuld indkøbsliste
+            </button>
+</section>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pt-2 pb-6 bg-white/95 dark:bg-emerald-950/95 rounded-t-2xl z-50 border-t border-gray-100 dark:border-emerald-900/50 shadow-[0_-4px_12px_rgba(45,106,79,0.05)]">
+<!-- Active: Plan -->
+<button class="flex flex-col items-center justify-center text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 rounded-xl px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 duration-200 transition-transform">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px]">Plan</span>
+</button>
+<!-- Inactive: Groceries (Indkøb in prompt, but strict JSON says Groceries, using JSON label) -->
+<button class="flex flex-col items-center justify-center text-gray-400 dark:text-emerald-700 px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 duration-200 transition-transform">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">shopping_basket</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px]">Groceries</span>
+</button>
+<!-- Inactive: Recipes -->
+<button class="flex flex-col items-center justify-center text-gray-400 dark:text-emerald-700 px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 duration-200 transition-transform">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">restaurant_menu</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px]">Recipes</span>
+</button>
+<!-- Inactive: Kitchen -->
+<button class="flex flex-col items-center justify-center text-gray-400 dark:text-emerald-700 px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 duration-200 transition-transform">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">home_storage</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px]">Kitchen</span>
+</button>
+</nav>
+</body></html>
