@@ -37,6 +37,8 @@ class Recipe {
   final RecipeCategory category;
   final List<Ingredient> ingredients;
   final List<String> instructions;
+  final String? householdId; // Null hvis det er en global opskrift
+  final String? createdBy;
 
   Recipe({
     required this.id,
@@ -47,6 +49,8 @@ class Recipe {
     required this.category,
     this.ingredients = const [],
     this.instructions = const [],
+    this.householdId,
+    this.createdBy,
   });
 
   Recipe copyWith({
@@ -58,6 +62,8 @@ class Recipe {
     RecipeCategory? category,
     List<Ingredient>? ingredients,
     List<String>? instructions,
+    String? householdId,
+    String? createdBy,
   }) {
     return Recipe(
       id: id ?? this.id,
@@ -68,6 +74,8 @@ class Recipe {
       category: category ?? this.category,
       ingredients: ingredients ?? this.ingredients,
       instructions: instructions ?? this.instructions,
+      householdId: householdId ?? this.householdId,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 }

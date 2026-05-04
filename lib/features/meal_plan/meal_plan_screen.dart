@@ -149,9 +149,7 @@ class MealPlanScreen extends ConsumerWidget {
   }
 
   Future<void> _transferWeekToShopping(BuildContext context, WidgetRef ref, WeeklyMealPlan plan) async {
-    final count = await ref.read(mealPlanProvider.notifier).transferToShoppingList(
-      ref.read(groceryListProvider.notifier),
-    );
+    final count = await ref.read(mealPlanProvider.notifier).transferToShoppingList();
     
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -74,8 +74,13 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   MealSlot _mapSlot(Map<String, dynamic>? data, List<Recipe> recipes) {
     if (data == null) return MealSlot();
     Recipe? recipe;
-    if (data['recipeId'] != null && recipes.isNotEmpty) {
-      recipe = recipes.firstWhere((r) => r.id == data['recipeId'], orElse: () => recipes.first);
+    if (data['recipeId'] != null) {
+      try {
+        recipe = recipes.firstWhere((r) => r.id == data['recipeId']);
+      } catch (_) {
+        // Opskrift ikke fundet - vi returnerer null i stedet for at gætte
+        recipe = null;
+      }
     }
     return MealSlot(
       recipe: recipe,
@@ -109,9 +114,12 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
     ref.invalidateSelf();
   }
 
-  Future<int> transferToShoppingList(GroceryListNotifier groceryNotifier) async {
-    if (state.value == null) return 0;
+  Future<int> transferToShoppingList() async {
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null || state.value == null) return 0;
+
     final plan = state.value!;
+    final batch = _firestore.batch();
     int count = 0;
     
     for (final day in plan.days.values) {
@@ -119,22 +127,31 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
       for (final slot in slots) {
         if (slot.recipe != null) {
           for (final ing in slot.recipe!.ingredients) {
-            await groceryNotifier.addItem(
-              GroceryItem(
-                id: const Uuid().v4(),
-                name: ing.name,
-                category: ing.category,
-                quantity: ing.quantity.toString(),
-                unit: ing.unit,
-                source: 'meal_plan',
-                createdAt: DateTime.now(),
-              ),
-            );
+            final docRef = _firestore
+                .collection('households')
+                .doc(householdId)
+                .collection('grocery_list')
+                .doc(); // Genererer nyt ID
+            
+            batch.set(docRef, {
+              'name': ing.name,
+              'category': ing.category,
+              'quantity': ing.quantity.toString(),
+              'unit': ing.unit,
+              'source': 'meal_plan',
+              'isChecked': false,
+              'createdAt': DateTime.now().millisecondsSinceEpoch,
+            });
             count++;
           }
         }
       }
     }
+
+    if (count > 0) {
+      await batch.commit();
+    }
+    
     return count;
   }
 }

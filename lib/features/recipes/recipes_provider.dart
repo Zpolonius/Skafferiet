@@ -2,21 +2,31 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
 
-class RecipesNotifier extends AsyncNotifier<List<Recipe>> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class RecipesNotifier extends StreamNotifier<List<Recipe>> {
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  RecipesNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth}) 
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
 
   @override
-  Future<List<Recipe>> build() async {
-    // Vi henter alle opskrifter (kunne senere filtreres på husholdning)
-    final snapshot = await _firestore.collection('recipes').get();
-    
-    if (snapshot.docs.isEmpty) {
-      // Hvis databasen er helt tom, kan vi uploade vores mock data én gang
-      // Men for nu returnerer vi bare en tom liste eller mock data hvis man vil
-      return []; 
-    }
+  Stream<List<Recipe>> build() {
+    final householdId = ref.watch(householdProvider.select((s) => s.householdId));
 
-    return snapshot.docs.map((doc) => _mapDocToRecipe(doc)).toList();
+    // Vi henter både globale opskrifter og dem der tilhører husstanden
+    // Da Firestore ikke understøtter 'OR' på tværs af værdier og null på en nem måde uden index,
+    // kan vi enten lave to streams og merge dem, eller gemme 'global' som en værdi.
+    // For simpelhedens skyld henter vi dem der matcher householdId eller har householdId == null.
+    
+    return _firestore
+        .collection('recipes')
+        .snapshots()
+        .map((snapshot) {
+          final allRecipes = snapshot.docs.map((doc) => _mapDocToRecipe(doc)).toList();
+          // Manuel filtrering i koden for at sikre både globale og egne opskrifter
+          return allRecipes.where((r) => r.householdId == null || r.householdId == householdId).toList();
+        });
   }
 
   Recipe _mapDocToRecipe(DocumentSnapshot doc) {
@@ -38,10 +48,16 @@ class RecipesNotifier extends AsyncNotifier<List<Recipe>> {
         category: i['category'],
       )).toList(),
       instructions: List<String>.from(data['instructions'] ?? []),
+      householdId: data['householdId'],
+      createdBy: data['createdBy'],
     );
   }
 
   Future<void> addRecipe(Recipe recipe) async {
+    final user = _auth.currentUser;
+    final householdId = ref.read(householdProvider).householdId;
+    if (user == null) return;
+
     await _firestore.collection('recipes').add({
       'title': recipe.title,
       'imageUrl': recipe.imageUrl,
@@ -56,11 +72,30 @@ class RecipesNotifier extends AsyncNotifier<List<Recipe>> {
       }).toList(),
       'instructions': recipe.instructions,
       'createdAt': FieldValue.serverTimestamp(),
+      'householdId': householdId,
+      'createdBy': user.uid,
     });
-    ref.invalidateSelf();
   }
 
   Future<void> updateRecipe(Recipe updatedRecipe) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    // SIKKERHED: Tjek om brugeren har lov til at redigere
+    final doc = await _firestore.collection('recipes').doc(updatedRecipe.id).get();
+    if (!doc.exists) return;
+    
+    final data = doc.data()!;
+    final ownerId = data['createdBy'];
+    final hId = data['householdId'];
+    final userHouseholdId = ref.read(householdProvider).householdId;
+
+    // Kun skaberen eller medlemmer af samme husstand må redigere
+    if (ownerId != user.uid && hId != userHouseholdId) {
+      print('Sikkerhedsfejl: Bruger har ikke tilladelse til at redigere denne opskrift');
+      return;
+    }
+
     await _firestore.collection('recipes').doc(updatedRecipe.id).update({
       'title': updatedRecipe.title,
       'imageUrl': updatedRecipe.imageUrl,
@@ -75,10 +110,24 @@ class RecipesNotifier extends AsyncNotifier<List<Recipe>> {
       }).toList(),
       'instructions': updatedRecipe.instructions,
     });
-    ref.invalidateSelf();
+  }
+
+  Future<void> deleteRecipe(String id) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final doc = await _firestore.collection('recipes').doc(id).get();
+    if (!doc.exists) return;
+    
+    if (doc.data()!['createdBy'] != user.uid) {
+      print('Sikkerhedsfejl: Kun skaberen kan slette opskriften');
+      return;
+    }
+
+    await _firestore.collection('recipes').doc(id).delete();
   }
 }
 
-final recipesProvider = AsyncNotifierProvider<RecipesNotifier, List<Recipe>>(() {
+final recipesProvider = StreamNotifierProvider<RecipesNotifier, List<Recipe>>(() {
   return RecipesNotifier();
 });
