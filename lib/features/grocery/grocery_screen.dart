@@ -46,7 +46,50 @@ class GroceryScreen extends ConsumerWidget {
                                 ),
                               ],
                             ),
-                            const ProfileAvatar(),
+                            Row(
+                              children: [
+                                if (itemsList.any((i) => i.isChecked))
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.primary),
+                                    onPressed: () => ref.read(groceryListProvider.notifier).clearCheckedItems(),
+                                    tooltip: 'Fjern markerede',
+                                  ),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert, color: AppColors.outline),
+                                  onSelected: (value) {
+                                    if (value == 'clear_all') {
+                                      _showClearAllDialog(context, ref);
+                                    } else if (value == 'clear_checked') {
+                                      ref.read(groceryListProvider.notifier).clearCheckedItems();
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'clear_checked',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.check_box_outlined, size: 20),
+                                          SizedBox(width: 12),
+                                          Text('Fjern markerede'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'clear_all',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete_forever_outlined, size: 20, color: AppColors.error),
+                                          SizedBox(width: 12),
+                                          Text('Tøm listen', style: TextStyle(color: AppColors.error)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 8),
+                                const ProfileAvatar(),
+                              ],
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -139,6 +182,30 @@ class GroceryScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const AddGroceryItemSheet(),
+    );
+  }
+
+  void _showClearAllDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tøm indkøbslisten?'),
+        content: const Text('Er du sikker på, at du vil slette alle varer fra listen? Denne handling kan ikke fortrydes.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuller'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(groceryListProvider.notifier).clearAllItems();
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Tøm liste'),
+          ),
+        ],
+      ),
     );
   }
 }

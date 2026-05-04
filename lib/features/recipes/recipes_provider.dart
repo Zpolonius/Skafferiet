@@ -54,77 +54,85 @@ class RecipesNotifier extends StreamNotifier<List<Recipe>> {
   }
 
   Future<void> addRecipe(Recipe recipe) async {
-    final user = _auth.currentUser;
-    final householdId = ref.read(householdProvider).householdId;
-    if (user == null) return;
+    try {
+      final user = _auth.currentUser;
+      final householdId = ref.read(householdProvider).householdId;
+      if (user == null) return;
 
-    await _firestore.collection('recipes').add({
-      'title': recipe.title,
-      'imageUrl': recipe.imageUrl,
-      'calories': recipe.calories,
-      'time': recipe.time,
-      'category': recipe.category.toString(),
-      'ingredients': recipe.ingredients.map((i) => {
-        'name': i.name,
-        'quantity': i.quantity,
-        'unit': i.unit,
-        'category': i.category,
-      }).toList(),
-      'instructions': recipe.instructions,
-      'createdAt': FieldValue.serverTimestamp(),
-      'householdId': householdId,
-      'createdBy': user.uid,
-    });
+      await _firestore.collection('recipes').add({
+        'title': recipe.title,
+        'imageUrl': recipe.imageUrl,
+        'calories': recipe.calories,
+        'time': recipe.time,
+        'category': recipe.category.toString(),
+        'ingredients': recipe.ingredients.map((i) => {
+          'name': i.name,
+          'quantity': i.quantity,
+          'unit': i.unit,
+          'category': i.category,
+        }).toList(),
+        'instructions': recipe.instructions,
+        'createdAt': FieldValue.serverTimestamp(),
+        'householdId': householdId,
+        'createdBy': user.uid,
+      });
+    } catch (e) {
+      print('FEJL ved tilføjelse af opskrift: $e');
+    }
   }
 
   Future<void> updateRecipe(Recipe updatedRecipe) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
 
-    // SIKKERHED: Tjek om brugeren har lov til at redigere
-    final doc = await _firestore.collection('recipes').doc(updatedRecipe.id).get();
-    if (!doc.exists) return;
-    
-    final data = doc.data()!;
-    final ownerId = data['createdBy'];
-    final hId = data['householdId'];
-    final userHouseholdId = ref.read(householdProvider).householdId;
+      final doc = await _firestore.collection('recipes').doc(updatedRecipe.id).get();
+      if (!doc.exists) return;
+      
+      final data = doc.data()!;
+      final ownerId = data['createdBy'];
+      final hId = data['householdId'];
+      final userHouseholdId = ref.read(householdProvider).householdId;
 
-    // Kun skaberen eller medlemmer af samme husstand må redigere
-    if (ownerId != user.uid && hId != userHouseholdId) {
-      print('Sikkerhedsfejl: Bruger har ikke tilladelse til at redigere denne opskrift');
-      return;
+      if (ownerId != user.uid && hId != userHouseholdId) {
+        throw Exception('Sikkerhedsfejl: Bruger har ikke tilladelse til at redigere denne opskrift');
+      }
+
+      await _firestore.collection('recipes').doc(updatedRecipe.id).update({
+        'title': updatedRecipe.title,
+        'imageUrl': updatedRecipe.imageUrl,
+        'calories': updatedRecipe.calories,
+        'time': updatedRecipe.time,
+        'category': updatedRecipe.category.toString(),
+        'ingredients': updatedRecipe.ingredients.map((i) => {
+          'name': i.name,
+          'quantity': i.quantity,
+          'unit': i.unit,
+          'category': i.category,
+        }).toList(),
+        'instructions': updatedRecipe.instructions,
+      });
+    } catch (e) {
+      print('FEJL ved opdatering af opskrift: $e');
     }
-
-    await _firestore.collection('recipes').doc(updatedRecipe.id).update({
-      'title': updatedRecipe.title,
-      'imageUrl': updatedRecipe.imageUrl,
-      'calories': updatedRecipe.calories,
-      'time': updatedRecipe.time,
-      'category': updatedRecipe.category.toString(),
-      'ingredients': updatedRecipe.ingredients.map((i) => {
-        'name': i.name,
-        'quantity': i.quantity,
-        'unit': i.unit,
-        'category': i.category,
-      }).toList(),
-      'instructions': updatedRecipe.instructions,
-    });
   }
 
   Future<void> deleteRecipe(String id) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
 
-    final doc = await _firestore.collection('recipes').doc(id).get();
-    if (!doc.exists) return;
-    
-    if (doc.data()!['createdBy'] != user.uid) {
-      print('Sikkerhedsfejl: Kun skaberen kan slette opskriften');
-      return;
+      final doc = await _firestore.collection('recipes').doc(id).get();
+      if (!doc.exists) return;
+      
+      if (doc.data()!['createdBy'] != user.uid) {
+        throw Exception('Sikkerhedsfejl: Kun skaberen kan slette opskriften');
+      }
+
+      await _firestore.collection('recipes').doc(id).delete();
+    } catch (e) {
+      print('FEJL ved sletning af opskrift: $e');
     }
-
-    await _firestore.collection('recipes').doc(id).delete();
   }
 }
 

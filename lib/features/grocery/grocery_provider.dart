@@ -78,6 +78,45 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .doc(id)
         .update({'quantity': newQuantity});
   }
+
+  Future<void> clearCheckedItems() async {
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null || state.value == null) return;
+
+    final batch = _firestore.batch();
+    final checkedItems = state.value!.where((item) => item.isChecked);
+    
+    if (checkedItems.isEmpty) return;
+
+    for (final item in checkedItems) {
+      final docRef = _firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('grocery_list')
+          .doc(item.id);
+      batch.delete(docRef);
+    }
+
+    await batch.commit();
+  }
+
+  Future<void> clearAllItems() async {
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null || state.value == null) return;
+
+    final batch = _firestore.batch();
+    
+    for (final item in state.value!) {
+      final docRef = _firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('grocery_list')
+          .doc(item.id);
+      batch.delete(docRef);
+    }
+
+    await batch.commit();
+  }
 }
 
 final groceryListProvider = StreamNotifierProvider<GroceryListNotifier, List<GroceryItem>>(() {
