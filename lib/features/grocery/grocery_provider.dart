@@ -3,55 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
 import '../profile/household_provider.dart';
 
-class GroceryListNotifier extends AsyncNotifier<List<GroceryItem>> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
+  final FirebaseFirestore _firestore;
+
+  GroceryListNotifier({FirebaseFirestore? firestore}) 
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
-  Future<List<GroceryItem>> build() async {
+  Stream<List<GroceryItem>> build() {
     final household = ref.watch(householdProvider);
     final householdId = household.householdId;
 
-    if (householdId == null) return [];
+    if (householdId == null) return Stream.value([]);
 
-    // Stream fra Firestore
-    final stream = _firestore
-        .collection('households')
-        .doc(householdId)
-        .collection('grocery_list')
-        .orderBy('createdAt', descending: true)
-        .snapshots();
-
-    // Vi konverterer streamen til AsyncValue
-    // Da build() returnerer en Future, bruger vi stream.first for den initiale værdi,
-    // men vi vil gerne have den til at opdatere løbende.
-    // I Riverpod 2.0 AsyncNotifier, kan vi bruge 'ref.listen' eller 'state = ' i en stream listen.
-    
-    _listenToStream(householdId);
-    
-    final firstSnapshot = await _firestore
-        .collection('households')
-        .doc(householdId)
-        .collection('grocery_list')
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    return firstSnapshot.docs
-        .map((doc) => GroceryItem.fromMap(doc.data(), doc.id))
-        .toList();
-  }
-
-  void _listenToStream(String householdId) {
-    _firestore
+    return _firestore
         .collection('households')
         .doc(householdId)
         .collection('grocery_list')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .listen((snapshot) {
-      state = AsyncValue.data(
-        snapshot.docs.map((doc) => GroceryItem.fromMap(doc.data(), doc.id)).toList(),
-      );
-    });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => GroceryItem.fromMap(doc.data(), doc.id))
+            .toList());
   }
 
   Future<void> toggleItem(String id) async {
@@ -107,6 +80,7 @@ class GroceryListNotifier extends AsyncNotifier<List<GroceryItem>> {
   }
 }
 
-final groceryListProvider = AsyncNotifierProvider<GroceryListNotifier, List<GroceryItem>>(() {
+final groceryListProvider = StreamNotifierProvider<GroceryListNotifier, List<GroceryItem>>(() {
   return GroceryListNotifier();
 });
+

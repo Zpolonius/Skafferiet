@@ -71,7 +71,7 @@ class ProfileScreen extends ConsumerWidget {
                       const SizedBox(height: 32),
                       
                       // Household Section
-                      _SectionHeader(title: 'Husholdning'),
+                      const _SectionHeader(title: 'Husholdning'),
                       const SizedBox(height: 12),
                       if (household.householdId == null)
                         const _NoHouseholdCard()
@@ -211,7 +211,7 @@ class _HouseholdCard extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Medlemmer: ${household.members.join(", ")}',
+                  'Medlemmer: ${household.memberNames.values.join(", ")}',
                   style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppColors.outline),
                 ),
               ),

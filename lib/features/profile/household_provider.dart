@@ -6,8 +6,9 @@ import 'dart:math';
 class HouseholdState {
   final String? householdId;
   final String? householdName;
-  final List<String> members;
+  final List<String> members; // Nu UID'er
   final List<Map<String, dynamic>> invitations;
+  final Map<String, String> memberNames; // Map fra UID til Navn
   final bool isLoading;
 
   HouseholdState({
@@ -15,6 +16,7 @@ class HouseholdState {
     this.householdName,
     this.members = const [],
     this.invitations = const [],
+    this.memberNames = const {},
     this.isLoading = false,
   });
 
@@ -23,6 +25,7 @@ class HouseholdState {
     String? householdName,
     List<String>? members,
     List<Map<String, dynamic>>? invitations,
+    Map<String, String>? memberNames,
     bool? isLoading,
   }) {
     return HouseholdState(
@@ -30,16 +33,20 @@ class HouseholdState {
       householdName: householdName ?? this.householdName,
       members: members ?? this.members,
       invitations: invitations ?? this.invitations,
+      memberNames: memberNames ?? this.memberNames,
       isLoading: isLoading ?? this.isLoading,
     );
   }
 }
 
 class HouseholdNotifier extends StateNotifier<HouseholdState> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  HouseholdNotifier() : super(HouseholdState(isLoading: true)) {
+  HouseholdNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth}) 
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance,
+        super(HouseholdState(isLoading: true)) {
     _init();
   }
 
@@ -58,7 +65,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     if (email == null) return;
     _firestore
         .collection('invitations')
-        .where('toUserEmail', isEqualTo: email)
+        .where('toUserEmail', isEqualTo: email.trim().toLowerCase())
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .listen((snapshot) {
@@ -78,27 +85,49 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         // Hvis brugeren ikke har en husstand, opret en automatisk
         final user = _auth.currentUser;
         if (user != null) {
-          print('DEBUG: Ingen husstand fundet. Opretter automatisk...');
-          await createHousehold('${user.displayName ?? 'Mit'} Skafferi');
+          // Vi tjekker om vi allerede er ved at oprette/loade
+          if (!state.isLoading) {
+            print('DEBUG: Ingen husstand fundet. Opretter automatisk...');
+            await createHousehold('${user.displayName ?? 'Mit'} Skafferi');
+          }
         } else {
-          state = HouseholdState(isLoading: false);
+          state = state.copyWith(isLoading: false);
         }
       }
     });
   }
 
   void _listenToHousehold(String householdId) {
-    _firestore.collection('households').doc(householdId).snapshots().listen((doc) {
+    _firestore.collection('households').doc(householdId).snapshots().listen((doc) async {
       if (doc.exists) {
         final data = doc.data()!;
+        final memberUids = List<String>.from(data['members'] ?? []);
+        
+        // Hent navne for alle medlemmer
+        final names = await _fetchMemberNames(memberUids);
+        
         state = state.copyWith(
           householdId: householdId,
           householdName: data['name'],
-          members: List<String>.from(data['members'] ?? []),
+          members: memberUids,
+          memberNames: names,
           isLoading: false,
         );
       }
     });
+  }
+
+  Future<Map<String, String>> _fetchMemberNames(List<String> uids) async {
+    final Map<String, String> names = {};
+    for (final uid in uids) {
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        names[uid] = userDoc.data()?['displayName'] ?? 'Ukendt bruger';
+      } else {
+        names[uid] = 'Bruger';
+      }
+    }
+    return names;
   }
 
   Future<void> createHousehold(String name) async {
@@ -107,15 +136,22 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
     state = state.copyWith(isLoading: true);
     
+    // Øg kompleksitet til 6 cifre for at undgå kollisioner
     final random = Random();
-    final code = 'SK-${random.nextInt(9000) + 1000}';
+    final code = 'SK-${random.nextInt(900000) + 100000}';
     
     final householdData = {
       'name': name,
-      'members': [user.displayName ?? user.email],
+      'members': [user.uid],
       'admin': user.uid,
       'createdAt': FieldValue.serverTimestamp(),
     };
+
+    // Sikr at bruger-dokumentet findes og har displayName
+    await _firestore.collection('users').doc(user.uid).set({
+      'displayName': user.displayName ?? user.email,
+      'email': user.email,
+    }, SetOptions(merge: true));
 
     await _firestore.collection('households').doc(code).set(householdData);
     await _firestore.collection('users').doc(user.uid).set({
@@ -132,7 +168,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     final doc = await _firestore.collection('households').doc(code).get();
     if (doc.exists) {
       await _firestore.collection('households').doc(code).update({
-        'members': FieldValue.arrayUnion([user.displayName ?? user.email]),
+        'members': FieldValue.arrayUnion([user.uid]),
       });
       await _firestore.collection('users').doc(user.uid).set({
         'householdId': code,
@@ -148,11 +184,13 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
     final hId = state.householdId!;
     await _firestore.collection('households').doc(hId).update({
-      'members': FieldValue.arrayRemove([user.displayName ?? user.email]),
+      'members': FieldValue.arrayRemove([user.uid]),
     });
     await _firestore.collection('users').doc(user.uid).update({
       'householdId': FieldValue.delete(),
     });
+    
+    state = state.copyWith(householdId: null, members: [], memberNames: {});
   }
 
   Future<void> sendInvitation(String email) async {
@@ -180,12 +218,25 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     if (!inviteDoc.exists) return;
 
     final data = inviteDoc.data()!;
+    final targetEmail = data['toUserEmail'] as String?;
+    
+    // SIKKERHED: Tjek om invitationen er til den nuværende bruger
+    if (targetEmail != user.email?.toLowerCase()) {
+      print('Sikkerhedsfejl: Invitation tilhører ikke denne bruger');
+      return;
+    }
+
     final householdId = data['fromHouseholdId'];
 
-    // Join the household
+    // Forlad nuværende husstand først (oprydning)
+    if (state.householdId != null && state.householdId != householdId) {
+      await leaveHousehold();
+    }
+
+    // Join den nye husstand
     await joinHousehold(householdId);
 
-    // Mark invitation as accepted
+    // Marker invitation som accepteret
     await _firestore.collection('invitations').doc(invitationId).update({
       'status': 'accepted',
     });
