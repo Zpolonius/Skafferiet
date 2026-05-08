@@ -18,9 +18,8 @@ class _MockMealPlanNotifier extends MealPlanNotifier {
   Recipe? capturedRecipe;
 
   @override
-  Future<WeeklyMealPlan> build() async {
-    return WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {});
-  }
+  Future<WeeklyMealPlan> build() async =>
+      WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {});
 
   @override
   Future<void> updateSlot(
@@ -44,47 +43,66 @@ final _testRecipe = Recipe(
   ingredients: [],
 );
 
-Widget _buildSheet(_MockMealPlanNotifier notifier) {
+// Hjælpefunktion der bygger sheet'en med en route så Navigator.pop() virker
+Widget _buildApp(_MockMealPlanNotifier notifier) {
   return ProviderScope(
-    overrides: [
-      mealPlanProvider.overrideWith(() => notifier),
-    ],
-    child: const MaterialApp(
-      home: Scaffold(
-        body: SizedBox.shrink(),
+    overrides: [mealPlanProvider.overrideWith(() => notifier)],
+    child: MaterialApp(
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProviderScope(
+                    overrides: [mealPlanProvider.overrideWith(() => notifier)],
+                    child: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
+                  ),
+                ),
+              ),
+              child: const Text('Åbn'),
+            ),
+          ),
+        ),
       ),
     ),
   );
 }
 
 void main() {
+  // Sæt telefon-skærmstørrelse så overflow undgås
+  const phoneSize = Size(390, 844);
+
   group('AddToMealPlanSheet', () {
-    testWidgets('viser opskriftens navn', (tester) async {
+    testWidgets('viser opskriftens navn og titel', (tester) async {
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final notifier = _MockMealPlanNotifier();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [mealPlanProvider.overrideWith(() => notifier)],
           child: MaterialApp(
-            home: Scaffold(
-              body: AddToMealPlanSheet(recipe: _testRecipe),
-            ),
+            home: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
           ),
         ),
       );
       await tester.pumpAndSettle();
+
       expect(find.text('Spaghetti Bolognese'), findsOneWidget);
       expect(find.text('Tilføj til madplan'), findsOneWidget);
     });
 
     testWidgets('"Bekræft"-knap er deaktiveret uden valg', (tester) async {
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final notifier = _MockMealPlanNotifier();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [mealPlanProvider.overrideWith(() => notifier)],
           child: MaterialApp(
-            home: Scaffold(
-              body: AddToMealPlanSheet(recipe: _testRecipe),
-            ),
+            home: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
           ),
         ),
       );
@@ -95,14 +113,15 @@ void main() {
     });
 
     testWidgets('"Bekræft"-knap aktiveres når dag og måltid er valgt', (tester) async {
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final notifier = _MockMealPlanNotifier();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [mealPlanProvider.overrideWith(() => notifier)],
           child: MaterialApp(
-            home: Scaffold(
-              body: AddToMealPlanSheet(recipe: _testRecipe),
-            ),
+            home: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
           ),
         ),
       );
@@ -117,18 +136,15 @@ void main() {
       expect(button.onPressed, isNotNull);
     });
 
-    testWidgets('kalder updateSlot med korrekte værdier ved tryk', (tester) async {
+    testWidgets('kalder updateSlot med korrekte værdier', (tester) async {
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final notifier = _MockMealPlanNotifier();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [mealPlanProvider.overrideWith(() => notifier)],
-          child: MaterialApp(
-            home: Scaffold(
-              body: AddToMealPlanSheet(recipe: _testRecipe),
-            ),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_buildApp(notifier));
+
+      // Naviger til sheet via route (så Navigator.pop() virker)
+      await tester.tap(find.text('Åbn'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Onsdag'));
@@ -137,7 +153,8 @@ void main() {
       await tester.pump();
 
       await tester.tap(find.byType(FilledButton));
-      await tester.pumpAndSettle();
+      await tester.pump(); // lad async-updateSlot køre
+      await tester.pump(); // lad Navigator.pop animere
 
       expect(notifier.capturedDay, 'Onsdag');
       expect(notifier.capturedSlot, 'Frokost');

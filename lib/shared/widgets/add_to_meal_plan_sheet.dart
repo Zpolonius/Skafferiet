@@ -34,11 +34,12 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Tilføj til madplan',
-                style: Theme.of(context).textTheme.displayMedium,
+              Expanded(
+                child: Text(
+                  'Tilføj til madplan',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.close),

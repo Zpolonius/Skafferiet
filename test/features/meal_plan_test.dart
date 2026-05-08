@@ -31,10 +31,9 @@ void main() {
 
     test('transferToShoppingList should add items', () async {
       final mealNotifier = container.read(mealPlanProvider.notifier);
-      final groceryNotifier = container.read(groceryListProvider.notifier);
       
       final initialCount = container.read(groceryListProvider).value!.length;
-      final count = await mealNotifier.transferToShoppingList(groceryNotifier);
+      final count = await mealNotifier.transferToShoppingList();
       
       expect(count, greaterThan(0));
       expect(container.read(groceryListProvider).value!.length, initialCount + count);
