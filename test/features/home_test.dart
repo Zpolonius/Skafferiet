@@ -8,7 +8,7 @@ import 'package:skafferiet/features/profile/household_provider.dart';
 import 'package:skafferiet/features/recipes/recipes_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
 import 'package:skafferiet/core/models/recipe.dart';
-import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart' show MealPlan;
+import 'package:skafferiet/core/models/meal_plan.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -25,9 +25,9 @@ class MockRecipesNotifier extends StreamNotifier<List<Recipe>> with Mock impleme
   Stream<List<Recipe>> build() => const Stream.empty();
 }
 
-class MockMealPlanNotifier extends AsyncNotifier<MealPlan> with Mock implements MealPlanNotifier {
+class MockMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<MealPlan> build() async => MealPlan(days: {});
+  Future<WeeklyMealPlan> build() async => WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {});
 }
 
 class _MockUser extends Mock implements User {}

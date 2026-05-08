@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../recipes/recipes_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../../core/models/recipe.dart';
@@ -29,9 +30,14 @@ class RecipeDetailScreen extends ConsumerWidget {
             expandedHeight: 300,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: Image.network(
-                recipe.imageUrl ?? 'https://via.placeholder.com/400x300',
+              background: CachedNetworkImage(
+                imageUrl: recipe.imageUrl ?? 'https://via.placeholder.com/400x300',
                 fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => const Icon(Icons.error),
               ),
             ),
             leading: Padding(

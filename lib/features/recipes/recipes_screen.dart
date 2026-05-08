@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
@@ -247,7 +248,7 @@ class _RecipeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         image: recipe.imageUrl != null
             ? DecorationImage(
-                image: NetworkImage(recipe.imageUrl!),
+                image: CachedNetworkImageProvider(recipe.imageUrl!),
                 fit: BoxFit.cover,
               )
             : null,

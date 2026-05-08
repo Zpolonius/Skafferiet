@@ -4,7 +4,7 @@ import 'package:skafferiet/main.dart';
 import 'package:skafferiet/features/auth/login_screen.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 
 class MockAuthNotifier extends StateNotifier<AuthState> with Mock implements AuthNotifier {
   MockAuthNotifier() : super(AuthState(isLoading: false));

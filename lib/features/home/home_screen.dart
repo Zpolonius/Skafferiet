@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../auth/auth_provider.dart';
 import '../meal_plan/meal_plan_provider.dart';
 import '../grocery/grocery_provider.dart';
@@ -368,11 +369,29 @@ class _MealCard extends StatelessWidget {
                     color: const Color(0xFFF1F3F2),
                     child: const Icon(Icons.add_circle_outline, color: Color(0xFF0F5238)),
                   )
-                : Image.network(
-                    slot.recipe?.imageUrl ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200',
+                : CachedNetworkImage(
+                    imageUrl: slot.recipe?.imageUrl ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200',
                     width: 64,
                     height: 64,
                     fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      width: 64,
+                      height: 64,
+                      color: const Color(0xFFF1F3F2),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 64,
+                      height: 64,
+                      color: const Color(0xFFF1F3F2),
+                      child: const Icon(Icons.error_outline, color: Colors.red),
+                    ),
                   ),
             ),
             const Gap(16),

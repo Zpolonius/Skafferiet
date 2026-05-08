@@ -7,6 +7,7 @@ import 'dart:developer' as developer;
 class HouseholdState {
   final String? householdId;
   final String? householdName;
+  final String? adminUid;
   final List<String> members; // Nu UID'er
   final List<Map<String, dynamic>> invitations;
   final Map<String, String> memberNames; // Map fra UID til Navn
@@ -16,6 +17,7 @@ class HouseholdState {
   HouseholdState({
     this.householdId,
     this.householdName,
+    this.adminUid,
     this.members = const [],
     this.invitations = const [],
     this.memberNames = const {},
@@ -26,6 +28,7 @@ class HouseholdState {
   HouseholdState copyWith({
     String? householdId,
     String? householdName,
+    String? adminUid,
     List<String>? members,
     List<Map<String, dynamic>>? invitations,
     Map<String, String>? memberNames,
@@ -36,6 +39,7 @@ class HouseholdState {
     return HouseholdState(
       householdId: householdId ?? this.householdId,
       householdName: householdName ?? this.householdName,
+      adminUid: adminUid ?? this.adminUid,
       members: members ?? this.members,
       invitations: invitations ?? this.invitations,
       memberNames: memberNames ?? this.memberNames,
@@ -115,6 +119,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         state = state.copyWith(
           householdId: householdId,
           householdName: data['name'],
+          adminUid: data['admin'] as String?,
           members: memberUids,
           memberNames: names,
           isLoading: false,
@@ -134,6 +139,16 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       }
     }
     return names;
+  }
+
+  Future<void> renameHousehold(String newName) async {
+    if (state.householdId == null) return;
+    try {
+      await _firestore.collection('households').doc(state.householdId).update({'name': newName});
+    } catch (e) {
+      developer.log('FEJL ved omdøbning af husstand', error: e, name: 'household_provider');
+      state = state.copyWith(error: 'Kunne ikke omdøbe husstanden');
+    }
   }
 
   Future<void> createHousehold(String name) async {

@@ -39,13 +39,13 @@ Baseret på kodeanalyse maj 2026.
 ## 🎨 Design-gap — Implementering matcher ikke mockups
 
 ### Høj prioritet
-- [ ] **Profil:** Tilføj stats-række (antal opskrifter / madplaner / gemte varer)
-- [ ] **Profil:** Tilføj manglende menupunkter: Mine opskrifter, Præferencer & Diæt, Hjælp & Support
+- [x] **Profil:** Tilføj stats-række (antal opskrifter / madplaner / gemte varer)
+- [x] **Profil:** Tilføj manglende menupunkter: Mine opskrifter, Præferencer & Diæt, Hjælp & Support
+- [x] **Del & Samarbejd:** Vis medlemsliste med roller (Ejer / Kan redigere) direkte på profil-siden
 - [ ] **Tilføj til madplan:** Implementer faktisk Firestore-skrivning (`add_to_meal_plan_sheet.dart:106`)
 
 ### Medium prioritet
 - [ ] **Home:** Tilføj Snack-slot i "Dagens Plan" (viser kun 3 måltider, designet har 4)
-- [ ] **Del & Samarbejd:** Vis medlemsliste med roller (Ejer / Kan redigere) direkte på profil-siden
 - [ ] **Madplan:** Tilføj "Tilføj til indkøb"-knap på Direct Entry snack-kort
 
 ### lav prioritet
