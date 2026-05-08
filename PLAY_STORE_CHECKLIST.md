@@ -7,12 +7,12 @@ Baseret på kodeanalyse maj 2026.
 ## 🔴 Kritisk — Fix inden release
 
 - [ ] Tilføj app-ikon (alle densities) — `android/app/src/main/res/mipmap-*/`
-- [ ] Tilføj INTERNET-permission i `android/app/src/main/AndroidManifest.xml`
+- [x] Tilføj INTERNET-permission i `android/app/src/main/AndroidManifest.xml`
+- [x] Ret app-navn fra `"skafferiet"` til `"Skafferiet"` i AndroidManifest.xml
 - [ ] Fjern alle `print()`-statements fra production-kode
   - `lib/features/auth/login_screen.dart:134–142`
   - `lib/features/profile/household_provider.dart:90`
   - `lib/features/profile/profile_screen.dart:196`
-- [ ] Ret app-navn fra `"skafferiet"` til `"Skafferiet"` i AndroidManifest.xml
 
 ---
 

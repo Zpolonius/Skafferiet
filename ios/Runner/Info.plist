@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Kamera og billedbibliotek (image_picker) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Skafferiet bruger kameraet til at tage billeder af varer og opskrifter.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Skafferiet bruger dit billedbibliotek til at vælge billeder til varer og opskrifter.</string>
+
+	<!-- Push notifikationer -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Skafferiet sender notifikationer om din madplan og indkøbsliste.</string>
 </dict>
 </plist>
