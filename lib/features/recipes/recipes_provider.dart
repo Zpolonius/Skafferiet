@@ -39,7 +39,7 @@ class RecipesNotifier extends StreamNotifier<List<Recipe>> {
       time: data['time'] ?? '',
       category: RecipeCategory.values.firstWhere(
         (e) => e.toString() == data['category'],
-        orElse: () => RecipeCategory.Aftensmad,
+        orElse: () => RecipeCategory.aftensmad,
       ),
       ingredients: (data['ingredients'] as List? ?? [])
           .map((i) => Ingredient(

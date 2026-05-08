@@ -17,7 +17,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   final _titleController = TextEditingController();
   final _caloriesController = TextEditingController();
   final _timeController = TextEditingController();
-  RecipeCategory _selectedCategory = RecipeCategory.Aftensmad;
+  RecipeCategory _selectedCategory = RecipeCategory.aftensmad;
   final List<Ingredient> _ingredients = [];
   String? _imageUrl;
   bool _isUploadingImage = false;

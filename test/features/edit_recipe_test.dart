@@ -8,7 +8,7 @@ void main() {
   final testRecipe = Recipe(
     id: 'test-1',
     title: 'Test Pasta',
-    category: RecipeCategory.Aftensmad,
+    category: RecipeCategory.aftensmad,
     calories: 500,
     time: '20 min',
     ingredients: [

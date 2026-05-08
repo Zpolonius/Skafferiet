@@ -37,7 +37,7 @@ class _MockMealPlanNotifier extends MealPlanNotifier {
 final _testRecipe = Recipe(
   id: 'r1',
   title: 'Spaghetti Bolognese',
-  category: RecipeCategory.Aftensmad,
+  category: RecipeCategory.aftensmad,
   calories: 650,
   time: '30 min',
   ingredients: [],

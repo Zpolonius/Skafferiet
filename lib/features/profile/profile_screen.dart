@@ -99,9 +99,14 @@ class ProfileScreen extends ConsumerWidget {
                       // Settings Section
                       const _SectionHeader(title: 'Indstillinger'),
                       const SizedBox(height: 12),
-                      const _ProfileTile(
+                      _ProfileTile(
                         icon: Icons.notifications_none,
                         title: 'Notifikationer',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Notifikationer kommer snart!')),
+                          );
+                        },
                       ),
                       _ProfileTile(
                         icon: Icons.dark_mode_outlined,
@@ -168,7 +173,7 @@ class _HouseholdCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -181,7 +186,7 @@ class _HouseholdCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryContainer.withOpacity(0.1),
+                  color: AppColors.primaryContainer.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.house_outlined, color: AppColors.primary, size: 20),
@@ -334,7 +339,12 @@ class _ProfileTile extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
 
-  const _ProfileTile({required this.icon, required this.title, this.trailing});
+  const _ProfileTile({
+    required this.icon,
+    required this.title,
+    this.trailing,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

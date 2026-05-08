@@ -20,11 +20,9 @@ Baseret på kodeanalyse maj 2026.
 
 - [x] Implementer "Tilføj til madplan"-funktionen (`add_to_meal_plan_sheet.dart`) — 4 tests ✓
 - [x] Implementer billede-picker til dagligvarer eller fjern knappen (`add_grocery_item_sheet.dart:87`)
-- [ ] Opret og commit `firestore.rules` og `storage.rules` til repo
+- [x] Opret og commit `firestore.rules` og `storage.rules` til repo — kør `firebase deploy --only firestore:rules,storage`
 - [x] Tilføj input-validering på login (email-format + password min. 6 tegn)
-- [ ] Vis fejlbeskeder til brugeren i stedet for `print()` i providers
-  - [x] `household_provider.dart`
-  - [x] `recipes_provider.dart`
+- [x] Vis fejlbeskeder til brugeren i stedet for `print()` i providers
 
 ---
 
@@ -43,7 +41,6 @@ Baseret på kodeanalyse maj 2026.
 ### Høj prioritet
 - [ ] **Profil:** Tilføj stats-række (antal opskrifter / madplaner / gemte varer)
 - [ ] **Profil:** Tilføj manglende menupunkter: Mine opskrifter, Præferencer & Diæt, Hjælp & Support
-- [ ] **Madplan:** Vis kalorie-sum badge ved siden af dagsoverskriften (f.eks. `1.850 kcal`)
 - [ ] **Tilføj til madplan:** Implementer faktisk Firestore-skrivning (`add_to_meal_plan_sheet.dart:106`)
 
 ### Medium prioritet
@@ -51,6 +48,8 @@ Baseret på kodeanalyse maj 2026.
 - [ ] **Del & Samarbejd:** Vis medlemsliste med roller (Ejer / Kan redigere) direkte på profil-siden
 - [ ] **Madplan:** Tilføj "Tilføj til indkøb"-knap på Direct Entry snack-kort
 
+### lav prioritet
+- []  **Madplan:** Vis kalorie-sum badge ved siden af dagsoverskriften (f.eks. `1.850 kcal`)
 ---
 
 ## 🟢 Lav — Nice to have

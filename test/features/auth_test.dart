@@ -27,9 +27,9 @@ void main() {
         ],
       );
 
-      // Initial state should be loading
+      // Initial state should NOT be loading by default in the constructor
       final state = container.read(authProvider);
-      expect(state.isLoading, true);
+      expect(state.isLoading, false);
       
       // Wait for init to finish
       await Future.delayed(Duration.zero);

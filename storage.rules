@@ -1,0 +1,35 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Cross-service check: verify the uploader is a member of the household.
+    function isMember(householdId) {
+      return isSignedIn() &&
+             request.auth.uid in
+               firestore.get(/databases/(default)/documents/households/$(householdId)).data.members;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size <= 5 * 1024 * 1024; // 5 MB max
+    }
+
+    // ── Household images (recipes and grocery items) ───────────────────────
+    match /households/{householdId}/{type}/{filename} {
+      allow read:  if isMember(householdId);
+      allow write: if isMember(householdId) && isValidImage();
+      allow delete: if isMember(householdId);
+    }
+
+    // ── Temporary path (used before a household is fully created) ──────────
+    // Kept minimal: authenticated write, no public read.
+    match /temp/{type}/{filename} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn() && isValidImage();
+    }
+  }
+}

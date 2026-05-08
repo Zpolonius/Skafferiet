@@ -54,17 +54,17 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     if (widget.initialCategory != null) {
       _selectedCategory = _mapStringToCategory(widget.initialCategory!);
     } else {
-      _selectedCategory = RecipeCategory.Aftensmad;
+      _selectedCategory = RecipeCategory.aftensmad;
     }
   }
 
 
   RecipeCategory _mapStringToCategory(String cat) {
     switch (cat.toLowerCase()) {
-      case 'morgenmad': return RecipeCategory.Morgenmad;
-      case 'frokost': return RecipeCategory.Frokost;
-      case 'snack': return RecipeCategory.Snack;
-      default: return RecipeCategory.Aftensmad;
+      case 'morgenmad': return RecipeCategory.morgenmad;
+      case 'frokost': return RecipeCategory.frokost;
+      case 'snack': return RecipeCategory.snack;
+      default: return RecipeCategory.aftensmad;
     }
   }
 
@@ -468,10 +468,10 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     // Map RecipeCategory to Slot name
     String slotName;
     switch (_selectedCategory) {
-      case RecipeCategory.Morgenmad: slotName = 'breakfast'; break;
-      case RecipeCategory.Frokost: slotName = 'lunch'; break;
-      case RecipeCategory.Aftensmad: slotName = 'dinner'; break;
-      case RecipeCategory.Snack: slotName = 'snack'; break;
+      case RecipeCategory.morgenmad: slotName = 'breakfast'; break;
+      case RecipeCategory.frokost: slotName = 'lunch'; break;
+      case RecipeCategory.aftensmad: slotName = 'dinner'; break;
+      case RecipeCategory.snack: slotName = 'snack'; break;
     }
     
     if (_activeTab == 1) {

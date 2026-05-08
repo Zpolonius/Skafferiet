@@ -1,4 +1,4 @@
-enum RecipeCategory { Morgenmad, Frokost, Aftensmad, Snack }
+enum RecipeCategory { morgenmad, frokost, aftensmad, snack }
 
 class Ingredient {
   final String name;
