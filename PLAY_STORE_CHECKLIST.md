@@ -19,7 +19,7 @@ Baseret på kodeanalyse maj 2026.
 ## 🟠 Høj — Vigtig for Play Store godkendelse
 
 - [x] Implementer "Tilføj til madplan"-funktionen (`add_to_meal_plan_sheet.dart`) — 4 tests ✓
-- [ ] Implementer billede-picker til dagligvarer eller fjern knappen (`add_grocery_item_sheet.dart:87`)
+- [x] Implementer billede-picker til dagligvarer eller fjern knappen (`add_grocery_item_sheet.dart:87`)
 - [ ] Opret og commit `firestore.rules` og `storage.rules` til repo
 - [ ] Tilføj input-validering på login (email-format + password min. 6 tegn)
 - [ ] Vis fejlbeskeder til brugeren i stedet for `print()` i providers

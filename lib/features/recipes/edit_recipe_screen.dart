@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
+import '../../features/profile/household_provider.dart';
+import '../../shared/utils/image_upload_service.dart';
 import 'recipes_provider.dart';
 
 class EditRecipeScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,8 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   late TextEditingController _timeController;
   late RecipeCategory _selectedCategory;
   late List<Ingredient> _ingredients;
+  String? _imageUrl;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -27,6 +31,68 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     _timeController = TextEditingController(text: widget.recipe.time);
     _selectedCategory = widget.recipe.category;
     _ingredients = List.from(widget.recipe.ingredients);
+    _imageUrl = widget.recipe.imageUrl;
+  }
+
+  Future<void> _pickImage(BuildContext context) async {
+    final householdId = ref.read(householdProvider).householdId;
+    final folder = householdId != null
+        ? 'households/$householdId/recipes'
+        : 'temp/recipes';
+    setState(() => _isUploadingImage = true);
+    try {
+      final url = await ImageUploadService.pickAndUpload(context, storagePath: folder);
+      if (mounted && url != null) setState(() => _imageUrl = url);
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Widget _buildImagePicker(BuildContext context) {
+    return GestureDetector(
+      onTap: _isUploadingImage ? null : () => _pickImage(context),
+      child: Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[300]!),
+          image: _imageUrl != null
+              ? DecorationImage(image: NetworkImage(_imageUrl!), fit: BoxFit.cover)
+              : null,
+        ),
+        child: _isUploadingImage
+            ? const Center(child: CircularProgressIndicator())
+            : _imageUrl == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tilføj billede',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                      ),
+                    ],
+                  )
+                : Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Colors.black54,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+                          onPressed: () => _pickImage(context),
+                        ),
+                      ),
+                    ),
+                  ),
+      ),
+    );
   }
 
   @override
@@ -38,6 +104,8 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildImagePicker(context),
+            const SizedBox(height: 24),
             _buildSectionTitle('Grundlæggende info'),
             TextField(
               controller: _titleController,
@@ -155,6 +223,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   void _saveRecipe() {
     final updatedRecipe = widget.recipe.copyWith(
       title: _titleController.text,
+      imageUrl: _imageUrl,
       calories: int.tryParse(_caloriesController.text) ?? 0,
       time: _timeController.text,
       category: _selectedCategory,

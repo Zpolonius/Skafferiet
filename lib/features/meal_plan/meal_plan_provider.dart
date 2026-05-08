@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
-import '../grocery/grocery_provider.dart';
-import '../../core/models/grocery_item.dart';
+
 import '../profile/household_provider.dart';
-import 'package:uuid/uuid.dart';
+
 
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
 

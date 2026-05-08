@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
 import '../../features/grocery/grocery_provider.dart';
+import '../../features/profile/household_provider.dart';
+import '../utils/image_upload_service.dart';
 import 'package:uuid/uuid.dart';
 
 class AddGroceryItemSheet extends ConsumerStatefulWidget {
@@ -19,9 +21,25 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
   String _selectedCategory = 'Grønt';
   String _selectedUnit = 'stk';
   bool _isAddingCustomCategory = false;
+  String? _imageUrl;
+  bool _isUploadingImage = false;
 
   final categories = ['Grønt', 'Mejeri', 'Kød', 'Frost', 'Brød', 'Andet'];
   final units = ['stk', 'g', 'kg', 'ml', 'l', 'pk', 'bakke', 'poser'];
+
+  Future<void> _pickImage(BuildContext context) async {
+    final householdId = ref.read(householdProvider).householdId;
+    final folder = householdId != null
+        ? 'households/$householdId/grocery'
+        : 'temp/grocery';
+    setState(() => _isUploadingImage = true);
+    try {
+      final url = await ImageUploadService.pickAndUpload(context, storagePath: folder);
+      if (mounted && url != null) setState(() => _imageUrl = url);
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,12 +101,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
-                  onTap: () {
-                    // TODO: Implement actual image picker logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Billedvælger åbner...')),
-                    );
-                  },
+                  onTap: _isUploadingImage ? null : () => _pickImage(context),
                   child: Container(
                     width: 56,
                     height: 56,
@@ -96,8 +109,21 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
                       color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey[300]!),
+                      image: _imageUrl != null
+                          ? DecorationImage(
+                              image: NetworkImage(_imageUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                    child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
+                    child: _isUploadingImage
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : _imageUrl == null
+                            ? const Icon(Icons.add_a_photo_outlined, color: Colors.grey)
+                            : null,
                   ),
                 ),
               ],
@@ -180,7 +206,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
                       unit: _selectedUnit,
                       source: 'manual',
                       createdAt: DateTime.now(),
-                      imageUrl: null, // Placeholder for selected image
+                      imageUrl: _imageUrl,
                     ),
                   );
                   Navigator.pop(context);

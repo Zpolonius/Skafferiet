@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/recipe.dart';
-import '../../core/models/meal_plan.dart';
 import '../recipes/recipes_provider.dart';
 import 'meal_plan_provider.dart';
 
@@ -189,7 +187,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           decoration: BoxDecoration(
             color: isActive ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            boxShadow: isActive ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
+            boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 13), blurRadius: 4, offset: const Offset(0, 2))] : null,
           ),
           child: Center(
             child: Text(
@@ -437,7 +435,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white.withOpacity(0.8) : Colors.grey,
+                color: isSelected ? Colors.white.withValues(alpha: 0.8) : Colors.grey,
               ),
             ),
             const SizedBox(height: 4),
