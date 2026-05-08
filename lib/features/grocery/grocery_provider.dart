@@ -20,11 +20,14 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .collection('households')
         .doc(householdId)
         .collection('grocery_list')
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => GroceryItem.fromMap(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+          final items = snapshot.docs
+              .map((doc) => GroceryItem.fromMap(doc.data(), doc.id))
+              .toList();
+          items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+          return items;
+        });
   }
 
   Future<void> toggleItem(String id) async {
@@ -97,6 +100,22 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
       batch.delete(docRef);
     }
 
+    await batch.commit();
+  }
+
+  Future<void> reorderItems(List<String> orderedIds) async {
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null) return;
+
+    final batch = _firestore.batch();
+    for (int i = 0; i < orderedIds.length; i++) {
+      final docRef = _firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('grocery_list')
+          .doc(orderedIds[i]);
+      batch.update(docRef, {'sortOrder': i});
+    }
     await batch.commit();
   }
 

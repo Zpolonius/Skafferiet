@@ -8,6 +8,7 @@ class GroceryItem {
   final bool isChecked;
   final String source; // 'manual' or 'meal_plan'
   final DateTime createdAt;
+  final int sortOrder;
 
   GroceryItem({
     required this.id,
@@ -19,7 +20,8 @@ class GroceryItem {
     this.isChecked = false,
     required this.source,
     required this.createdAt,
-  });
+    int? sortOrder,
+  }) : sortOrder = sortOrder ?? createdAt.millisecondsSinceEpoch;
 
   GroceryItem copyWith({
     String? id,
@@ -31,6 +33,7 @@ class GroceryItem {
     bool? isChecked,
     String? source,
     DateTime? createdAt,
+    int? sortOrder,
   }) {
     return GroceryItem(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class GroceryItem {
       isChecked: isChecked ?? this.isChecked,
       source: source ?? this.source,
       createdAt: createdAt ?? this.createdAt,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 
@@ -55,10 +59,14 @@ class GroceryItem {
       'isChecked': isChecked,
       'source': source,
       'createdAt': createdAt.millisecondsSinceEpoch,
+      'sortOrder': sortOrder,
     };
   }
 
   factory GroceryItem.fromMap(Map<String, dynamic> map, String id) {
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      map['createdAt'] ?? DateTime.now().millisecondsSinceEpoch,
+    );
     return GroceryItem(
       id: id,
       name: map['name'] ?? '',
@@ -68,7 +76,8 @@ class GroceryItem {
       imageUrl: map['imageUrl'],
       isChecked: map['isChecked'] ?? false,
       source: map['source'] ?? 'manual',
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? DateTime.now().millisecondsSinceEpoch),
+      createdAt: createdAt,
+      sortOrder: map['sortOrder'] ?? createdAt.millisecondsSinceEpoch,
     );
   }
 }

@@ -6,7 +6,6 @@ import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/profile_avatar.dart';
-import '../../shared/widgets/empty_state_widget.dart';
 import 'grocery_provider.dart';
 
 class GroceryScreen extends ConsumerStatefulWidget {
@@ -18,6 +17,7 @@ class GroceryScreen extends ConsumerStatefulWidget {
 
 class _GroceryScreenState extends ConsumerState<GroceryScreen> {
   String? _selectedCategory; // null = Alle
+  bool _isReorderMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +68,18 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                             ),
                             Row(
                               children: [
+                                if (itemsList.isNotEmpty)
+                                  IconButton(
+                                    icon: Icon(
+                                      _isReorderMode ? Icons.check_rounded : Icons.sort,
+                                      color: _isReorderMode ? AppColors.primary : AppColors.outline,
+                                    ),
+                                    tooltip: _isReorderMode ? 'Gem rækkefølge' : 'Sorter liste',
+                                    onPressed: () => setState(() {
+                                      _isReorderMode = !_isReorderMode;
+                                      if (_isReorderMode) _selectedCategory = null;
+                                    }),
+                                  ),
                                 if (itemsList.any((i) => i.isChecked))
                                   IconButton(
                                     icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.primary),
@@ -113,7 +125,7 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (itemsList.isNotEmpty) ...[
+                        if (itemsList.isNotEmpty && !_isReorderMode) ...[
                           _SearchBar(),
                           const SizedBox(height: 12),
                           _CategoryFilterRow(
@@ -122,6 +134,20 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                             onSelected: (cat) => setState(() => _selectedCategory = cat),
                           ),
                         ],
+                        if (_isReorderMode)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.drag_indicator, size: 16, color: AppColors.outline),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Hold og træk for at ændre rækkefølge',
+                                  style: TextStyle(fontSize: 12, color: AppColors.outline),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -148,6 +174,29 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           ),
                         ],
                       ),
+                    ),
+                  )
+                else if (_isReorderMode)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    sliver: SliverReorderableList(
+                      itemCount: itemsList.length,
+                      onReorder: (oldIndex, newIndex) {
+                        if (newIndex > oldIndex) newIndex--;
+                        final reordered = [...itemsList];
+                        final moved = reordered.removeAt(oldIndex);
+                        reordered.insert(newIndex, moved);
+                        ref.read(groceryListProvider.notifier)
+                            .reorderItems(reordered.map((i) => i.id).toList());
+                      },
+                      itemBuilder: (context, index) {
+                        final item = itemsList[index];
+                        return ReorderableDelayedDragStartListener(
+                          key: ValueKey(item.id),
+                          index: index,
+                          child: _GroceryItemTile(item: item, showDragHandle: true),
+                        );
+                      },
                     ),
                   )
                 else
@@ -328,8 +377,9 @@ class _SearchBar extends StatelessWidget {
 
 class _GroceryItemTile extends ConsumerWidget {
   final GroceryItem item;
+  final bool showDragHandle;
 
-  const _GroceryItemTile({required this.item});
+  const _GroceryItemTile({required this.item, this.showDragHandle = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -404,7 +454,12 @@ class _GroceryItemTile extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (!item.isChecked)
+                if (showDragHandle)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.drag_indicator, color: AppColors.outline, size: 22),
+                  )
+                else if (!item.isChecked)
                   _QuantityPicker(
                     quantity: item.quantity,
                     onChanged: (val) => ref.read(groceryListProvider.notifier).updateQuantity(item.id, val),
