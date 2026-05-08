@@ -9,18 +9,38 @@ import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import 'grocery_provider.dart';
 
-class GroceryScreen extends ConsumerWidget {
+class GroceryScreen extends ConsumerStatefulWidget {
   const GroceryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GroceryScreen> createState() => _GroceryScreenState();
+}
+
+class _GroceryScreenState extends ConsumerState<GroceryScreen> {
+  String? _selectedCategory; // null = Alle
+
+  @override
+  Widget build(BuildContext context) {
     final items = ref.watch(groceryListProvider);
 
     return Scaffold(
       body: SafeArea(
         child: items.when(
           data: (itemsList) {
-            final categories = itemsList.isEmpty ? <String, List<GroceryItem>>{} : _groupItemsByCategory(itemsList);
+            final uniqueCategories = itemsList
+                .map((i) => i.category)
+                .toSet()
+                .toList()
+              ..sort();
+
+            final filtered = _selectedCategory == null
+                ? itemsList
+                : itemsList.where((i) => i.category == _selectedCategory).toList();
+
+            final categories = filtered.isEmpty
+                ? <String, List<GroceryItem>>{}
+                : _groupItemsByCategory(filtered);
+
             return CustomScrollView(
               slivers: [
                 SliverPadding(
@@ -93,7 +113,15 @@ class GroceryScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (itemsList.isNotEmpty) _SearchBar(),
+                        if (itemsList.isNotEmpty) ...[
+                          _SearchBar(),
+                          const SizedBox(height: 12),
+                          _CategoryFilterRow(
+                            categories: uniqueCategories,
+                            selected: _selectedCategory,
+                            onSelected: (cat) => setState(() => _selectedCategory = cat),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -205,6 +233,76 @@ class GroceryScreen extends ConsumerWidget {
             child: const Text('Tøm liste'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CategoryFilterRow extends StatelessWidget {
+  final List<String> categories;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+
+  const _CategoryFilterRow({
+    required this.categories,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _FilterChip(
+            label: 'Alle',
+            isSelected: selected == null,
+            onTap: () => onSelected(null),
+          ),
+          ...categories.map((cat) => _FilterChip(
+            label: cat,
+            isSelected: selected == cat,
+            onTap: () => onSelected(cat),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.outlineVariant,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.onSurface,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ),
     );
   }

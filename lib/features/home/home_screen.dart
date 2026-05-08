@@ -21,7 +21,7 @@ class HomeScreen extends ConsumerWidget {
     final mealPlan = ref.watch(mealPlanProvider);
     final groceryList = ref.watch(groceryListProvider);
     
-    final userName = authState.user?.displayName?.split(' ').first ?? 'Mette';
+    final userName = authState.user?.displayName?.split(' ').first ?? 'Bruger';
     final today = DateFormat('EEEE, d. MMMM', 'da_DK').format(DateTime.now()).toUpperCase();
     final greeting = _getGreeting();
 

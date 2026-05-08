@@ -224,27 +224,41 @@ class _HouseholdCard extends ConsumerWidget {
 
   void _showInviteDialog(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Inviter til husstand'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'e-mail@eksempel.dk'),
-          keyboardType: TextInputType.emailAddress,
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'e-mail@eksempel.dk',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Indtast e-mail';
+              if (!value.contains('@') || !value.contains('.')) return 'Ugyldig e-mail';
+              return null;
+            },
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuller')),
           FilledButton(
             onPressed: () {
-              final email = controller.text.trim();
-              if (email.contains('@')) {
+              if (formKey.currentState!.validate()) {
+                final email = controller.text.trim();
                 ref.read(householdProvider.notifier).sendInvitation(email);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Invitation sendt til $email'),
                     backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
@@ -348,16 +362,87 @@ class _NoHouseholdCard extends ConsumerWidget {
       ),
       child: Column(
         children: [
+          const Icon(Icons.house_siding_rounded, size: 48, color: AppColors.outlineVariant),
+          const SizedBox(height: 16),
           const Text('Du er ikke i en husstand endnu', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Bliv inviteret af en ven, eller opret din egen herunder.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.outline)),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => ref.read(householdProvider.notifier).createHousehold('Mit Skafferi'),
-              child: const Text('Opret nyt Skafferi'),
-            ),
+          const Text('Bliv inviteret via e-mail, indtast en kode eller opret din egen herunder.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.outline)),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _showJoinDialog(context, ref),
+                  child: const Text('Indtast kode'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _showCreateDialog(context, ref),
+                  child: const Text('Opret ny'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJoinDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deltag med kode'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'F.eks. SK-123456',
+            prefixIcon: Icon(Icons.vpn_key_outlined),
+          ),
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuller')),
+          FilledButton(
+            onPressed: () {
+              final code = controller.text.trim().toUpperCase();
+              if (code.isNotEmpty) {
+                ref.read(householdProvider.notifier).joinHousehold(code);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Deltag'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController(text: 'Mit Skafferi');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Navngiv dit Skafferi'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Navn på husstand'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuller')),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                ref.read(householdProvider.notifier).createHousehold(name);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Opret'),
           ),
         ],
       ),
