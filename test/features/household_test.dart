@@ -103,4 +103,102 @@ void main() {
       expect(code.length, 9); // SK-XXXXXX = 3 + 6 = 9
     });
   });
+
+  group('HouseholdState.adminUid', () {
+    test('defaults to null', () {
+      expect(HouseholdState().adminUid, isNull);
+    });
+
+    test('copyWith preserves adminUid', () {
+      final s = HouseholdState(adminUid: 'owner-uid', householdId: 'hh-1');
+      expect(s.copyWith(householdName: 'Nyt Navn').adminUid, 'owner-uid');
+    });
+
+    test('copyWith can update adminUid', () {
+      final s = HouseholdState(adminUid: 'old-uid');
+      expect(s.copyWith(adminUid: 'new-uid').adminUid, 'new-uid');
+    });
+  });
+
+  group('renameHousehold', () {
+    late MockFirestore mockFirestore;
+    late MockFirebaseAuth mockAuth;
+    late MockCollectionReference mockUsersCollection;
+    late MockCollectionReference mockHouseholdsCollection;
+    late MockCollectionReference mockInvitesCollection;
+
+    setUp(() {
+      mockFirestore = MockFirestore();
+      mockAuth = MockFirebaseAuth();
+      mockUsersCollection = MockCollectionReference();
+      mockHouseholdsCollection = MockCollectionReference();
+      mockInvitesCollection = MockCollectionReference();
+
+      registerFallbackValue(SetOptions(merge: true));
+
+      // Use Stream.empty() so _init() never fires and state stays pristine
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+      when(() => mockAuth.currentUser).thenReturn(null);
+
+      when(() => mockFirestore.collection('users')).thenReturn(mockUsersCollection);
+      when(() => mockFirestore.collection('households')).thenReturn(mockHouseholdsCollection);
+      when(() => mockFirestore.collection('invitations')).thenReturn(mockInvitesCollection);
+    });
+
+    ProviderContainer _makeContainer() => ProviderContainer(
+      overrides: [
+        householdProvider.overrideWith((ref) => HouseholdNotifier(
+          firestore: mockFirestore,
+          auth: mockAuth,
+        )),
+      ],
+    );
+
+    test('calls Firestore update with new name', () async {
+      final container = _makeContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(householdProvider.notifier);
+      // ignore: invalid_use_of_protected_member
+      notifier.state = HouseholdState(householdId: 'SK-123456', isLoading: false);
+
+      final mockDocRef = MockDocumentReference();
+      when(() => mockHouseholdsCollection.doc('SK-123456')).thenReturn(mockDocRef);
+      when(() => mockDocRef.update(any())).thenAnswer((_) async {});
+
+      await notifier.renameHousehold('Nyt Navn');
+
+      verify(() => mockDocRef.update({'name': 'Nyt Navn'})).called(1);
+    });
+
+    test('sets error state when Firestore throws', () async {
+      final container = _makeContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(householdProvider.notifier);
+      // ignore: invalid_use_of_protected_member
+      notifier.state = HouseholdState(householdId: 'SK-123456', isLoading: false);
+
+      final mockDocRef = MockDocumentReference();
+      when(() => mockHouseholdsCollection.doc('SK-123456')).thenReturn(mockDocRef);
+      when(() => mockDocRef.update(any())).thenThrow(Exception('Netværksfejl'));
+
+      await notifier.renameHousehold('Nyt Navn');
+
+      expect(container.read(householdProvider).error, 'Kunne ikke omdøbe husstanden');
+    });
+
+    test('does nothing when householdId is null', () async {
+      final container = _makeContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(householdProvider.notifier);
+      // ignore: invalid_use_of_protected_member
+      notifier.state = HouseholdState(householdId: null, isLoading: false);
+
+      await notifier.renameHousehold('Nyt Navn');
+
+      verifyNever(() => mockHouseholdsCollection.doc(any()));
+    });
+  });
 }
