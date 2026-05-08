@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../meal_plan/meal_plan_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../../core/models/meal_plan.dart';
-import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -84,9 +82,9 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      actions: [
+      actions: const [
         ProfileAvatar(),
-        const Gap(8),
+        Gap(8),
       ],
     );
   }
@@ -214,14 +212,14 @@ class HomeScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 '3 vigtige ting at huske',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const Icon(Icons.shopping_cart_outlined, color: Color(0xFF404943)),
+              Icon(Icons.shopping_cart_outlined, color: Color(0xFF404943)),
             ],
           ),
           const Gap(16),

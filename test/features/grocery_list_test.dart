@@ -59,7 +59,7 @@ void main() {
 
     test('reorderItems skriver korrekte sortOrder-værdier til Firestore', () async {
       // authStateChanges streamer ikke for at undgå lifecycle-issues
-      when(() => mockAuth.authStateChanges()).thenAnswer((_) => Stream.empty());
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
 
       final mockBatch = MockWriteBatch();
       final mockHouseholdsCollection = MockCollectionReference();
@@ -108,7 +108,7 @@ void main() {
     });
 
     test('reorderItems gør ingenting når householdId er null', () async {
-      when(() => mockAuth.authStateChanges()).thenAnswer((_) => Stream.empty());
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
 
       final mockBatch = MockWriteBatch();
       when(() => mockFirestore.batch()).thenReturn(mockBatch);

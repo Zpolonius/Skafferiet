@@ -143,7 +143,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
                 Expanded(
                   flex: 3,
                   child: DropdownButtonFormField<String>(
-                    value: _selectedUnit,
+                    initialValue: _selectedUnit,
                     decoration: const InputDecoration(labelText: 'Enhed'),
                     items: units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                     onChanged: (v) => setState(() => _selectedUnit = v!),

@@ -135,12 +135,12 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           ),
                         ],
                         if (_isReorderMode)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
                             child: Row(
                               children: [
-                                const Icon(Icons.drag_indicator, size: 16, color: AppColors.outline),
-                                const SizedBox(width: 6),
+                                Icon(Icons.drag_indicator, size: 16, color: AppColors.outline),
+                                SizedBox(width: 6),
                                 Text(
                                   'Hold og træk for at ændre rækkefølge',
                                   style: TextStyle(fontSize: 12, color: AppColors.outline),

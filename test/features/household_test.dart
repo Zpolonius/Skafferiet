@@ -55,6 +55,7 @@ void main() {
       final mockUserDocRef = MockDocumentReference();
       when(() => mockUsersCollection.doc(any())).thenReturn(mockUserDocRef);
       when(() => mockUserDocRef.snapshots()).thenAnswer((_) => Stream.value(MockDocumentSnapshot()));
+      when(() => mockUserDocRef.set(any(), any())).thenAnswer((_) async => {});
       
       final mockQuery = MockQuery();
       when(() => mockInvitesCollection.where('toUserEmail', isEqualTo: any(named: 'isEqualTo'))).thenReturn(mockQuery);

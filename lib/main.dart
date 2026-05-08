@@ -33,27 +33,33 @@ void main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+// Bridges Riverpod auth state into a ChangeNotifier so GoRouter can
+// re-evaluate its redirect without recreating the router object.
+class _AuthRouterNotifier extends ChangeNotifier {
+  _AuthRouterNotifier(WidgetRef ref) {
+    ref.listenManual<AuthState>(authProvider, (_, __) => notifyListeners());
+  }
+}
+
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
 
-    final router = GoRouter(
+class _MyAppState extends ConsumerState<MyApp> {
+  late final _AuthRouterNotifier _notifier;
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifier = _AuthRouterNotifier(ref);
+    _router = GoRouter(
       initialLocation: '/',
-      redirect: (context, state) {
-        if (authState.isLoading) return null; // Vent på Firebase
-        
-        final isLoggingIn = state.matchedLocation == '/login';
-        if (!authState.isAuthenticated && !isLoggingIn) {
-          return '/login';
-        }
-        if (authState.isAuthenticated && isLoggingIn) {
-          return '/';
-        }
-        return null;
-      },
+      refreshListenable: _notifier,
+      redirect: _redirect,
       routes: [
         GoRoute(
           path: '/login',
@@ -117,11 +123,29 @@ class MyApp extends ConsumerWidget {
         ),
       ],
     );
+  }
 
+  String? _redirect(BuildContext context, GoRouterState state) {
+    final authState = ref.read(authProvider);
+    final isLoggingIn = state.matchedLocation == '/login';
+    if (!authState.isAuthenticated && !isLoggingIn) return '/login';
+    if (authState.isAuthenticated && isLoggingIn) return '/';
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _notifier.dispose();
+    _router.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Skafferiet',
       theme: AppTheme.lightTheme,
-      routerConfig: router,
+      routerConfig: _router,
       debugShowCheckedModeBanner: false,
     );
   }

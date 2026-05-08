@@ -22,9 +22,9 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final FirebaseAuth _auth;
 
-  AuthNotifier({FirebaseAuth? auth}) 
+  AuthNotifier({FirebaseAuth? auth})
       : _auth = auth ?? FirebaseAuth.instance,
-        super(AuthState(isLoading: true)) {
+        super(AuthState(user: (auth ?? FirebaseAuth.instance).currentUser)) {
     _init();
   }
 

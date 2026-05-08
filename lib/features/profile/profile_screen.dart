@@ -90,16 +90,16 @@ class ProfileScreen extends ConsumerWidget {
                       
                       // Invitations Section
                       if (household.invitations.isNotEmpty) ...[
-                        _SectionHeader(title: 'Invitationer'),
+                        const _SectionHeader(title: 'Invitationer'),
                         const SizedBox(height: 12),
                         ...household.invitations.map((invite) => _InvitationCard(invite: invite)),
                         const SizedBox(height: 32),
                       ],
                       
                       // Settings Section
-                      _SectionHeader(title: 'Indstillinger'),
+                      const _SectionHeader(title: 'Indstillinger'),
                       const SizedBox(height: 12),
-                      _ProfileTile(
+                      const _ProfileTile(
                         icon: Icons.notifications_none,
                         title: 'Notifikationer',
                       ),
@@ -288,9 +288,9 @@ class _InvitationCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primaryContainer.withOpacity(0.1),
+        color: AppColors.secondaryContainer.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primaryContainer.withOpacity(0.2)),
+        border: Border.all(color: AppColors.secondaryContainer.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +334,7 @@ class _ProfileTile extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
 
-  const _ProfileTile({required this.icon, required this.title, this.trailing, this.onTap});
+  const _ProfileTile({required this.icon, required this.title, this.trailing});
 
   @override
   Widget build(BuildContext context) {
