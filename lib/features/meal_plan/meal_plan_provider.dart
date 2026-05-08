@@ -11,7 +11,10 @@ import 'package:uuid/uuid.dart';
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
 
 class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  MealPlanNotifier({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   DateTime _getWeekStart(DateTime date) {
     // Finder mandagen i den uge, som 'date' tilhører
@@ -156,8 +159,8 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   }
 }
 
-final mealPlanProvider = AsyncNotifierProvider<MealPlanNotifier, WeeklyMealPlan>(() {
-  return MealPlanNotifier();
-});
+final mealPlanProvider = AsyncNotifierProvider<MealPlanNotifier, WeeklyMealPlan>(
+  MealPlanNotifier.new,
+);
 
 final selectedDayProvider = StateProvider<String>((ref) => 'Mandag');

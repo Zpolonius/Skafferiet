@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
+import '../../features/meal_plan/meal_plan_provider.dart';
 
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
   final Recipe recipe;
@@ -102,16 +103,34 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
           const SizedBox(height: 32),
           FilledButton(
             onPressed: (selectedDay != null && selectedSlot != null)
-                ? () {
-                    // TODO: Update the actual meal plan provider
-                    // (Requires adding a method to the provider)
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Tilføjet til $selectedDay ($selectedSlot)'),
-                        backgroundColor: AppColors.primary,
-                      ),
-                    );
+                ? () async {
+                    try {
+                      await ref.read(mealPlanProvider.notifier).updateSlot(
+                        selectedDay!,
+                        selectedSlot!,
+                        recipe: widget.recipe,
+                      );
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${widget.recipe.title} tilføjet til $selectedDay ($selectedSlot)'),
+                            backgroundColor: AppColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Noget gik galt: $e'),
+                            backgroundColor: AppColors.error,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
                   }
                 : null,
             style: FilledButton.styleFrom(
