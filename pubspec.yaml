@@ -52,9 +52,19 @@ dev_dependencies:
   riverpod_lint: ^2.6.3
   riverpod_test: ^0.1.9
   mocktail: ^1.0.5
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/icons/
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/logo.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true

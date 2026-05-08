@@ -6,7 +6,7 @@ Baseret på kodeanalyse maj 2026.
 
 ## 🔴 Kritisk — Fix inden release
 
-- [ ] Tilføj app-ikon (alle densities) — `android/app/src/main/res/mipmap-*/`
+- [x] Tilføj app-ikon (alle densities) — `android/app/src/main/res/mipmap-*/`
 - [x] Tilføj INTERNET-permission i `android/app/src/main/AndroidManifest.xml`
 - [x] Ret app-navn fra `"skafferiet"` til `"Skafferiet"` i AndroidManifest.xml
 - [ ] Fjern alle `print()`-statements fra production-kode
