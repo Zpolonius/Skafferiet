@@ -30,8 +30,7 @@ void main() {
     });
 
     test('transferToShoppingList should add items', () async {
-      final mealNotifier = container.read(mealPlanProvider.notifier);
-      
+      final mealNotifier = container.read(mealPlanProvider.notifier);      
       final initialCount = container.read(groceryListProvider).value!.length;
       final count = await mealNotifier.transferToShoppingList();
       
