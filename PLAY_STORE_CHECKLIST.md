@@ -9,10 +9,10 @@ Baseret på kodeanalyse maj 2026.
 - [x] Tilføj app-ikon (alle densities) — `android/app/src/main/res/mipmap-*/`
 - [x] Tilføj INTERNET-permission i `android/app/src/main/AndroidManifest.xml`
 - [x] Ret app-navn fra `"skafferiet"` til `"Skafferiet"` i AndroidManifest.xml
-- [ ] Fjern alle `print()`-statements fra production-kode
-  - `lib/features/auth/login_screen.dart:134–142`
-  - `lib/features/profile/household_provider.dart:90`
-  - `lib/features/profile/profile_screen.dart:196`
+- [x] Fjern alle `print()`-statements fra production-kode
+  - ~~`lib/features/auth/login_screen.dart:134–142`~~ ✓
+  - ~~`lib/features/profile/household_provider.dart:90`~~ ✓
+  - ~~`lib/features/profile/profile_screen.dart:196`~~ ✓
 
 ---
 
@@ -21,10 +21,10 @@ Baseret på kodeanalyse maj 2026.
 - [x] Implementer "Tilføj til madplan"-funktionen (`add_to_meal_plan_sheet.dart`) — 4 tests ✓
 - [x] Implementer billede-picker til dagligvarer eller fjern knappen (`add_grocery_item_sheet.dart:87`)
 - [ ] Opret og commit `firestore.rules` og `storage.rules` til repo
-- [ ] Tilføj input-validering på login (email-format + password min. 6 tegn)
+- [x] Tilføj input-validering på login (email-format + password min. 6 tegn)
 - [ ] Vis fejlbeskeder til brugeren i stedet for `print()` i providers
-  - `household_provider.dart`
-  - `recipes_provider.dart`
+  - [x] `household_provider.dart`
+  - [x] `recipes_provider.dart`
 
 ---
 

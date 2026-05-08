@@ -13,6 +13,14 @@ class ProfileScreen extends ConsumerWidget {
     final household = ref.watch(householdProvider);
     final auth = ref.watch(authProvider);
     final user = auth.user;
+
+    ref.listen(householdProvider.select((s) => s.error), (previous, next) {
+      if (next != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next), backgroundColor: Colors.red),
+        );
+      }
+    });
     
     // Sikker håndtering af initialer
     String initial = 'U';
@@ -193,7 +201,6 @@ class _HouseholdCard extends ConsumerWidget {
               ),
               FilledButton.tonal(
                 onPressed: () {
-                  print('DEBUG: Inviter-knap trykket!');
                   _showInviteDialog(context, ref);
                 },
                 style: FilledButton.styleFrom(

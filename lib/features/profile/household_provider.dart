@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math';
+import 'dart:developer' as developer;
 
 class HouseholdState {
   final String? householdId;
@@ -10,6 +11,7 @@ class HouseholdState {
   final List<Map<String, dynamic>> invitations;
   final Map<String, String> memberNames; // Map fra UID til Navn
   final bool isLoading;
+  final String? error;
 
   HouseholdState({
     this.householdId,
@@ -18,6 +20,7 @@ class HouseholdState {
     this.invitations = const [],
     this.memberNames = const {},
     this.isLoading = false,
+    this.error,
   });
 
   HouseholdState copyWith({
@@ -27,6 +30,8 @@ class HouseholdState {
     List<Map<String, dynamic>>? invitations,
     Map<String, String>? memberNames,
     bool? isLoading,
+    String? error,
+    bool clearError = false,
   }) {
     return HouseholdState(
       householdId: householdId ?? this.householdId,
@@ -35,6 +40,7 @@ class HouseholdState {
       invitations: invitations ?? this.invitations,
       memberNames: memberNames ?? this.memberNames,
       isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 }
@@ -87,7 +93,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         if (user != null) {
           // Vi tjekker om vi allerede er ved at oprette/loade
           if (!state.isLoading) {
-            print('DEBUG: Ingen husstand fundet. Opretter automatisk...');
+            developer.log('Ingen husstand fundet. Opretter automatisk...', name: 'household_provider');
             await createHousehold('${user.displayName ?? 'Mit'} Skafferi');
           }
         } else {
@@ -157,8 +163,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'householdId': code,
       }, SetOptions(merge: true));
     } catch (e) {
-      print('FEJL ved oprettelse af husstand: $e');
-      state = state.copyWith(isLoading: false);
+      developer.log('FEJL ved oprettelse af husstand', error: e, name: 'household_provider');
+      state = state.copyWith(isLoading: false, error: 'Kunne ikke oprette husstand');
     }
   }
 
@@ -167,7 +173,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       final user = _auth.currentUser;
       if (user == null) return;
 
-      state = state.copyWith(isLoading: true);
+      state = state.copyWith(isLoading: true, clearError: true);
       
       final doc = await _firestore.collection('households').doc(code).get();
       if (doc.exists) {
@@ -178,12 +184,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           'householdId': code,
         }, SetOptions(merge: true));
       } else {
-        print('FEJL: Husstandskode $code findes ikke');
-        state = state.copyWith(isLoading: false);
+        developer.log('Husstandskode $code findes ikke', name: 'household_provider');
+        state = state.copyWith(isLoading: false, error: 'Husstandskoden findes ikke');
       }
     } catch (e) {
-      print('FEJL ved tilslutning til husstand: $e');
-      state = state.copyWith(isLoading: false);
+      developer.log('FEJL ved tilslutning til husstand', error: e, name: 'household_provider');
+      state = state.copyWith(isLoading: false, error: 'Kunne ikke tilslutte til husstand');
     }
   }
 
@@ -200,9 +206,10 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'householdId': FieldValue.delete(),
       });
       
-      state = state.copyWith(householdId: null, members: [], memberNames: {});
+      state = state.copyWith(householdId: null, members: [], memberNames: {}, clearError: true);
     } catch (e) {
-      print('FEJL ved udmeldelse af husstand: $e');
+      developer.log('FEJL ved udmeldelse af husstand', error: e, name: 'household_provider');
+      state = state.copyWith(error: 'Kunne ikke forlade husstanden');
     }
   }
 
@@ -221,7 +228,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('FEJL ved afsendelse af invitation: $e');
+      developer.log('FEJL ved afsendelse af invitation', error: e, name: 'household_provider');
+      state = state.copyWith(error: 'Kunne ikke sende invitation');
     }
   }
 
@@ -229,6 +237,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     try {
       final user = _auth.currentUser;
       if (user == null) return;
+
+      state = state.copyWith(isLoading: true, clearError: true);
 
       final inviteDoc = await _firestore.collection('invitations').doc(invitationId).get();
       if (!inviteDoc.exists) return;
@@ -252,8 +262,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'status': 'accepted',
       });
     } catch (e) {
-      print('FEJL ved accept af invitation: $e');
-      state = state.copyWith(isLoading: false);
+      developer.log('FEJL ved accept af invitation', error: e, name: 'household_provider');
+      state = state.copyWith(isLoading: false, error: 'Kunne ikke acceptere invitation');
     }
   }
 
@@ -263,7 +273,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'status': 'declined',
       });
     } catch (e) {
-      print('FEJL ved afvisning af invitation: $e');
+      developer.log('FEJL ved afvisning af invitation', error: e, name: 'household_provider');
+      state = state.copyWith(error: 'Kunne ikke afvise invitation');
     }
   }
 }

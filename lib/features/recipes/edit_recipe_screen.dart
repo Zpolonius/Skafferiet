@@ -220,7 +220,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     });
   }
 
-  void _saveRecipe() {
+  Future<void> _saveRecipe() async {
     final updatedRecipe = widget.recipe.copyWith(
       title: _titleController.text,
       imageUrl: _imageUrl,
@@ -230,7 +230,15 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       ingredients: _ingredients,
     );
     
-    ref.read(recipesProvider.notifier).updateRecipe(updatedRecipe);
-    Navigator.pop(context);
+    try {
+      await ref.read(recipesProvider.notifier).updateRecipe(updatedRecipe);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kunne ikke opdatere opskrift: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

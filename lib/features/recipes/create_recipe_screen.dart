@@ -205,7 +205,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     });
   }
 
-  void _saveRecipe() {
+  Future<void> _saveRecipe() async {
     final recipe = Recipe(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text,
@@ -216,7 +216,15 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       ingredients: _ingredients,
     );
     
-    ref.read(recipesProvider.notifier).addRecipe(recipe);
-    Navigator.pop(context);
+    try {
+      await ref.read(recipesProvider.notifier).addRecipe(recipe);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kunne ikke gemme opskrift: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }
