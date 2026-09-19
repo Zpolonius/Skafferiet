@@ -18,11 +18,11 @@ import 'package:skafferiet/core/models/meal_plan.dart';
 class _MockUser extends Mock implements User {}
 
 class _MockAuthNotifier extends StateNotifier<AuthState> with Mock implements AuthNotifier {
-  _MockAuthNotifier(AuthState state) : super(state);
+  _MockAuthNotifier(super.state);
 }
 
 class _MockHouseholdNotifier extends StateNotifier<HouseholdState> with Mock implements HouseholdNotifier {
-  _MockHouseholdNotifier(HouseholdState state) : super(state);
+  _MockHouseholdNotifier(super.state);
 }
 
 class _EmptyRecipesNotifier extends StreamNotifier<List<Recipe>> with Mock implements RecipesNotifier {
