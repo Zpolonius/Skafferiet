@@ -178,7 +178,10 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildDailyPlan(AsyncValue<WeeklyMealPlan> planAsync) {
     return planAsync.when(
       data: (plan) {
-        final dayName = DateFormat('EEEE', 'da_DK').format(DateTime.now());
+        final rawDayName = DateFormat('EEEE', 'da_DK').format(DateTime.now());
+        final dayName = rawDayName.isNotEmpty
+            ? '${rawDayName[0].toUpperCase()}${rawDayName.substring(1)}'
+            : rawDayName;
         final day = plan.days[dayName];
         
         return Column(
@@ -188,6 +191,8 @@ class HomeScreen extends ConsumerWidget {
             _MealCard(type: 'FROKOST', slot: day?.lunch ?? MealSlot()),
             const Gap(12),
             _MealCard(type: 'AFTENSMAD', slot: day?.dinner ?? MealSlot()),
+            const Gap(12),
+            _MealCard(type: 'SNACK', slot: day?.snack ?? MealSlot()),
           ],
         );
       },

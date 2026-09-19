@@ -13,11 +13,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class MockAuthNotifier extends StateNotifier<AuthState> with Mock implements AuthNotifier {
-  MockAuthNotifier(AuthState state) : super(state);
+  MockAuthNotifier(super.state);
 }
 
 class MockHouseholdNotifier extends StateNotifier<HouseholdState> with Mock implements HouseholdNotifier {
-  MockHouseholdNotifier(HouseholdState state) : super(state);
+  MockHouseholdNotifier(super.state);
 }
 
 class MockRecipesNotifier extends StreamNotifier<List<Recipe>> with Mock implements RecipesNotifier {

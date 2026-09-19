@@ -1,3 +1,5 @@
+// ignore_for_file: subtype_of_sealed_class
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -145,7 +147,7 @@ void main() {
       when(() => mockFirestore.collection('invitations')).thenReturn(mockInvitesCollection);
     });
 
-    ProviderContainer _makeContainer() => ProviderContainer(
+    ProviderContainer makeContainer() => ProviderContainer(
       overrides: [
         householdProvider.overrideWith((ref) => HouseholdNotifier(
           firestore: mockFirestore,
@@ -155,7 +157,7 @@ void main() {
     );
 
     test('calls Firestore update with new name', () async {
-      final container = _makeContainer();
+      final container = makeContainer();
       addTearDown(container.dispose);
 
       final notifier = container.read(householdProvider.notifier);
@@ -172,7 +174,7 @@ void main() {
     });
 
     test('sets error state when Firestore throws', () async {
-      final container = _makeContainer();
+      final container = makeContainer();
       addTearDown(container.dispose);
 
       final notifier = container.read(householdProvider.notifier);
@@ -189,7 +191,7 @@ void main() {
     });
 
     test('does nothing when householdId is null', () async {
-      final container = _makeContainer();
+      final container = makeContainer();
       addTearDown(container.dispose);
 
       final notifier = container.read(householdProvider.notifier);

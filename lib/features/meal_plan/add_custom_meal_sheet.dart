@@ -96,7 +96,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
                 const Expanded(
                   child: Center(
                     child: Text(
-                      'Add custom meal',
+                      'Tilføj eget måltid',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

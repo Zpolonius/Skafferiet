@@ -29,7 +29,7 @@ Baseret på kodeanalyse maj 2026.
 ## 🟡 Medium — Kvalitet og UX
 
 - [ ] Aktivér R8/ProGuard minifikation i `android/app/build.gradle.kts`
-- [ ] Erstat `Image.network()` med `CachedNetworkImage` (`home_screen.dart:374`)
+- [x] Erstat `Image.network()` med `CachedNetworkImage` (`home_screen.dart:374`)
 - [ ] Tilføj offline-fejl-UI (f.eks. `connectivity_plus` pakken)
 - [ ] Fiksér Dark Mode toggle — `onChanged` er tom (`profile_screen.dart:98–102`)
 - [ ] Fiksér Notifications-knap — gør intet pt.
@@ -42,14 +42,16 @@ Baseret på kodeanalyse maj 2026.
 - [x] **Profil:** Tilføj stats-række (antal opskrifter / madplaner / gemte varer)
 - [x] **Profil:** Tilføj manglende menupunkter: Mine opskrifter, Præferencer & Diæt, Hjælp & Support
 - [x] **Del & Samarbejd:** Vis medlemsliste med roller (Ejer / Kan redigere) direkte på profil-siden
-- [ ] **Tilføj til madplan:** Implementer faktisk Firestore-skrivning (`add_to_meal_plan_sheet.dart:106`)
+- [x] **Tilføj til madplan:** Implementer faktisk Firestore-skrivning (`add_to_meal_plan_sheet.dart:106`)
+- [x] **Home:** Fiks ugedags-casing bug i "Dagens Plan" (`home_screen.dart:181`)
+- [x] **Madplan:** Ret engelsk overskrift til dansk i `add_custom_meal_sheet.dart`
 
 ### Medium prioritet
-- [ ] **Home:** Tilføj Snack-slot i "Dagens Plan" (viser kun 3 måltider, designet har 4)
+- [x] **Home:** Tilføj Snack-slot i "Dagens Plan" (viser kun 3 måltider, designet har 4)
 - [ ] **Madplan:** Tilføj "Tilføj til indkøb"-knap på Direct Entry snack-kort
 
 ### lav prioritet
-- []  **Madplan:** Vis kalorie-sum badge ved siden af dagsoverskriften (f.eks. `1.850 kcal`)
+- [ ] **Madplan:** Vis kalorie-sum badge ved siden af dagsoverskriften (f.eks. `1.850 kcal`)
 ---
 
 ## 🟢 Lav — Nice to have
