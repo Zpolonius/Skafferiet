@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'grocery_provider.dart';
 
@@ -155,25 +156,23 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                 if (itemsList.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _GhostGroceryItem(name: 'Mælk', onTap: () => _showAddItemSheet(context)),
-                          _GhostGroceryItem(name: 'Brød', onTap: () => _showAddItemSheet(context)),
-                          _GhostGroceryItem(name: 'Grøntsager', onTap: () => _showAddItemSheet(context)),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Tryk for at tilføj din første vare',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: EmptyStateWidget(
+                      icon: Icons.shopping_basket_outlined,
+                      title: 'Indkøbslisten er tom',
+                      message: 'Tilføj varer manuelt eller overfør ingredienser direkte fra madplanen.',
+                      actionLabel: 'Tilføj første vare',
+                      onAction: () => _showAddItemSheet(context),
+                    ),
+                  )
+                else if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyStateWidget(
+                      icon: Icons.filter_alt_off,
+                      title: 'Ingen varer fundet',
+                      message: 'Der er ingen varer i kategorien "$_selectedCategory".',
+                      actionLabel: 'Vis alle varer',
+                      onAction: () => setState(() => _selectedCategory = null),
                     ),
                   )
                 else if (_isReorderMode)
@@ -511,62 +510,3 @@ class _QuantityPicker extends StatelessWidget {
   }
 }
 
-class _GhostGroceryItem extends StatelessWidget {
-  final String name;
-  final VoidCallback onTap;
-
-  const _GhostGroceryItem({required this.name, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.outlineVariant.withValues(alpha: 0.5),
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.add_rounded,
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  name,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.outline.withValues(alpha: 0.5),
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.outline.withValues(alpha: 0.3),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

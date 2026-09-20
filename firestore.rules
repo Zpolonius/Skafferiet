@@ -7,17 +7,23 @@ service cloud.firestore {
     }
 
     // Looks up the household document to check membership.
-    // Counts as one extra Firestore read per operation that uses it.
     function isMember(householdId) {
       return isSignedIn() &&
+             exists(/databases/$(database)/documents/households/$(householdId)) &&
              request.auth.uid in
                get(/databases/$(database)/documents/households/$(householdId)).data.members;
     }
 
     function isAdmin(householdId) {
       return isSignedIn() &&
+             exists(/databases/$(database)/documents/households/$(householdId)) &&
              get(/databases/$(database)/documents/households/$(householdId)).data.admin
                == request.auth.uid;
+    }
+
+    // Helper to get the current user's household ID from their user profile.
+    function currentUserHouseholdId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.householdId;
     }
 
     // ── User profiles ─────────────────────────────────────────────────────────
@@ -30,7 +36,10 @@ service cloud.firestore {
 
     // ── Households ────────────────────────────────────────────────────────────
     match /households/{householdId} {
-      allow read: if isMember(householdId);
+      // Direct lookup allowed for signed-in users (to load own household or verify code when joining).
+      // Listing/querying across all households is strictly forbidden.
+      allow get: if isSignedIn();
+      allow list: if false;
 
       // Creator must include themselves as the first member and as admin.
       allow create: if isSignedIn() &&
@@ -52,11 +61,13 @@ service cloud.firestore {
       allow delete: if isAdmin(householdId);
 
       // ── Grocery list ───────────────────────────────────────────────────────
+      // Strictly isolated: only members of this household can read/write.
       match /grocery_list/{itemId} {
         allow read, write: if isMember(householdId);
       }
 
       // ── Meal plans ─────────────────────────────────────────────────────────
+      // Strictly isolated: only members of this household can read/write.
       match /meal_plans/{weekId} {
         allow read, write: if isMember(householdId);
       }
@@ -64,20 +75,33 @@ service cloud.firestore {
 
     // ── Recipes ───────────────────────────────────────────────────────────────
     // Global recipes (householdId == null) are readable by all signed-in users.
-    // Household recipes are restricted to members.
+    // Household-specific recipes are strictly restricted to members of that household.
     match /recipes/{recipeId} {
       allow read: if isSignedIn() && (
         !('householdId' in resource.data) ||
         resource.data.householdId == null ||
-        isMember(resource.data.householdId)
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          resource.data.householdId == currentUserHouseholdId()
+        )
       );
 
       allow create: if isSignedIn() &&
-                       request.resource.data.createdBy == request.auth.uid;
+                       request.resource.data.createdBy == request.auth.uid &&
+                       (
+                         request.resource.data.householdId == null ||
+                         (
+                           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                           request.resource.data.householdId == currentUserHouseholdId()
+                         )
+                       );
 
       allow update: if isSignedIn() && (
         resource.data.createdBy == request.auth.uid ||
-        isMember(resource.data.householdId)
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          resource.data.householdId == currentUserHouseholdId()
+        )
       );
 
       // Only the original creator may delete a recipe.
@@ -90,6 +114,7 @@ service cloud.firestore {
       // Recipient or any member of the sending household can read.
       allow read: if isSignedIn() && (
         resource.data.toUserEmail == request.auth.token.email ||
+        (request.auth.token.email != null && resource.data.toUserEmail == request.auth.token.email.lower()) ||
         isMember(resource.data.fromHouseholdId)
       );
 
@@ -99,8 +124,10 @@ service cloud.firestore {
 
       // Only the recipient may change the status (to accepted or declined).
       // All other fields must remain unchanged.
-      allow update: if isSignedIn() &&
-                       resource.data.toUserEmail == request.auth.token.email &&
+      allow update: if isSignedIn() && (
+                       resource.data.toUserEmail == request.auth.token.email ||
+                       (request.auth.token.email != null && resource.data.toUserEmail == request.auth.token.email.lower())
+                     ) &&
                        request.resource.data.status in ['accepted', 'declined'];
 
       allow delete: if false;

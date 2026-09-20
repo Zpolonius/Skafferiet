@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 
 
@@ -58,12 +59,12 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     _SearchBar(
                       onChanged: (val) => setState(() => searchQuery = val),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     _CategoryFilter(
                       selected: selectedCategory,
                       onSelected: (cat) => setState(() => selectedCategory = cat),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -77,21 +78,24 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                 }).toList();
 
                 if (results.isEmpty) {
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 1,
+                  if (searchQuery.isNotEmpty || selectedCategory != null) {
+                    return const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyStateWidget(
+                        icon: Icons.search_off,
+                        title: 'Ingen opskrifter fundet',
+                        message: 'Prøv at søge efter noget andet eller nulstil filteret.',
                       ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => _GhostRecipeCard(
-                          onTap: () => context.push('/recipes/create'),
-                        ),
-                        childCount: 4,
-                      ),
+                    );
+                  }
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyStateWidget(
+                      icon: Icons.restaurant_menu_outlined,
+                      title: 'Ingen opskrifter endnu',
+                      message: 'Opret familiens yndlingsretter, så du nemt kan planlægge ugens måltider.',
+                      actionLabel: 'Opret opskrift',
+                      onAction: () => context.push('/recipes/create'),
                     ),
                   );
                 }
@@ -333,51 +337,3 @@ class _RecipeCard extends StatelessWidget {
   }
 }
 
-class _GhostRecipeCard extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _GhostRecipeCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.outlineVariant.withValues(alpha: 0.5),
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.add_rounded,
-                color: AppColors.primary.withValues(alpha: 0.4),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Tilføj opskrift',
-              style: GoogleFonts.plusJakartaSans(
-                color: AppColors.outline.withValues(alpha: 0.6),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -48,10 +48,10 @@ Baseret på kodeanalyse maj 2026.
 
 ### Medium prioritet
 - [x] **Home:** Tilføj Snack-slot i "Dagens Plan" (viser kun 3 måltider, designet har 4)
-- [ ] **Madplan:** Tilføj "Tilføj til indkøb"-knap på Direct Entry snack-kort
+- [x] **Madplan:** Tilføj "Tilføj til indkøb"-knap på Direct Entry snack-kort
 
 ### lav prioritet
-- [ ] **Madplan:** Vis kalorie-sum badge ved siden af dagsoverskriften (f.eks. `1.850 kcal`)
+- [x] **Madplan:** Vis kalorie-sum badge ved siden af dagsoverskriften (f.eks. `1.850 kcal`)
 ---
 
 ## 🟢 Lav — Nice to have
