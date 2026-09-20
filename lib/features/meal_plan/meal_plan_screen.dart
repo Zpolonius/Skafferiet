@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../../core/models/grocery_item.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
-
+import '../grocery/grocery_provider.dart';
 import 'meal_plan_provider.dart';
-
 
 import 'add_custom_meal_sheet.dart';
 
@@ -76,9 +77,42 @@ class MealPlanScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '$selectedDay\'s Madplan',
-                              style: Theme.of(context).textTheme.displayMedium,
+                            Row(
+                              children: [
+                                Text(
+                                  '$selectedDay\'s Madplan',
+                                  style: Theme.of(context).textTheme.displayMedium,
+                                ),
+                                if (dailyPlan.totalCalories > 0) ...[
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.secondaryFixed,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.local_fire_department,
+                                          size: 14,
+                                          color: AppColors.secondary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${NumberFormat('#,###', 'da_DK').format(dailyPlan.totalCalories)} kcal',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.onSecondaryFixedVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             TextButton.icon(
                               onPressed: () => _transferWeekToShopping(context, ref, plan),
@@ -399,16 +433,16 @@ class _FilledSlotCard extends StatelessWidget {
   }
 }
 
-class _DirectEntryCard extends StatelessWidget {
+class _DirectEntryCard extends ConsumerWidget {
   final String text;
 
   const _DirectEntryCard({required this.text});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
@@ -417,9 +451,46 @@ class _DirectEntryCard extends StatelessWidget {
       child: Row(
         children: [
           const Icon(Icons.edit_note, color: AppColors.primary),
-          const SizedBox(width: 16),
-          Text(text, style: Theme.of(context).textTheme.bodyLarge),
-          const Spacer(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyLarge,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.add_shopping_cart, size: 20),
+            color: AppColors.primary,
+            tooltip: 'Tilføj til indkøbsliste',
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.primaryFixed.withValues(alpha: 0.4),
+              padding: const EdgeInsets.all(8),
+            ),
+            onPressed: () {
+              ref.read(groceryListProvider.notifier).addItem(
+                    GroceryItem(
+                      id: '',
+                      name: text,
+                      category: 'Måltider',
+                      quantity: '1',
+                      unit: 'stk',
+                      source: 'meal_plan',
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Tilføjet "$text" til indkøbslisten'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
           const Icon(Icons.chevron_right, color: AppColors.outline),
         ],
       ),

@@ -52,6 +52,7 @@ class HouseholdState {
 class HouseholdNotifier extends StateNotifier<HouseholdState> {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  bool _isCreatingHousehold = false;
 
   HouseholdNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth}) 
       : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -84,6 +85,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         ...doc.data(),
       }).toList();
       state = state.copyWith(invitations: invites);
+    }, onError: (e) {
+      developer.log('FEJL i invitations listener', error: e, name: 'household_provider');
     });
   }
 
@@ -94,16 +97,21 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       } else {
         // Hvis brugeren ikke har en husstand, opret en automatisk
         final user = _auth.currentUser;
-        if (user != null) {
-          // Vi tjekker om vi allerede er ved at oprette/loade
-          if (!state.isLoading) {
-            developer.log('Ingen husstand fundet. Opretter automatisk...', name: 'household_provider');
+        if (user != null && !_isCreatingHousehold) {
+          _isCreatingHousehold = true;
+          developer.log('Ingen husstand fundet. Opretter automatisk...', name: 'household_provider');
+          try {
             await createHousehold('${user.displayName ?? 'Mit'} Skafferi');
+          } finally {
+            _isCreatingHousehold = false;
           }
-        } else {
+        } else if (user == null) {
           state = state.copyWith(isLoading: false);
         }
       }
+    }, onError: (e) {
+      developer.log('FEJL i user household listener', error: e, name: 'household_provider');
+      state = state.copyWith(isLoading: false, error: 'Kunne ikke hente brugerdata');
     });
   }
 
@@ -124,7 +132,13 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           memberNames: names,
           isLoading: false,
         );
+      } else {
+        // Husstanden findes ikke (f.eks. slettet eller ikke oprettet endnu)
+        state = state.copyWith(isLoading: false);
       }
+    }, onError: (e) {
+      developer.log('FEJL i household listener', error: e, name: 'household_provider');
+      state = state.copyWith(isLoading: false, error: 'Kunne ikke hente husstand');
     });
   }
 
