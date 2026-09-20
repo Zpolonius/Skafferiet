@@ -57,5 +57,5 @@ Baseret på kodeanalyse maj 2026.
 ## 🟢 Lav — Nice to have
 
 - [ ] Branded splash screen
-- [ ] Onboarding-flow for nye brugere (husstand oprettes nu usynligt i baggrunden)
+- [x] Onboarding-flow for nye brugere ("Den Personlige Setup-Wizard" med 3 trin, familiestørrelse, præferencer og instant aftensmad)
 - [ ] **Profil:** Profilbillede med redigerings-ikon (viser nu kun bogstav-avatar)

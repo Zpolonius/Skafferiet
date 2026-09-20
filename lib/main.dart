@@ -11,8 +11,10 @@ import 'features/recipes/recipes_screen.dart';
 import 'features/recipes/recipe_detail_screen.dart';
 import 'features/recipes/create_recipe_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/profile/household_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
+import 'features/onboarding/onboarding_screen.dart';
 
 import 'features/home/home_screen.dart';
 
@@ -38,6 +40,7 @@ void main() async {
 class _AuthRouterNotifier extends ChangeNotifier {
   _AuthRouterNotifier(WidgetRef ref) {
     ref.listenManual<AuthState>(authProvider, (_, __) => notifyListeners());
+    ref.listenManual<HouseholdState>(householdProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -64,6 +67,10 @@ class _MyAppState extends ConsumerState<MyApp> {
         GoRoute(
           path: '/login',
           builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/onboarding',
+          builder: (context, state) => const OnboardingScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {
@@ -128,8 +135,24 @@ class _MyAppState extends ConsumerState<MyApp> {
   String? _redirect(BuildContext context, GoRouterState state) {
     final authState = ref.read(authProvider);
     final isLoggingIn = state.matchedLocation == '/login';
+    final isOnboarding = state.matchedLocation == '/onboarding';
+
     if (!authState.isAuthenticated && !isLoggingIn) return '/login';
-    if (authState.isAuthenticated && isLoggingIn) return '/';
+    if (!authState.isAuthenticated) return null;
+
+    final householdState = ref.read(householdProvider);
+    if (isLoggingIn) {
+      if (!householdState.hasCompletedOnboarding && !householdState.isLoading) {
+        return '/onboarding';
+      }
+      return '/';
+    }
+    if (!householdState.hasCompletedOnboarding && !householdState.isLoading && !isOnboarding) {
+      return '/onboarding';
+    }
+    if (householdState.hasCompletedOnboarding && isOnboarding) {
+      return '/';
+    }
     return null;
   }
 

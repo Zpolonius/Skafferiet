@@ -25,6 +25,7 @@ Skafferiet is a modern meal planning and grocery shopping application built with
   - `meal_plan/`: Weekly meal planning grid.
   - `recipes/`: Recipe discovery and details.
   - `home/`: Dashboard overview.
+  - `onboarding/`: 3-step personal setup-wizard and starter recipes.
 - `lib/shared/`: Reusable widgets and utility functions.
 - `assets/`: Icons and images used in the app.
 - `design/`: HTML/CSS mockups and reference screens for UI implementation.
@@ -67,3 +68,6 @@ Skafferiet is a modern meal planning and grocery shopping application built with
 - `lib/core/theme/app_theme.dart`: Global theme definitions.
 - `lib/features/auth/auth_provider.dart`: Authentication logic.
 - `lib/features/grocery/grocery_provider.dart`: Real-time grocery list management.
+- `lib/features/onboarding/onboarding_screen.dart`: Personal setup-wizard for new users.
+- `ROADMAP.md`: Project roadmap and vision.
+- `PLAY_STORE_CHECKLIST.md`: Release readiness checklist.
