@@ -1,0 +1,70 @@
+import '../../core/models/recipe.dart';
+
+final List<Recipe> starterRecipes = [
+  Recipe(
+    id: 'starter_one_pot_pasta',
+    title: 'Klassisk One-Pot Pasta',
+    imageUrl: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281292?w=600&auto=format&fit=crop&q=80',
+    calories: 520,
+    time: '20 min',
+    category: RecipeCategory.aftensmad,
+    ingredients: [
+      Ingredient(name: 'Spaghetti', quantity: 400, unit: 'g', category: 'Kolonial'),
+      Ingredient(name: 'Hakkede tomater', quantity: 2, unit: 'dåser', category: 'Kolonial'),
+      Ingredient(name: 'Løg', quantity: 1, unit: 'stk', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Hvidløg', quantity: 2, unit: 'fed', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Frisk basilikum', quantity: 1, unit: 'potte', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Parmesan', quantity: 50, unit: 'g', category: 'Mejeri'),
+    ],
+    instructions: [
+      'Hak løg og hvidløg fint.',
+      'Kom spaghetti, hakkede tomater, vand, løg og hvidløg i en stor gryde.',
+      'Lad retten simre ved middel varme i 12-15 minutter under jævnlig omrøring.',
+      'Smag til med salt, peber og frisk basilikum. Server med revet parmesan.',
+    ],
+  ),
+  Recipe(
+    id: 'starter_chicken_curry',
+    title: 'Kylling i karry & ris',
+    imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&auto=format&fit=crop&q=80',
+    calories: 480,
+    time: '25 min',
+    category: RecipeCategory.aftensmad,
+    ingredients: [
+      Ingredient(name: 'Kyllingebryst', quantity: 450, unit: 'g', category: 'Kød'),
+      Ingredient(name: 'Karrypasta / karry', quantity: 2, unit: 'spsk', category: 'Kolonial'),
+      Ingredient(name: 'Kokosmælk', quantity: 1, unit: 'dåse', category: 'Kolonial'),
+      Ingredient(name: 'Jasminris', quantity: 300, unit: 'g', category: 'Kolonial'),
+      Ingredient(name: 'Røde æbler', quantity: 2, unit: 'stk', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Forårsløg', quantity: 3, unit: 'stk', category: 'Frugt & Grønt'),
+    ],
+    instructions: [
+      'Kog risene efter anvisningen på pakken.',
+      'Skær kyllingen i mundrette tern og brun dem i en gryde med lidt olie og karry.',
+      'Hæld kokosmælk ved og lad det simre i ca. 10 minutter.',
+      'Tilsæt æbletern og snittet forårsløg de sidste 3 minutter for sprødhed.',
+    ],
+  ),
+  Recipe(
+    id: 'starter_salmon_veggies',
+    title: 'Laks m. ovnbagte rodfrugter',
+    imageUrl: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600&auto=format&fit=crop&q=80',
+    calories: 560,
+    time: '30 min',
+    category: RecipeCategory.aftensmad,
+    ingredients: [
+      Ingredient(name: 'Laksefilet', quantity: 4, unit: 'stk', category: 'Fisk'),
+      Ingredient(name: 'Gulerødder', quantity: 500, unit: 'g', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Små kartofler', quantity: 500, unit: 'g', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Olivenolie', quantity: 2, unit: 'spsk', category: 'Kolonial'),
+      Ingredient(name: 'Frisk dild', quantity: 1, unit: 'bdt', category: 'Frugt & Grønt'),
+      Ingredient(name: 'Citron', quantity: 1, unit: 'stk', category: 'Frugt & Grønt'),
+    ],
+    instructions: [
+      'Tænd ovnen på 200 grader varmluft.',
+      'Skær rodfrugter og kartofler i grove stykker, vend med olie, salt og peber, og bag i 15 min.',
+      'Læg laksefileterne på bagepladen sammen med grøntsagerne og bag videre i 12-14 minutter.',
+      'Drys med frisk dild og pres frisk citronsaft over inden servering.',
+    ],
+  ),
+];
