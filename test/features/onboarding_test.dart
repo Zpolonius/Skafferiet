@@ -166,7 +166,7 @@ void main() {
 
       // Trin 3: Aftensmad til i aften
       expect(find.text('Hvad skal I have i aften?'), findsOneWidget);
-      expect(find.text('Trin 3 af 3'), findsOneWidget);
+      expect(find.text('Spring over'), findsOneWidget);
       expect(find.text('Færdiggør og åbn Skafferiet'), findsOneWidget);
     });
   });

@@ -41,6 +41,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Recipe? _selectedStarterRecipe = starterRecipes.first;
   bool _isCustomMeal = false;
   final _customMealController = TextEditingController();
+  final _customMealFocusNode = FocusNode();
+  String? _customMealError;
   bool _isSubmitting = false;
 
   @override
@@ -58,6 +60,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _pageController.dispose();
     _householdNameController.dispose();
     _customMealController.dispose();
+    _customMealFocusNode.dispose();
     super.dispose();
   }
 
@@ -80,6 +83,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _finishOnboarding() async {
+    if (_isCustomMeal && _customMealController.text.trim().isEmpty) {
+      setState(() {
+        _customMealError = 'Indtast venligst et måltid, eller vælg en opskrift ovenfor';
+      });
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       await ref.read(householdProvider.notifier).completeOnboarding(
@@ -95,6 +105,44 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
       if (mounted) {
         context.go('/');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Velkommen til dit Skafferi! Vi har gjort madplanen og indkøbslisten klar til dig.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _skipMealSelection() async {
+    setState(() => _isSubmitting = true);
+    try {
+      await ref.read(householdProvider.notifier).completeOnboarding(
+            householdName: _householdNameController.text.trim().isEmpty
+                ? 'Mit Skafferi'
+                : _householdNameController.text.trim(),
+            adultsCount: _adultsCount,
+            childrenCount: _childrenCount,
+            preferences: _selectedPreferences.toList(),
+            starterRecipe: null,
+            customMeal: null,
+          );
+
+      if (mounted) {
+        context.go('/');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Velkommen til dit Skafferi! Din profil er nu oprettet.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -105,26 +153,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (page) => setState(() => _currentStep = page),
-                children: [
-                  _buildStep1(),
-                  _buildStep2(),
-                  _buildStep3(),
-                ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildTopBar(),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (page) => setState(() => _currentStep = page),
+                  children: [
+                    _buildStep1(),
+                    _buildStep2(),
+                    _buildStep3(),
+                  ],
+                ),
               ),
-            ),
-            _buildBottomBar(),
-          ],
+              _buildBottomBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -153,14 +205,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ],
               ),
-              Text(
-                'Trin ${_currentStep + 1} af 3',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.outline,
+              if (_currentStep == 2)
+                TextButton(
+                  onPressed: _isSubmitting ? null : _skipMealSelection,
+                  child: const Text(
+                    'Spring over',
+                    style: TextStyle(
+                      color: AppColors.outline,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  'Trin ${_currentStep + 1} af 3',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.outline,
+                  ),
                 ),
-              ),
             ],
           ),
           const Gap(16),
@@ -256,6 +320,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             title: 'Voksne',
             subtitle: '13+ år',
             count: _adultsCount,
+            canDecrement: _adultsCount + _childrenCount > 1,
             onChanged: (val) => setState(() => _adultsCount = val),
           ),
           const Gap(12),
@@ -263,7 +328,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             title: 'Børn',
             subtitle: '0-12 år',
             count: _childrenCount,
+            canDecrement: _adultsCount + _childrenCount > 1,
             onChanged: (val) => setState(() => _childrenCount = val),
+          ),
+          const Gap(12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+                const Gap(8),
+                Text(
+                  'Giver ca. ${_adultsCount + _childrenCount} portioner pr. opskrift',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -296,7 +383,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const Gap(8),
           const Text(
-            'Vælg de temaer, der bedst beskriver jeres hverdag. Vælg gerne flere.',
+            'Vælg de temaer, der bedst beskriver jeres hverdag. Vælg én, flere eller spring over (valgfrit).',
             style: TextStyle(
               fontSize: 15,
               color: AppColors.onSurfaceVariant,
@@ -482,6 +569,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           InkWell(
             onTap: () {
               setState(() => _isCustomMeal = true);
+              _customMealFocusNode.requestFocus();
             },
             borderRadius: BorderRadius.circular(16),
             child: Container(
@@ -530,8 +618,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     const Gap(14),
                     TextFormField(
                       controller: _customMealController,
+                      focusNode: _customMealFocusNode,
+                      onChanged: (_) {
+                        if (_customMealError != null) {
+                          setState(() => _customMealError = null);
+                        }
+                      },
                       decoration: InputDecoration(
                         hintText: 'F.eks. Hakkebøffer med bløde løg',
+                        errorText: _customMealError,
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -619,12 +714,14 @@ class _CounterCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final int count;
+  final bool canDecrement;
   final ValueChanged<int> onChanged;
 
   const _CounterCard({
     required this.title,
     required this.subtitle,
     required this.count,
+    this.canDecrement = true,
     required this.onChanged,
   });
 
@@ -663,7 +760,7 @@ class _CounterCard extends StatelessWidget {
             children: [
               _CircleBtn(
                 icon: Icons.remove,
-                onTap: count > 0 ? () => onChanged(count - 1) : null,
+                onTap: (count > 0 && canDecrement) ? () => onChanged(count - 1) : null,
               ),
               SizedBox(
                 width: 40,
@@ -700,10 +797,10 @@ class _CircleBtn extends StatelessWidget {
     final isEnabled = onTap != null;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        width: 36,
-        height: 36,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: isEnabled
               ? AppColors.primaryContainer.withValues(alpha: 0.1)
@@ -712,7 +809,7 @@ class _CircleBtn extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          size: 18,
+          size: 20,
           color: isEnabled ? AppColors.primary : AppColors.outline,
         ),
       ),

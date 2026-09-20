@@ -85,30 +85,34 @@ class MealPlanScreen extends ConsumerWidget {
                                 ),
                                 if (dailyPlan.totalCalories > 0) ...[
                                   const SizedBox(width: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.secondaryFixed,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.local_fire_department,
-                                          size: 14,
-                                          color: AppColors.secondary,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${NumberFormat('#,###', 'da_DK').format(dailyPlan.totalCalories)} kcal',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.onSecondaryFixedVariant,
+                                  Tooltip(
+                                    message: 'Beregnet ud fra opskrifter i madplanen',
+                                    triggerMode: TooltipTriggerMode.tap,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondaryFixed,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.local_fire_department,
+                                            size: 14,
+                                            color: AppColors.secondary,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${NumberFormat('#,###', 'da_DK').format(dailyPlan.totalCalories)} kcal',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.onSecondaryFixedVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -433,13 +437,20 @@ class _FilledSlotCard extends StatelessWidget {
   }
 }
 
-class _DirectEntryCard extends ConsumerWidget {
+class _DirectEntryCard extends ConsumerStatefulWidget {
   final String text;
 
   const _DirectEntryCard({required this.text});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DirectEntryCard> createState() => _DirectEntryCardState();
+}
+
+class _DirectEntryCardState extends ConsumerState<_DirectEntryCard> {
+  bool _isAdded = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -454,7 +465,7 @@ class _DirectEntryCard extends ConsumerWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text,
+              widget.text,
               style: Theme.of(context).textTheme.bodyLarge,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -462,33 +473,41 @@ class _DirectEntryCard extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.add_shopping_cart, size: 20),
-            color: AppColors.primary,
-            tooltip: 'Tilføj til indkøbsliste',
+            icon: Icon(
+              _isAdded ? Icons.check : Icons.add_shopping_cart,
+              size: 20,
+            ),
+            color: _isAdded ? Colors.green[700] : AppColors.primary,
+            tooltip: _isAdded ? 'Allerede tilføjet til indkøbsliste' : 'Tilføj til indkøbsliste',
             style: IconButton.styleFrom(
-              backgroundColor: AppColors.primaryFixed.withValues(alpha: 0.4),
+              backgroundColor: _isAdded
+                  ? Colors.green.withValues(alpha: 0.15)
+                  : AppColors.primaryFixed.withValues(alpha: 0.4),
               padding: const EdgeInsets.all(8),
             ),
-            onPressed: () {
-              ref.read(groceryListProvider.notifier).addItem(
-                    GroceryItem(
-                      id: '',
-                      name: text,
-                      category: 'Måltider',
-                      quantity: '1',
-                      unit: 'stk',
-                      source: 'meal_plan',
-                      createdAt: DateTime.now(),
-                    ),
-                  );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Tilføjet "$text" til indkøbslisten'),
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onPressed: _isAdded
+                ? null
+                : () {
+                    setState(() => _isAdded = true);
+                    ref.read(groceryListProvider.notifier).addItem(
+                          GroceryItem(
+                            id: '',
+                            name: widget.text,
+                            category: 'Måltider',
+                            quantity: '1',
+                            unit: 'stk',
+                            source: 'meal_plan',
+                            createdAt: DateTime.now(),
+                          ),
+                        );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Tilføjet "${widget.text}" til indkøbslisten'),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
           ),
           const SizedBox(width: 4),
           const Icon(Icons.chevron_right, color: AppColors.outline),

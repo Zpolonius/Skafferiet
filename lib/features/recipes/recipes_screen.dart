@@ -18,8 +18,15 @@ class RecipesScreen extends ConsumerStatefulWidget {
 }
 
 class _RecipesScreenState extends ConsumerState<RecipesScreen> {
+  final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
   RecipeCategory? selectedCategory;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +64,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     ),
                     const SizedBox(height: 16),
                     _SearchBar(
+                      controller: _searchController,
                       onChanged: (val) => setState(() => searchQuery = val),
                     ),
                     const SizedBox(height: 16),
@@ -79,12 +87,20 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
 
                 if (results.isEmpty) {
                   if (searchQuery.isNotEmpty || selectedCategory != null) {
-                    return const SliverFillRemaining(
+                    return SliverFillRemaining(
                       hasScrollBody: false,
                       child: EmptyStateWidget(
                         icon: Icons.search_off,
                         title: 'Ingen opskrifter fundet',
                         message: 'Prøv at søge efter noget andet eller nulstil filteret.',
+                        actionLabel: 'Nulstil søgning og filter',
+                        onAction: () {
+                          setState(() {
+                            searchQuery = '';
+                            selectedCategory = null;
+                            _searchController.clear();
+                          });
+                        },
                       ),
                     );
                   }
@@ -143,13 +159,15 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
 }
 
 class _SearchBar extends StatelessWidget {
+  final TextEditingController? controller;
   final ValueChanged<String> onChanged;
 
-  const _SearchBar({required this.onChanged});
+  const _SearchBar({this.controller, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       onChanged: onChanged,
       decoration: InputDecoration(
         hintText: 'Søg i opskrifter, ingredienser...',
