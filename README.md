@@ -6,12 +6,18 @@ En moderne indkøbs- og madplanlægnings-app bygget med Flutter og Firebase.
 Appen er fuldt integreret med Firebase (Authentication, Cloud Firestore, Firebase Storage) og understøtter delte husholdninger, madplanlægning i realtid og dynamiske indkøbslister.
 
 ### Implementerede Features:
-- **Madplan**: Ugevisning med 4 daglige slots (Morgenmad, Frokost, Aftensmad, Snack), tilføjelse af opskrifter eller egne måltider, samt 1-klik overførsel af ingredienser til indkøbslisten.
-- **Indkøbsliste**: Real-time synkronisering, kategorisering, reorder/sortering, swipe-to-check, swipe-to-delete og billed-upload.
-- **Opskrifter**: Bento-grid layout med søgning og kategorifiltrering, samt oprettelse og redigering af opskrifter med billed-upload.
+- **Onboarding (Den Personlige Setup-Wizard)**: 3-trins interaktivt flow for nye brugere (familiestørrelse, madstil-præferencer og instant aftensmad lagt direkte i madplanen og indkøbslisten).
+- **Madplan**: Ugevisning med 4 daglige slots (Morgenmad, Frokost, Aftensmad, Snack), kalorie-sum badge (`🔥 1.850 kcal`), 1-klik overførsel af opskrift-ingredienser og fritekst-måltider til indkøbslisten.
+- **Indkøbsliste**: Real-time synkronisering, kategorisering, reorder/sortering, swipe-to-check, swipe-to-delete, billed-upload og empty states med hurtighandlinger.
+- **Opskrifter**: Bento-grid layout med søgning, kategorifiltrering, oprettelse og redigering af opskrifter med billed-upload samt 1-klik nulstilling ved tomme søgninger.
 - **Husstand & Samarbejde**: Flere brugere kan dele madplan og indkøbsliste via e-mail invitationer, omdøbning af husstand og rollebaseret medlemsvisning.
+- **Empty States**: Konsekvent `EmptyStateWidget` på tværs af appen med handlingsorienterede opfordringer.
 - **Design System**: "Kitchen Harmony" – lyst, friskt og minimalistisk Material 3 design med typografi (Plus Jakarta Sans & Be Vietnam Pro).
-- **Sikkerhed & Regler**: Fuldt afskærmede Firestore- og Storage-regler med data-isolation pr. husstand.
+- **Sikkerhed & Regler**: Fuldt afskærmede Firestore- og Storage-regler med streng data-isolation pr. husstand.
+
+Se også:
+- [Produkt & Udviklings-Roadmap](ROADMAP.md)
+- [Google Play Store Release Checklist](PLAY_STORE_CHECKLIST.md)
 
 ## Kom i gang
 
