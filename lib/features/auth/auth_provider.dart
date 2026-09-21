@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,9 +22,11 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final FirebaseAuth _auth;
+  final FirebaseFirestore? _firestore;
 
-  AuthNotifier({FirebaseAuth? auth})
+  AuthNotifier({FirebaseAuth? auth, FirebaseFirestore? firestore})
       : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore,
         super(AuthState(user: (auth ?? FirebaseAuth.instance).currentUser)) {
     _init();
   }
@@ -58,6 +61,56 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _auth.signOut();
+  }
+
+  Future<bool> updateProfilePhoto(String photoURL) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    state = state.copyWith(isLoading: true);
+    try {
+      await user.updatePhotoURL(photoURL);
+      await user.reload();
+
+      final firestore = _firestore ?? FirebaseFirestore.instance;
+      await firestore.collection('users').doc(user.uid).set({
+        'photoURL': photoURL,
+      }, SetOptions(merge: true));
+
+      state = state.copyWith(user: _auth.currentUser, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Kunne ikke opdatere profilbillede.',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> removeProfilePhoto() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    state = state.copyWith(isLoading: true);
+    try {
+      await user.updatePhotoURL(null);
+      await user.reload();
+
+      final firestore = _firestore ?? FirebaseFirestore.instance;
+      await firestore.collection('users').doc(user.uid).update({
+        'photoURL': FieldValue.delete(),
+      });
+
+      state = state.copyWith(user: _auth.currentUser, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Kunne ikke fjerne profilbillede.',
+      );
+      return false;
+    }
   }
 
   String _mapError(FirebaseAuthException e) {

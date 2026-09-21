@@ -19,7 +19,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 
 ## Architecture
 
-**Feature-sliced layout**: `lib/features/<feature>/` — each feature owns its provider(s) and screen(s) side by side. Shared widgets live in `lib/shared/widgets/`. Domain models and theme live in `lib/core/`.
+**Feature-sliced layout**: `lib/features/<feature>/` — each feature owns its provider(s) and screen(s) side by side. Shared widgets live in `lib/shared/widgets/`. Domain models, services, providers, and theme live in `lib/core/`.
 
 **State management (Riverpod v2)**:
 - `AsyncNotifier` for Firestore-backed data (recipes, grocery list, meal plan).

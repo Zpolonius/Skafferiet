@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
 import 'package:skafferiet/features/profile/profile_screen.dart';
@@ -108,6 +109,8 @@ Widget _buildProfileScreen({
   final mockUser = _MockUser();
   when(() => mockUser.displayName).thenReturn('Test Bruger');
   when(() => mockUser.email).thenReturn('test@example.com');
+  when(() => mockUser.photoURL).thenReturn(null);
+  when(() => mockUser.uid).thenReturn('test-uid');
 
   return ProviderScope(
     overrides: [
@@ -358,6 +361,49 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Notifikationer kommer snart!'), findsOneWidget);
+    });
+  });
+
+  group('Profile Avatar', () {
+    testWidgets('shows camera badge and user initial', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final notifier = _MockHouseholdNotifier(
+        HouseholdState(householdId: 'hh-1', isLoading: false),
+      );
+
+      await tester.pumpWidget(_buildProfileScreen(
+        householdState: notifier.state,
+        householdNotifier: notifier,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
+      expect(find.text('T'), findsOneWidget); // Test Bruger -> 'T'
+    });
+
+    testWidgets('renders CachedNetworkImage when user has photoURL', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final mockUser = _MockUser();
+      when(() => mockUser.displayName).thenReturn('Anna');
+      when(() => mockUser.email).thenReturn('anna@example.com');
+      when(() => mockUser.photoURL).thenReturn('https://example.com/anna.jpg');
+      when(() => mockUser.uid).thenReturn('anna-uid');
+
+      final notifier = _MockHouseholdNotifier(
+        HouseholdState(householdId: 'hh-1', isLoading: false),
+      );
+
+      await tester.pumpWidget(_buildProfileScreen(
+        householdState: notifier.state,
+        householdNotifier: notifier,
+        authState: AuthState(user: mockUser),
+      ));
+
+      expect(find.byType(CachedNetworkImage), findsOneWidget);
     });
   });
 }

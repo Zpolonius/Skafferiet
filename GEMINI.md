@@ -16,8 +16,10 @@ Skafferiet is a modern meal planning and grocery shopping application built with
 
 ## Project Structure
 
-- `lib/core/`: Centralized domain models, services, and theme configurations.
+- `lib/core/`: Centralized domain models, services, providers, and theme configurations.
   - `models/`: Data classes (Recipe, GroceryItem, MealPlan).
+  - `services/`: Abstract service contracts & platform wrappers (ConnectivityService, ProfileImageService).
+  - `providers/`: Core cross-cutting Riverpod providers.
   - `theme/`: App colors and global `ThemeData`.
 - `lib/features/`: Feature-sliced architecture. Each directory contains logic and UI for a specific feature:
   - `auth/`: Login, signup, and authentication state.

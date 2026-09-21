@@ -48,9 +48,9 @@
 
 	<!-- Kamera og billedbibliotek (image_picker) -->
 	<key>NSCameraUsageDescription</key>
-	<string>Skafferiet bruger kameraet til at tage billeder af varer og opskrifter.</string>
+	<string>Skafferiet bruger kameraet til at tage billeder til dit profilbillede, opskrifter og varer.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Skafferiet bruger dit billedbibliotek til at vælge billeder til varer og opskrifter.</string>
+	<string>Skafferiet bruger dit billedbibliotek til at vælge billeder til dit profilbillede, opskrifter og varer.</string>
 
 	<!-- Push notifikationer -->
 	<key>NSUserNotificationUsageDescription</key>
