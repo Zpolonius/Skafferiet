@@ -9,7 +9,7 @@ Dette roadmap forener den overordnede vision for **Skafferiet** med behovene hos
 ```mermaid
 flowchart LR
     Fase1["Fase 1: Madplan & Hverdags-UX (Gennemført)"] --> Fase2["Fase 2: Empty States & Onboarding (Gennemført)"]
-    Fase2 --> Fase3["Fase 3: Release & Kvalitet (Næste skridt)"]
+    Fase2 --> Fase3["Fase 3: Release & Kvalitet (I gang)"]
     Fase3 --> Fase4["Fase 4: Budget & AI Agent (Vision)"]
 ```
 
@@ -42,20 +42,27 @@ flowchart LR
 
 ---
 
-## 🚀 Fase 3: Play Store Release & Kvalitet (Næste skridt)
+## 🚀 Fase 3: Play Store Release & Kvalitet (I gang)
 *Fokus: Teknisk robusthed, stabilitet og overholdelse af Play Store krav.*
 
 - [x] **Offline-fejlhåndtering**:
   - Detektering af netværksforbindelse (`connectivity_plus`).
   - Diskret offline-banner over bundnavigationsbaren med Kitchen Harmony styling, automatisk overgang og "Forbindelse genoprettet" notifikation.
-- [ ] **R8 / Minifikation**:
-  - Aktivering af minifikation og ressource-shrinking i `android/app/build.gradle.kts`.
+- [x] **R8 / Minifikation**:
+  - Minifikation og ressource-shrinking aktiveret i `android/app/build.gradle.kts`.
+  - ProGuard-regler i `android/app/proguard-rules.pro` — linjenumre bevaret til brugbare crash-rapporter, Play Core undertrykt.
+  - App bundle reduceret fra 49,3 MB til 46,5 MB. Verificeret på emulator: Firebase initialiserer, UI renderer, ingen fatale fejl.
+- [x] **Signing config**:
+  - Release-builds læser nøgleoplysninger fra git-ignored `android/key.properties`, med fallback til debug-nøgler og en tydelig advarsel i byggeloggen.
+  - Vejledning i [docs/SIGNING.md](docs/SIGNING.md). **Udestående:** selve upload-keystoren skal genereres — se den kritiske sektion i [PLAY_STORE_CHECKLIST.md](PLAY_STORE_CHECKLIST.md).
 - [ ] **Branded Splash Screen**:
   - Rolig opstartsskærm med "Kitchen Harmony" logo og baggrundsfarve.
-- [ ] **Dark Mode Toggle**:
-  - Tilkobling af `ThemeMode` provider på profilsidens indstillinger.
 - [ ] **Profilbillede & Personliggørelse**:
   - Mulighed for upload af profilbillede via `ImageUploadService`, så avatarer i husstanden og app-baren er personlige.
+- [ ] **Dark Mode** — *større end oprindeligt antaget*:
+  - Ikke en toggle-opgave. Appen har hverken `darkTheme`, `ThemeMode` eller en toggle i dag, og 220 hårdkodede `AppColors`-opslag fordelt på 15 widget-filer omgår temaet helt.
+  - Kræver mørkt farvesæt, oprydning af de 220 opslag til `Theme.of(context).colorScheme`, `ThemeMode`-provider med persistering (`shared_preferences` mangler) og først derefter en toggle.
+  - Fuld analyse og trinplan: [docs/DARK_MODE.md](docs/DARK_MODE.md).
 
 ---
 

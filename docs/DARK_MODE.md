@@ -36,7 +36,7 @@ Det reelle problem er ikke temaet — det er, at widgets henter farver uden om d
 værdier. En `static const` kan pr. definition ikke skifte med temaet. Widgets,
 der læser dem direkte, vil se præcis ens ud i dark mode.
 
-Der er **254 direkte `AppColors.`-opslag**. 40 af dem sidder i `app_theme.dart`,
+Der er **260 direkte `AppColors.`-opslag**. 40 af dem sidder i `app_theme.dart`,
 hvor de hører hjemme — resten er widgets, der omgår temaet:
 
 | Fil | Forekomster |
@@ -49,13 +49,14 @@ hvor de hører hjemme — resten er widgets, der omgår temaet:
 | `lib/features/recipes/recipes_screen.dart` | 8 |
 | `lib/shared/widgets/add_to_meal_plan_sheet.dart` | 7 |
 | `lib/features/meal_plan/add_custom_meal_sheet.dart` | 7 |
+| `lib/shared/widgets/offline_banner.dart` | 4 |
 | `lib/shared/widgets/empty_state_widget.dart` | 4 |
 | `lib/shared/widgets/profile_avatar.dart` | 3 |
 | `lib/features/meal_plan/edit_meal_slot_sheet.dart` | 3 |
 | `lib/features/recipes/edit_recipe_screen.dart` | 2 |
 | `lib/features/recipes/create_recipe_screen.dart` | 2 |
 | `lib/features/auth/login_screen.dart` | 2 |
-| **I alt uden for `app_theme.dart`** | **214** |
+| **I alt uden for `app_theme.dart`** | **220** |
 
 Det strider samtidig mod reglen i `CLAUDE.md`:
 
@@ -94,7 +95,7 @@ forkerte kontrastfarver til sine egne komponenter.
 fungere på en mørk flade. Den skal lysnes i den mørke palet for at opnå
 tilstrækkelig kontrast. Det samme gælder sekundærfarven `#895100`.
 
-### Trin 2 — Ryd de 214 direkte opslag op
+### Trin 2 — Ryd de 220 direkte opslag op
 
 Den tunge del. Fil for fil, startende med de største:
 
@@ -133,7 +134,7 @@ Først nu. En `SwitchListTile` eller et trevejsvalg under en ny
 
 ## Omfang
 
-Trin 2 dominerer. 214 opslag over 14 filer, hvor hvert enkelt kræver en
+Trin 2 dominerer. 220 opslag over 15 filer, hvor hvert enkelt kræver en
 semantisk vurdering — ikke en søg-og-erstat.
 
 Realistisk er det **flere arbejdsgange**, ikke én aften. Forsøger man at klare
@@ -141,7 +142,7 @@ det i ét hug, ender man typisk med halvt konverterede skærme, der ser værre
 ud end udgangspunktet.
 
 **Forslag til opdeling:** tag trin 1 og trin 2 for de fire største filer
-(148 af de 214 opslag) som første bid. Så er hovedparten af appen klar, og
+(148 af de 220 opslag) som første bid. Så er hovedparten af appen klar, og
 resten kan følge løbende.
 
 ---

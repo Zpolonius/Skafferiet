@@ -44,7 +44,18 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 
 - Firebase project ID: `siet-8630a`. Platforms: Android, iOS, Web.
 - `lib/firebase_options.dart` is auto-generated and git-ignored — regenerate with `flutterfire configure`.
+- `android/app/google-services.json` is git-ignored too. Both files are therefore **absent in a fresh clone and in every git worktree**, and Android builds fail until they are copied in from the main checkout.
 - Auth, Firestore, and Storage are all in use.
+
+## Release builds
+
+- Release is minified with R8 — rules in `android/app/proguard-rules.pro`. Verify a minified build actually runs before shipping; a successful build does not prove the app works.
+- Signing reads `android/key.properties` (git-ignored). Without it, release falls back to debug keys and prints a warning that `flutter build` hides unless you pass `--verbose`. Check the artifact instead: `apksigner verify --print-certs <apk>`.
+- Full guide: `docs/SIGNING.md`.
+
+## Dark mode
+
+Not implemented — there is no `darkTheme`, no `ThemeMode` and no toggle. Note that `AppColors` holds 47 hardcoded light `static const` values, and 220 widget call sites read them directly instead of going through the theme, so a toggle alone would change almost nothing. See `docs/DARK_MODE.md` before starting.
 
 ## Testing
 
