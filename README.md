@@ -12,8 +12,11 @@ Appen er fuldt integreret med Firebase (Authentication, Cloud Firestore, Firebas
 - **Opskrifter**: Bento-grid layout med søgning, kategorifiltrering, oprettelse og redigering af opskrifter med billed-upload samt 1-klik nulstilling ved tomme søgninger.
 - **Husstand & Samarbejde**: Flere brugere kan dele madplan og indkøbsliste via e-mail invitationer, omdøbning af husstand og rollebaseret medlemsvisning.
 - **Empty States**: Konsekvent `EmptyStateWidget` på tværs af appen med handlingsorienterede opfordringer.
+- **Offline-fejlhåndtering**: Netværksovervågning i realtid via abstraheret `ConnectivityService` og et diskret, animeret `OfflineBanner` over bundmenuen, der sikrer tryghed i supermarkedet.
+- **Profilbillede & Personlige Avatarer**: Interaktiv avatar med kamera/galleri upload, komprimering, 3-vejs synkronisering (Storage, Auth og Firestore) samt personlige avatarer i topbaren og husstandens medlemsliste.
+- **R8 / Minifikation**: Fuld Android release-optimering med R8/ProGuard kode- og ressource-shrinking.
 - **Design System**: "Kitchen Harmony" – lyst, friskt og minimalistisk Material 3 design med typografi (Plus Jakarta Sans & Be Vietnam Pro).
-- **Sikkerhed & Regler**: Fuldt afskærmede Firestore- og Storage-regler med streng data-isolation pr. husstand.
+- **Sikkerhed & Regler**: Fuldt afskærmede Firestore- og Storage-regler med streng data-isolation pr. husstand samt brugerprofil-sikring.
 
 Se også:
 - [Produkt & Udviklings-Roadmap](ROADMAP.md)
