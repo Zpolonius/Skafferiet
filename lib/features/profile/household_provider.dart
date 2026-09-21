@@ -12,6 +12,7 @@ class HouseholdState {
   final List<String> members; // Nu UID'er
   final List<Map<String, dynamic>> invitations;
   final Map<String, String> memberNames; // Map fra UID til Navn
+  final Map<String, String?> memberPhotos; // Map fra UID til Foto-URL
   final bool isLoading;
   final String? error;
   final bool hasCompletedOnboarding;
@@ -26,6 +27,7 @@ class HouseholdState {
     this.members = const [],
     this.invitations = const [],
     this.memberNames = const {},
+    this.memberPhotos = const {},
     this.isLoading = false,
     this.error,
     this.hasCompletedOnboarding = true,
@@ -41,6 +43,7 @@ class HouseholdState {
     List<String>? members,
     List<Map<String, dynamic>>? invitations,
     Map<String, String>? memberNames,
+    Map<String, String?>? memberPhotos,
     bool? isLoading,
     String? error,
     bool clearError = false,
@@ -56,6 +59,7 @@ class HouseholdState {
       members: members ?? this.members,
       invitations: invitations ?? this.invitations,
       memberNames: memberNames ?? this.memberNames,
+      memberPhotos: memberPhotos ?? this.memberPhotos,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
@@ -141,15 +145,16 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         final data = doc.data()!;
         final memberUids = List<String>.from(data['members'] ?? []);
         
-        // Hent navne for alle medlemmer
-        final names = await _fetchMemberNames(memberUids);
+        // Hent navne og billeder for alle medlemmer
+        final details = await _fetchMemberDetails(memberUids);
         
         state = state.copyWith(
           householdId: householdId,
           householdName: data['name'],
           adminUid: data['admin'] as String?,
           members: memberUids,
-          memberNames: names,
+          memberNames: details.names,
+          memberPhotos: details.photos,
           adultsCount: data['adultsCount'] ?? 2,
           childrenCount: data['childrenCount'] ?? 2,
           preferences: List<String>.from(data['preferences'] ?? []),
@@ -166,17 +171,20 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     });
   }
 
-  Future<Map<String, String>> _fetchMemberNames(List<String> uids) async {
+  Future<({Map<String, String> names, Map<String, String?> photos})> _fetchMemberDetails(List<String> uids) async {
     final Map<String, String> names = {};
+    final Map<String, String?> photos = {};
     for (final uid in uids) {
       final userDoc = await _firestore.collection('users').doc(uid).get();
       if (userDoc.exists) {
         names[uid] = userDoc.data()?['displayName'] ?? 'Ukendt bruger';
+        photos[uid] = userDoc.data()?['photoURL'] as String?;
       } else {
         names[uid] = 'Bruger';
+        photos[uid] = null;
       }
     }
-    return names;
+    return (names: names, photos: photos);
   }
 
   Future<void> renameHousehold(String newName) async {

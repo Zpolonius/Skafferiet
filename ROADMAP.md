@@ -57,8 +57,8 @@ flowchart LR
   - Vejledning i [docs/SIGNING.md](docs/SIGNING.md). **Udestående:** selve upload-keystoren skal genereres — se den kritiske sektion i [PLAY_STORE_CHECKLIST.md](PLAY_STORE_CHECKLIST.md).
 - [ ] **Branded Splash Screen**:
   - Rolig opstartsskærm med "Kitchen Harmony" logo og baggrundsfarve.
-- [ ] **Profilbillede & Personliggørelse**:
-  - Mulighed for upload af profilbillede via `ImageUploadService`, så avatarer i husstanden og app-baren er personlige.
+- [x] **Profilbillede & Personliggørelse**:
+  - Mulighed for upload og fjernelse af profilbillede via `ProfileImageService`, kamera/galleri tilladelser, 3-vejs synkronisering (Storage, Auth og Firestore) samt avatarer i husstanden og app-baren.
 - [ ] **Dark Mode** — *større end oprindeligt antaget*:
   - Ikke en toggle-opgave. Appen har hverken `darkTheme`, `ThemeMode` eller en toggle i dag, og 220 hårdkodede `AppColors`-opslag fordelt på 15 widget-filer omgår temaet helt.
   - Kræver mørkt farvesæt, oprydning af de 220 opslag til `Theme.of(context).colorScheme`, `ThemeMode`-provider med persistering (`shared_preferences` mangler) og først derefter en toggle.

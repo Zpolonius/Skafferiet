@@ -18,6 +18,13 @@ service firebase.storage {
              request.resource.size <= 5 * 1024 * 1024; // 5 MB max
     }
 
+    // ── User profile avatars ──────────────────────────────────────────────
+    match /users/{userId}/{filename} {
+      allow read:   if isSignedIn();
+      allow write:  if isSignedIn() && request.auth.uid == userId && isValidImage();
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // ── Household images (recipes and grocery items) ───────────────────────
     match /households/{householdId}/{type}/{filename} {
       allow read:  if isMember(householdId);

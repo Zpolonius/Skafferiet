@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/providers/profile_image_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../grocery/grocery_provider.dart';
@@ -53,16 +56,9 @@ class ProfileScreen extends ConsumerWidget {
                         Center(
                           child: Column(
                             children: [
-                              CircleAvatar(
-                                radius: 50,
-                                backgroundColor: AppColors.primaryContainer,
-                                child: Text(
-                                  initial,
-                                  style: const TextStyle(
-                                      fontSize: 32,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold),
-                                ),
+                              _ProfileHeaderAvatar(
+                                user: user,
+                                initial: initial,
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -125,7 +121,8 @@ class ProfileScreen extends ConsumerWidget {
                         _ProfileTile(
                           icon: Icons.notifications_outlined,
                           title: 'Notifikationer',
-                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                          onTap: () =>
+                              ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text('Notifikationer kommer snart!')),
                           ),
@@ -133,14 +130,16 @@ class ProfileScreen extends ConsumerWidget {
                         _ProfileTile(
                           icon: Icons.tune_outlined,
                           title: 'Præferencer & Diæt',
-                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                          onTap: () =>
+                              ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Kommer snart')),
                           ),
                         ),
                         _ProfileTile(
                           icon: Icons.help_outline,
                           title: 'Hjælp & Support',
-                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                          onTap: () =>
+                              ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Kommer snart')),
                           ),
                         ),
@@ -386,6 +385,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
                   final initial = entry.value.isNotEmpty
                       ? entry.value[0].toUpperCase()
                       : '?';
+                  final photoUrl = household.memberPhotos[entry.key];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
@@ -395,12 +395,41 @@ class _HouseholdDetailCard extends ConsumerWidget {
                           backgroundColor: isOwner
                               ? AppColors.primaryContainer
                               : Colors.grey[300],
-                          child: Text(
-                            initial,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
+                          child: ClipOval(
+                            child: photoUrl != null && photoUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: photoUrl,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) =>
+                                        const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                    errorWidget: (context, url, error) => Text(
+                                      initial,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: isOwner
+                                            ? Colors.white
+                                            : Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    initial,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: isOwner
+                                          ? Colors.white
+                                          : Colors.black87,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -462,8 +491,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
                 size: 18, color: AppColors.outline),
             onTap: () => _showInviteDialog(context, ref),
             shape: const RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(16)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
           ),
         ],
@@ -480,8 +508,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
         title: const Text('Omdøb husstand'),
         content: TextField(
           controller: controller,
-          decoration:
-              const InputDecoration(hintText: 'Navn på husstand'),
+          decoration: const InputDecoration(hintText: 'Navn på husstand'),
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
         ),
@@ -768,6 +795,174 @@ class _NoHouseholdCard extends ConsumerWidget {
               }
             },
             child: const Text('Opret'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileHeaderAvatar extends ConsumerStatefulWidget {
+  final User? user;
+  final String initial;
+
+  const _ProfileHeaderAvatar({
+    required this.user,
+    required this.initial,
+  });
+
+  @override
+  ConsumerState<_ProfileHeaderAvatar> createState() =>
+      _ProfileHeaderAvatarState();
+}
+
+class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
+  bool _isUploading = false;
+
+  Future<void> _handleAvatarTap() async {
+    final user = widget.user;
+    if (user == null) return;
+
+    final imageService = ref.read(profileImageServiceProvider);
+    String? photoUrl;
+    try {
+      photoUrl = user.photoURL;
+    } catch (_) {}
+
+    setState(() => _isUploading = true);
+    try {
+      final newUrl = await imageService.pickAndUploadProfileImage(
+        context,
+        userId: user.uid,
+        showDeleteOption: photoUrl != null && photoUrl.isNotEmpty,
+      );
+
+      if (!mounted) return;
+
+      if (newUrl == '') {
+        // Bruger valgte at fjerne billedet
+        final success =
+            await ref.read(authProvider.notifier).removeProfilePhoto();
+        if (mounted && success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profilbillede fjernet'),
+              backgroundColor: AppColors.primary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else if (newUrl != null && newUrl.isNotEmpty) {
+        // Nyt billede uploadet
+        final success =
+            await ref.read(authProvider.notifier).updateProfilePhoto(newUrl);
+        if (mounted && success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profilbillede opdateret'),
+              backgroundColor: AppColors.primary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String? photoUrl;
+    try {
+      photoUrl = widget.user?.photoURL;
+    } catch (_) {}
+
+    return GestureDetector(
+      onTap: _isUploading ? null : _handleAvatarTap,
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: AppColors.primaryContainer,
+            child: ClipOval(
+              child: photoUrl != null && photoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: photoUrl,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Text(
+                        widget.initial,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      widget.initial,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+          if (_isUploading)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.camera_alt_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),

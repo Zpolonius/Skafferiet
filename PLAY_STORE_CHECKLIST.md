@@ -60,4 +60,4 @@ Baseret på kodeanalyse maj 2026, opdateret september 2026.
 
 - [ ] Branded splash screen
 - [x] Onboarding-flow for nye brugere ("Den Personlige Setup-Wizard" med 3 trin, familiestørrelse, præferencer og instant aftensmad)
-- [ ] **Profil:** Profilbillede med redigerings-ikon (viser nu kun bogstav-avatar)
+- [x] **Profil:** Profilbillede med redigerings-ikon (understøtter kamera, galleri og fjernelse)
