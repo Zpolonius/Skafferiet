@@ -1,11 +1,13 @@
 # Google Play Store — Release Checklist
 
-Baseret på kodeanalyse maj 2026.
+Baseret på kodeanalyse maj 2026, opdateret september 2026.
 
 ---
 
 ## 🔴 Kritisk — Fix inden release
 
+- [x] Opsæt signing config til release-builds — [docs/SIGNING.md](docs/SIGNING.md)
+- [ ] **Generér upload-keystore og opret `android/key.properties`** — uden den signeres release med debug-nøgler og afvises af Play Console. Følg [docs/SIGNING.md](docs/SIGNING.md)
 - [x] Tilføj app-ikon (alle densities) — `android/app/src/main/res/mipmap-*/`
 - [x] Tilføj INTERNET-permission i `android/app/src/main/AndroidManifest.xml`
 - [x] Ret app-navn fra `"skafferiet"` til `"Skafferiet"` i AndroidManifest.xml
@@ -28,11 +30,11 @@ Baseret på kodeanalyse maj 2026.
 
 ## 🟡 Medium — Kvalitet og UX
 
-- [ ] Aktivér R8/ProGuard minifikation i `android/app/build.gradle.kts`
+- [x] Aktivér R8/ProGuard minifikation i `android/app/build.gradle.kts` — bundle 49,3 → 46,5 MB, regler i `android/app/proguard-rules.pro`
 - [x] Erstat `Image.network()` med `CachedNetworkImage` (`home_screen.dart:374`)
 - [x] Tilføj offline-fejl-UI (f.eks. `connectivity_plus` pakken)
-- [ ] Fiksér Dark Mode toggle — `onChanged` er tom (`profile_screen.dart:98–102`)
-- [ ] Fiksér Notifications-knap — gør intet pt.
+- [ ] Implementér Dark Mode — kræver mørkt farvesæt + oprydning af 220 hårdkodede `AppColors`-opslag. Se [docs/DARK_MODE.md](docs/DARK_MODE.md)
+- [ ] Fiksér Notifications-knap — viser pt. kun "Notifikationer kommer snart!"
 
 ---
 

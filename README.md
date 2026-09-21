@@ -18,6 +18,8 @@ Appen er fuldt integreret med Firebase (Authentication, Cloud Firestore, Firebas
 Se også:
 - [Produkt & Udviklings-Roadmap](ROADMAP.md)
 - [Google Play Store Release Checklist](PLAY_STORE_CHECKLIST.md)
+- [Signering af release-builds](docs/SIGNING.md)
+- [Dark Mode — analyse og plan](docs/DARK_MODE.md)
 
 ## Kom i gang
 
@@ -36,6 +38,23 @@ Se også:
    flutter analyze
    flutter test
    ```
+
+> **Bemærk:** `lib/firebase_options.dart` og `android/app/google-services.json`
+> er git-ignored. De genereres med `flutterfire configure` og findes derfor ikke
+> i et frisk klon eller i en git worktree — Android-builds fejler, indtil de er
+> på plads.
+
+## Release-builds
+
+```bash
+flutter build appbundle --release
+```
+
+Release-builds er minificerede med R8 (`android/app/proguard-rules.pro`) og
+signeres med nøglen i den git-ignorerede `android/key.properties`. Mangler den
+fil, falder builden tilbage til debug-nøgler og kan ikke uploades til Play Store.
+
+Se [docs/SIGNING.md](docs/SIGNING.md) for opsætning og verifikation af signaturen.
 
 ## Arkitektur
 - **State Management**: Flutter Riverpod (v2.x) med `AsyncNotifier`, `StreamNotifier` og `StateNotifier`.
