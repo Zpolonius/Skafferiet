@@ -15,19 +15,19 @@ import 'features/profile/household_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
-
 import 'features/home/home_screen.dart';
+import 'shared/widgets/offline_banner.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await initializeDateFormatting('da_DK', null);
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -40,7 +40,8 @@ void main() async {
 class _AuthRouterNotifier extends ChangeNotifier {
   _AuthRouterNotifier(WidgetRef ref) {
     ref.listenManual<AuthState>(authProvider, (_, __) => notifyListeners());
-    ref.listenManual<HouseholdState>(householdProvider, (_, __) => notifyListeners());
+    ref.listenManual<HouseholdState>(
+        householdProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -147,7 +148,9 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
       return '/';
     }
-    if (!householdState.hasCompletedOnboarding && !householdState.isLoading && !isOnboarding) {
+    if (!householdState.hasCompletedOnboarding &&
+        !householdState.isLoading &&
+        !isOnboarding) {
       return '/onboarding';
     }
     if (householdState.hasCompletedOnboarding && isOnboarding) {
@@ -186,52 +189,59 @@ class ScaffoldWithNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavBarItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Madplan',
-                  isActive: navigationShell.currentIndex == 0,
-                  onTap: () => navigationShell.goBranch(0),
-                ),
-                _NavBarItem(
-                  icon: Icons.home_outlined,
-                  label: 'Hjem',
-                  isActive: navigationShell.currentIndex == 1,
-                  onTap: () => navigationShell.goBranch(1),
-                ),
-                _NavBarItem(
-                  icon: Icons.shopping_basket_outlined,
-                  label: 'Indkøb',
-                  isActive: navigationShell.currentIndex == 2,
-                  onTap: () => navigationShell.goBranch(2),
-                ),
-                _NavBarItem(
-                  icon: Icons.restaurant_menu_outlined,
-                  label: 'Opskrifter',
-                  isActive: navigationShell.currentIndex == 3,
-                  onTap: () => navigationShell.goBranch(3),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const OfflineBanner(),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
                 ),
               ],
             ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _NavBarItem(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Madplan',
+                      isActive: navigationShell.currentIndex == 0,
+                      onTap: () => navigationShell.goBranch(0),
+                    ),
+                    _NavBarItem(
+                      icon: Icons.home_outlined,
+                      label: 'Hjem',
+                      isActive: navigationShell.currentIndex == 1,
+                      onTap: () => navigationShell.goBranch(1),
+                    ),
+                    _NavBarItem(
+                      icon: Icons.shopping_basket_outlined,
+                      label: 'Indkøb',
+                      isActive: navigationShell.currentIndex == 2,
+                      onTap: () => navigationShell.goBranch(2),
+                    ),
+                    _NavBarItem(
+                      icon: Icons.restaurant_menu_outlined,
+                      label: 'Opskrifter',
+                      isActive: navigationShell.currentIndex == 3,
+                      onTap: () => navigationShell.goBranch(3),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
