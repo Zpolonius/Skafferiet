@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -6,6 +9,19 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Signing-oplysninger indlaeses fra android/key.properties, som er git-ignored
+// og derfor aldrig havner i versionsstyring. Se key.properties.example.
+// Mangler filen — f.eks. i CI, i en git worktree eller hos en ny udvikler —
+// falder release-builds tilbage til debug-noegler, saa `flutter build` stadig
+// virker. En saadan build kan ikke uploades til Play Store.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+val keystoreProperties = Properties().apply {
+    if (hasReleaseKeystore) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
 }
 
 android {
@@ -33,11 +49,28 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "ADVARSEL: android/key.properties mangler. Release-builden " +
+                        "signeres med debug-noegler og kan ikke uploades til Play Store.",
+                )
+                signingConfigs.getByName("debug")
+            }
 
             // R8: fjern ubrugt kode og ressourcer, og obfusker release-bundlen.
             isMinifyEnabled = true

@@ -1,0 +1,25 @@
+# Skabelon for android/key.properties.
+#
+# Kopier denne fil til android/key.properties og udfyld den med dine egne
+# vaerdier. key.properties er git-ignored og maa ALDRIG committes.
+#
+# Se docs/SIGNING.md for den fulde vejledning.
+#
+# Kort version — generer en upload-keystore (gem den UDEN FOR dette repo):
+#
+#    keytool -genkeypair -v \
+#      -keystore C:/Users/<dig>/keys/skafferiet-upload.jks \
+#      -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 \
+#      -alias upload
+#
+# storeFile skal vaere en absolut sti med skraastreger (/), ogsaa paa Windows.
+# Relative stier fortolkes ud fra android/app/ og bliver let forvirrende.
+#
+# ADVARSEL: mister du denne keystore eller dens adgangskoder, kan du ikke
+# laengere udgive opdateringer til den eksisterende app i Play Store.
+# Tag en backup et sikkert sted, f.eks. i en adgangskodemanager.
+
+storeFile=C:/absolut/sti/til/skafferiet-upload.jks
+storePassword=
+keyAlias=upload
+keyPassword=
