@@ -45,9 +45,9 @@ flowchart LR
 ## 🚀 Fase 3: Play Store Release & Kvalitet (Næste skridt)
 *Fokus: Teknisk robusthed, stabilitet og overholdelse af Play Store krav.*
 
-- [ ] **Offline-fejlhåndtering**:
+- [x] **Offline-fejlhåndtering**:
   - Detektering af netværksforbindelse (`connectivity_plus`).
-  - Diskret offline-banner i toppen eller bunden af skærmen, så brugeren i supermarkedet ved, at offline-ændringer synkroniseres ved forbindelse.
+  - Diskret offline-banner over bundnavigationsbaren med Kitchen Harmony styling, automatisk overgang og "Forbindelse genoprettet" notifikation.
 - [ ] **R8 / Minifikation**:
   - Aktivering af minifikation og ressource-shrinking i `android/app/build.gradle.kts`.
 - [ ] **Branded Splash Screen**:

@@ -30,7 +30,7 @@ Baseret på kodeanalyse maj 2026.
 
 - [ ] Aktivér R8/ProGuard minifikation i `android/app/build.gradle.kts`
 - [x] Erstat `Image.network()` med `CachedNetworkImage` (`home_screen.dart:374`)
-- [ ] Tilføj offline-fejl-UI (f.eks. `connectivity_plus` pakken)
+- [x] Tilføj offline-fejl-UI (f.eks. `connectivity_plus` pakken)
 - [ ] Fiksér Dark Mode toggle — `onChanged` er tom (`profile_screen.dart:98–102`)
 - [ ] Fiksér Notifications-knap — gør intet pt.
 
