@@ -166,6 +166,8 @@ class RecipeDetailScreen extends ConsumerWidget {
                           fontWeight: FontWeight.w600,
                           color: AppColors.onSurfaceVariant,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ],
                   ),

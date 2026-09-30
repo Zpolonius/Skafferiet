@@ -421,6 +421,8 @@ class _MealCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: isEmpty ? const Color(0xFF9BA49F) : const Color(0xFF191C1D),
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                   if (!isEmpty && slot.recipe != null) ...[
                     const Gap(4),

@@ -440,6 +440,8 @@ class _HouseholdDetailCard extends ConsumerWidget {
                             entry.value,
                             style: GoogleFonts.beVietnamPro(
                                 fontSize: 14, fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                         Container(

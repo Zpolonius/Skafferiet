@@ -209,6 +209,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
                             ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ),
