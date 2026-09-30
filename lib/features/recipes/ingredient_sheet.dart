@@ -1,21 +1,15 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/models/recipe.dart';
 import '../../core/models/recipe_units.dart';
 import '../../shared/utils/number_format.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 
 /// Åbner bottom sheet til at tilføje eller rette en ingrediens.
 /// Returnerer den nye/rettede ingrediens, eller null hvis brugeren fortryder.
 Future<Ingredient?> showIngredientSheet(BuildContext context, {Ingredient? initial}) {
-  return showModalBottomSheet<Ingredient>(
+  return showAppBottomSheet<Ingredient>(
     context: context,
-    isScrollControlled: true,
-    // Over bundmenuen og under statuslinjen/kameraet.
-    useRootNavigator: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
     builder: (context) => IngredientSheet(initial: initial),
   );
 }
@@ -170,8 +164,7 @@ class _IngredientSheetState extends State<IngredientSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       padding: EdgeInsets.only(
-        // Tastaturet dækker hjem-stregen, så brug den største af de to.
-        bottom: math.max(MediaQuery.of(context).viewInsets.bottom, MediaQuery.of(context).viewPadding.bottom) + 24,
+        bottom: sheetBottomInset(context) + 24,
         top: 24,
         left: 24,
         right: 24,
