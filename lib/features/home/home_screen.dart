@@ -26,8 +26,9 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: CustomScrollView(
-        slivers: [
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
           _buildAppBar(context, authState),
           SliverToBoxAdapter(
             child: Padding(
@@ -50,6 +51,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -420,6 +422,8 @@ class _MealCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: isEmpty ? const Color(0xFF9BA49F) : const Color(0xFF191C1D),
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                   if (!isEmpty && slot.recipe != null) ...[
                     const Gap(4),

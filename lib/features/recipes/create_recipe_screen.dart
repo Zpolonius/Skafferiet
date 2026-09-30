@@ -51,8 +51,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Ny opskrift')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -109,6 +110,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

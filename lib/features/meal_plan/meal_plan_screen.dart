@@ -24,6 +24,9 @@ class MealPlanScreen extends ConsumerWidget {
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,
+          // Over bundmenuen og under statuslinjen/kameraet.
+          useRootNavigator: true,
+          useSafeArea: true,
           builder: (context) => const AddCustomMealSheet(),
         ),
         label: const Text('Tilføj måltid'),
@@ -180,6 +183,8 @@ class MealPlanScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => AddCustomMealSheet(initialDay: day, initialCategory: type),
     );
@@ -424,9 +429,18 @@ class _FilledSlotCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(recipe.title, style: Theme.of(context).textTheme.bodyLarge),
-                Text('${recipe.calories} kcal • ${recipe.time}',
-                    style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  recipe.title,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Text(
+                  '${recipe.calories} kcal • ${recipe.time}',
+                  style: Theme.of(context).textTheme.labelSmall,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ],
             ),
           ),

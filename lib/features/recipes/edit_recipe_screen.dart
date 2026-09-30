@@ -111,8 +111,9 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Rediger opskrift')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -169,6 +170,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
