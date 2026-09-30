@@ -8,6 +8,7 @@ import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
+import 'edit_grocery_item_dialog.dart';
 import 'grocery_provider.dart';
 
 class GroceryScreen extends ConsumerStatefulWidget {
@@ -381,6 +382,13 @@ class _GroceryItemTile extends ConsumerWidget {
 
   const _GroceryItemTile({required this.item, this.showDragHandle = false});
 
+  void _showEditDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => EditGroceryItemDialog(item: item),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
@@ -389,8 +397,16 @@ class _GroceryItemTile extends ConsumerWidget {
         key: ValueKey(item.id),
         endActionPane: ActionPane(
           motion: const DrawerMotion(),
-          extentRatio: 0.25,
+          extentRatio: 0.5,
           children: [
+            SlidableAction(
+              onPressed: (_) => _showEditDialog(context),
+              backgroundColor: AppColors.primaryFixed,
+              foregroundColor: AppColors.primary,
+              icon: Icons.edit_outlined,
+              label: 'Rediger',
+              borderRadius: BorderRadius.circular(16),
+            ),
             SlidableAction(
               onPressed: (_) => ref.read(groceryListProvider.notifier).removeItem(item.id),
               backgroundColor: AppColors.errorContainer,
@@ -410,6 +426,8 @@ class _GroceryItemTile extends ConsumerWidget {
           ),
           child: InkWell(
             onTap: () => ref.read(groceryListProvider.notifier).toggleItem(item.id),
+            // I sorteringstilstand bruges long-press til at trække varen.
+            onLongPress: showDragHandle ? null : () => _showEditDialog(context),
             child: Row(
               children: [
                 // Image or Category Icon
@@ -510,4 +528,3 @@ class _QuantityPicker extends StatelessWidget {
     );
   }
 }
-

@@ -82,6 +82,32 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .update({'quantity': newQuantity});
   }
 
+  /// Opdaterer kun de felter, brugeren kan redigere. Felter som `isChecked`
+  /// og `sortOrder` røres ikke, så samtidige ændringer fra andre i
+  /// husstanden ikke overskrives.
+  Future<void> updateItem(
+    String id, {
+    required String name,
+    required String quantity,
+    required String? unit,
+    required String category,
+  }) async {
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null) return;
+
+    await _firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('grocery_list')
+        .doc(id)
+        .update({
+          'name': name,
+          'quantity': quantity,
+          'unit': unit,
+          'category': category,
+        });
+  }
+
   Future<void> clearCheckedItems() async {
     final householdId = ref.read(householdProvider).householdId;
     if (householdId == null || state.value == null) return;

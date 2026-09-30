@@ -153,5 +153,88 @@ void main() {
       final items = await container.read(groceryListProvider.future);
       expect(items, isEmpty);
     });
+
+    test('updateItem opdaterer kun de redigerbare felter', () async {
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+
+      final mockHouseholdsCollection = MockCollectionReference();
+      final mockHouseholdDoc = MockDocumentReference();
+      final mockGroceryCollection = MockCollectionReference();
+      final mockItemDoc = MockDocumentReference();
+
+      when(() => mockFirestore.collection('households')).thenReturn(mockHouseholdsCollection);
+      when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
+      when(() => mockHouseholdDoc.collection('grocery_list')).thenReturn(mockGroceryCollection);
+      when(() => mockGroceryCollection.doc('test-item-id')).thenReturn(mockItemDoc);
+      when(() => mockItemDoc.update(any())).thenAnswer((_) async {});
+
+      final container = ProviderContainer(
+        overrides: [
+          householdProvider.overrideWith((ref) => HouseholdNotifier(
+            firestore: mockFirestore,
+            auth: mockAuth,
+          )),
+          groceryListProvider.overrideWith(() => GroceryListNotifier(
+            firestore: mockFirestore,
+          )),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(householdProvider.notifier).state =
+          HouseholdState(householdId: 'hh-123');
+
+      await container.read(groceryListProvider.notifier).updateItem(
+        'test-item-id',
+        name: 'Letmælk',
+        quantity: '2',
+        unit: 'l',
+        category: 'Mejeri',
+      );
+
+      // Kun de redigerbare felter må sendes – isChecked og sortOrder må ikke
+      // overskrives, da en anden i husstanden kan have ændret dem imens.
+      verify(() => mockItemDoc.update({
+            'name': 'Letmælk',
+            'quantity': '2',
+            'unit': 'l',
+            'category': 'Mejeri',
+          })).called(1);
+    });
+
+    test('updateItem gør ingenting når householdId er null', () async {
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+
+      final mockHouseholdsCollection = MockCollectionReference();
+      final mockHouseholdDoc = MockDocumentReference();
+      final mockGroceryCollection = MockCollectionReference();
+
+      when(() => mockFirestore.collection('households')).thenReturn(mockHouseholdsCollection);
+      when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
+      when(() => mockHouseholdDoc.collection('grocery_list')).thenReturn(mockGroceryCollection);
+
+      final container = ProviderContainer(
+        overrides: [
+          householdProvider.overrideWith((ref) => HouseholdNotifier(
+            firestore: mockFirestore,
+            auth: mockAuth,
+          )),
+          groceryListProvider.overrideWith(() => GroceryListNotifier(
+            firestore: mockFirestore,
+          )),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(groceryListProvider.notifier).updateItem(
+        'test-item-id',
+        name: 'Mælk',
+        quantity: '1',
+        unit: null,
+        category: 'Mejeri',
+      );
+
+      verifyNever(() => mockGroceryCollection.doc(any()));
+    });
   });
 }
