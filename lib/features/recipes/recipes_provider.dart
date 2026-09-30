@@ -35,25 +35,41 @@ class RecipesNotifier extends StreamNotifier<List<Recipe>> {
       id: doc.id,
       title: data['title'] ?? '',
       imageUrl: data['imageUrl'],
-      calories: data['calories'] ?? 0,
+      calories: (data['calories'] as num?)?.round() ?? 0,
       time: data['time'] ?? '',
       category: RecipeCategory.values.firstWhere(
         (e) => e.toString() == data['category'],
         orElse: () => RecipeCategory.aftensmad,
       ),
       ingredients: (data['ingredients'] as List? ?? [])
-          .map((i) => Ingredient(
-                name: i['name'],
-                quantity: (i['quantity'] as num).toDouble(),
-                unit: i['unit'],
-                category: i['category'],
-              ))
+          .map((i) => Ingredient.fromMap(Map<String, dynamic>.from(i as Map)))
           .toList(),
       instructions: List<String>.from(data['instructions'] ?? []),
       householdId: data['householdId'],
       createdBy: data['createdBy'],
+      servings: (data['servings'] as num?)?.toInt(),
+      protein: (data['protein'] as num?)?.toDouble(),
+      carbs: (data['carbs'] as num?)?.toDouble(),
+      fat: (data['fat'] as num?)?.toDouble(),
+      nutritionFromIngredients: data['nutritionFromIngredients'] == true,
     );
   }
+
+  /// Felter der er fælles for oprettelse og opdatering.
+  Map<String, dynamic> _recipeFields(Recipe recipe) => {
+        'title': recipe.title,
+        'imageUrl': recipe.imageUrl,
+        'calories': recipe.calories,
+        'time': recipe.time,
+        'category': recipe.category.toString(),
+        'ingredients': recipe.ingredients.map((i) => i.toMap()).toList(),
+        'instructions': recipe.instructions,
+        'servings': recipe.servings,
+        'protein': recipe.protein,
+        'carbs': recipe.carbs,
+        'fat': recipe.fat,
+        'nutritionFromIngredients': recipe.nutritionFromIngredients,
+      };
 
   Future<void> addRecipe(Recipe recipe) async {
     final user = _auth.currentUser;
@@ -62,20 +78,7 @@ class RecipesNotifier extends StreamNotifier<List<Recipe>> {
     final householdId = ref.read(householdProvider).householdId;
 
     await _firestore.collection('recipes').add({
-      'title': recipe.title,
-      'imageUrl': recipe.imageUrl,
-      'calories': recipe.calories,
-      'time': recipe.time,
-      'category': recipe.category.toString(),
-      'ingredients': recipe.ingredients
-          .map((i) => {
-                'name': i.name,
-                'quantity': i.quantity,
-                'unit': i.unit,
-                'category': i.category,
-              })
-          .toList(),
-      'instructions': recipe.instructions,
+      ..._recipeFields(recipe),
       'createdAt': FieldValue.serverTimestamp(),
       'householdId': householdId,
       'createdBy': user.uid,
@@ -96,22 +99,10 @@ class RecipesNotifier extends StreamNotifier<List<Recipe>> {
       throw Exception('Sikkerhedsfejl: Bruger har ikke tilladelse til at redigere denne opskrift');
     }
 
-    await _firestore.collection('recipes').doc(updatedRecipe.id).update({
-      'title': updatedRecipe.title,
-      'imageUrl': updatedRecipe.imageUrl,
-      'calories': updatedRecipe.calories,
-      'time': updatedRecipe.time,
-      'category': updatedRecipe.category.toString(),
-      'ingredients': updatedRecipe.ingredients
-          .map((i) => {
-                'name': i.name,
-                'quantity': i.quantity,
-                'unit': i.unit,
-                'category': i.category,
-              })
-          .toList(),
-      'instructions': updatedRecipe.instructions,
-    });
+    await _firestore
+        .collection('recipes')
+        .doc(updatedRecipe.id)
+        .update(_recipeFields(updatedRecipe));
   }
 
   Future<void> deleteRecipe(String id) async {

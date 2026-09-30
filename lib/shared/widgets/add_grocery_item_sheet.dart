@@ -5,6 +5,7 @@ import '../../core/models/grocery_item.dart';
 import '../../features/grocery/grocery_provider.dart';
 import '../../features/profile/household_provider.dart';
 import '../utils/image_upload_service.dart';
+import 'app_bottom_sheet.dart';
 import 'package:uuid/uuid.dart';
 
 class AddGroceryItemSheet extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: sheetBottomInset(context) + 24,
         top: 24,
         left: 24,
         right: 24,

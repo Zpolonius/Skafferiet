@@ -1,8 +1,9 @@
+import '../../core/theme/theme_context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/theme_context.dart';
+import 'app_bottom_sheet.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
 
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + sheetBottomInset(context)),
       decoration: BoxDecoration(
         color: context.colors.surfaceContainerLowest,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),

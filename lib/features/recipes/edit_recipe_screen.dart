@@ -1,9 +1,11 @@
+import '../../core/theme/theme_context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/theme_context.dart';
+import '../../core/services/nutrition_calculator.dart';
 import '../../features/profile/household_provider.dart';
 import '../../shared/utils/image_upload_service.dart';
+import 'recipe_form_widgets.dart';
 import 'recipes_provider.dart';
 
 class EditRecipeScreen extends ConsumerStatefulWidget {
@@ -16,22 +18,33 @@ class EditRecipeScreen extends ConsumerStatefulWidget {
 
 class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   late TextEditingController _titleController;
-  late TextEditingController _caloriesController;
   late TextEditingController _timeController;
+  final _nutrition = NutritionFormControllers();
   late RecipeCategory _selectedCategory;
   late List<Ingredient> _ingredients;
+  int? _servings;
   String? _imageUrl;
   bool _isUploadingImage = false;
+  bool _showErrors = false;
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.recipe.title);
-    _caloriesController = TextEditingController(text: widget.recipe.calories.toString());
     _timeController = TextEditingController(text: widget.recipe.time);
     _selectedCategory = widget.recipe.category;
     _ingredients = List.from(widget.recipe.ingredients);
+    _servings = widget.recipe.servings;
     _imageUrl = widget.recipe.imageUrl;
+    _nutrition.loadFrom(widget.recipe);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _timeController.dispose();
+    _nutrition.dispose();
+    super.dispose();
   }
 
   Future<void> _pickImage(BuildContext context) async {
@@ -99,8 +112,9 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Rediger opskrift')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -112,23 +126,14 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
               decoration: const InputDecoration(labelText: 'Titel', hintText: 'F.eks. Pasta Carbonara'),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _caloriesController,
-                    decoration: const InputDecoration(labelText: 'Kalorier', suffixText: 'kcal'),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _timeController,
-                    decoration: const InputDecoration(labelText: 'Tid', hintText: 'F.eks. 20 min'),
-                  ),
-                ),
-              ],
+            TextField(
+              controller: _timeController,
+              decoration: const InputDecoration(labelText: 'Tid', hintText: 'F.eks. 20 min'),
+            ),
+            const SizedBox(height: 16),
+            ServingsStepper(
+              value: _servings,
+              onChanged: (v) => setState(() => _servings = v),
             ),
             const SizedBox(height: 24),
             _buildSectionTitle('Kategori'),
@@ -144,57 +149,20 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
               }).toList(),
             ),
             const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSectionTitle('Ingredienser'),
-                IconButton(
-                  onPressed: _addIngredient,
-                  icon: Icon(Icons.add_circle_outline, color: context.colors.primary),
-                ),
-              ],
+            _buildSectionTitle('Ingredienser'),
+            IngredientListEditor(
+              ingredients: _ingredients,
+              onChanged: (list) => setState(() => _ingredients = list),
             ),
-            ..._ingredients.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final ing = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        decoration: const InputDecoration(hintText: 'Navn'),
-                        onChanged: (val) => _ingredients[idx] = ing.copyWith(name: val),
-                        controller: TextEditingController(text: ing.name),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        decoration: const InputDecoration(hintText: 'Mængde'),
-                        onChanged: (val) => _ingredients[idx] = ing.copyWith(quantity: double.tryParse(val) ?? 0),
-                        controller: TextEditingController(text: ing.quantity.toString()),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        decoration: const InputDecoration(hintText: 'Enh.'),
-                        onChanged: (val) => _ingredients[idx] = ing.copyWith(unit: val),
-                        controller: TextEditingController(text: ing.unit),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _ingredients.removeAt(idx)),
-                      icon: Icon(Icons.remove_circle_outline, color: context.colors.error),
-                    ),
-                  ],
-                ),
-              );
-            }),
+            const SizedBox(height: 32),
+            _buildSectionTitle('Næring pr. portion'),
+            NutritionFields(
+              controllers: _nutrition,
+              calculation: calculateNutrition(_ingredients),
+              servings: _servings,
+              showErrors: _showErrors,
+              onChanged: () => setState(() {}),
+            ),
             const SizedBox(height: 40),
             FilledButton(
               onPressed: _saveRecipe,
@@ -203,6 +171,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -214,20 +183,33 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     );
   }
 
-  void _addIngredient() {
-    setState(() {
-      _ingredients.add(Ingredient(name: '', quantity: 0, unit: '', category: 'Andet'));
-    });
-  }
-
   Future<void> _saveRecipe() async {
-    final updatedRecipe = widget.recipe.copyWith(
+    if (_nutrition.hasErrors) {
+      setState(() => _showErrors = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ret de markerede næringsfelter')),
+      );
+      return;
+    }
+    final nutrition = _nutrition.resolve(calculateNutrition(_ingredients).perServing(_servings));
+    final old = widget.recipe;
+    // Bygges fra bunden (ikke copyWith), så felter man har tømt faktisk bliver null.
+    final updatedRecipe = Recipe(
+      id: old.id,
       title: _titleController.text,
       imageUrl: _imageUrl,
-      calories: int.tryParse(_caloriesController.text) ?? 0,
+      calories: nutrition.calories,
       time: _timeController.text,
       category: _selectedCategory,
       ingredients: _ingredients,
+      instructions: old.instructions,
+      householdId: old.householdId,
+      createdBy: old.createdBy,
+      servings: _servings,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      nutritionFromIngredients: nutrition.fromIngredients,
     );
     
     try {
