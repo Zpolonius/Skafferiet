@@ -9,7 +9,10 @@ import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_to_meal_plan_sheet.dart';
 import 'package:uuid/uuid.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_recipe_screen.dart';
+import 'recipe_form_widgets.dart';
+import '../../shared/utils/number_format.dart';
 
 class RecipeDetailScreen extends ConsumerWidget {
   final String recipeId;
@@ -71,8 +74,12 @@ class RecipeDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Wrap i stedet for Row, så tid/portioner ombrydes på smalle skærme.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -91,10 +98,22 @@ class RecipeDetailScreen extends ConsumerWidget {
                       ),
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.schedule, size: 18, color: AppColors.outline),
-                        const SizedBox(width: 4),
-                        Text('25 min', style: Theme.of(context).textTheme.labelSmall),
+                        if (recipe.time.trim().isNotEmpty) ...[
+                          const Icon(Icons.schedule, size: 18, color: AppColors.outline),
+                          const SizedBox(width: 4),
+                          Text(recipe.time, style: Theme.of(context).textTheme.labelSmall),
+                        ],
+                        if (recipe.servings != null) ...[
+                          const SizedBox(width: 12),
+                          const Icon(Icons.people_outline, size: 18, color: AppColors.outline),
+                          const SizedBox(width: 4),
+                          Text(
+                            recipe.servings == 1 ? '1 portion' : '${recipe.servings} portioner',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -104,6 +123,10 @@ class RecipeDetailScreen extends ConsumerWidget {
                   recipe.title,
                   style: Theme.of(context).textTheme.displayLarge,
                 ),
+                if (recipe.hasNutrition) ...[
+                  const SizedBox(height: 20),
+                  _NutritionSummary(recipe: recipe),
+                ],
                 const SizedBox(height: 24),
                 
                 // Action Buttons
@@ -160,11 +183,13 @@ class RecipeDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${ing.quantity} ${ing.unit}',
+                        formatIngredientAmount(ing),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.onSurfaceVariant,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ],
                   ),
@@ -207,11 +232,77 @@ class RecipeDetailScreen extends ConsumerWidget {
   }
 
   void _showAddToMealPlan(BuildContext context, Recipe recipe) {
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => AddToMealPlanSheet(recipe: recipe),
+    );
+  }
+}
+
+/// Fire små felter med næring pr. portion under titlen.
+class _NutritionSummary extends StatelessWidget {
+  final Recipe recipe;
+  const _NutritionSummary({required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    String grams(double? v) => v == null ? '–' : '${formatDanishNumber(v)} g';
+
+    final tiles = [
+      ('${recipe.calories}', 'kcal'),
+      (grams(recipe.protein), 'protein'),
+      (grams(recipe.carbs), 'kulhydrat'),
+      (grams(recipe.fat), 'fedt'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < tiles.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          tiles[i].$1,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        tiles[i].$2,
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          recipe.nutritionFromIngredients
+              ? 'Pr. portion · beregnet ud fra ingredienserne'
+              : 'Pr. portion',
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'meal_plan_provider.dart';
 
 class AddCustomMealSheet extends ConsumerStatefulWidget {
@@ -76,8 +77,11 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+    // 90 % af den plads sheetet faktisk har (ikke hele skærmen), så det
+    // aldrig når op under statuslinjen.
+    return FractionallySizedBox(
+      heightFactor: 0.9,
+      child: Container(
       decoration: const BoxDecoration(
         color: Color(0xFFF8F9F8),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -135,9 +139,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
             ),
           ),
           
-          // Bottom Button
+          // Bottom Button — ekstra plads til hjem-stregen i bunden
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + sheetBottomInset(context)),
             child: Column(
               children: [
                 Row(
@@ -173,6 +177,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

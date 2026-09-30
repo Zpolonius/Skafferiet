@@ -42,9 +42,10 @@ class ProfileScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: household.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
+      body: SafeArea(
+        child: household.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
@@ -168,6 +169,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+      ),
     );
   }
 
@@ -438,6 +440,8 @@ class _HouseholdDetailCard extends ConsumerWidget {
                             entry.value,
                             style: GoogleFonts.beVietnamPro(
                                 fontSize: 14, fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                         Container(
