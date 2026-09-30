@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skafferiet/features/grocery/grocery_provider.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
-import 'package:skafferiet/core/models/grocery_item.dart';
 
 class MockFirestore extends Mock implements FirebaseFirestore {}
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -155,7 +154,7 @@ void main() {
       expect(items, isEmpty);
     });
 
-    test('updateItem opdaterer korrekte data i Firestore', () async {
+    test('updateItem opdaterer kun de redigerbare felter', () async {
       when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
 
       final mockHouseholdsCollection = MockCollectionReference();
@@ -185,19 +184,22 @@ void main() {
       container.read(householdProvider.notifier).state =
           HouseholdState(householdId: 'hh-123');
 
-      final testItem = GroceryItem(
-        id: 'test-item-id',
-        name: 'Updated Mælk',
-        category: 'Mejeri',
+      await container.read(groceryListProvider.notifier).updateItem(
+        'test-item-id',
+        name: 'Letmælk',
         quantity: '2',
         unit: 'l',
-        source: 'manual',
-        createdAt: DateTime.now(),
+        category: 'Mejeri',
       );
 
-      await container.read(groceryListProvider.notifier).updateItem(testItem);
-
-      verify(() => mockItemDoc.update(testItem.toMap())).called(1);
+      // Kun de redigerbare felter må sendes – isChecked og sortOrder må ikke
+      // overskrives, da en anden i husstanden kan have ændret dem imens.
+      verify(() => mockItemDoc.update({
+            'name': 'Letmælk',
+            'quantity': '2',
+            'unit': 'l',
+            'category': 'Mejeri',
+          })).called(1);
     });
 
     test('updateItem gør ingenting når householdId er null', () async {
@@ -224,16 +226,13 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final testItem = GroceryItem(
-        id: 'test-item-id',
+      await container.read(groceryListProvider.notifier).updateItem(
+        'test-item-id',
         name: 'Mælk',
-        category: 'Mejeri',
         quantity: '1',
-        source: 'manual',
-        createdAt: DateTime.now(),
+        unit: null,
+        category: 'Mejeri',
       );
-
-      await container.read(groceryListProvider.notifier).updateItem(testItem);
 
       verifyNever(() => mockGroceryCollection.doc(any()));
     });
