@@ -380,6 +380,13 @@ class _GroceryItemTile extends ConsumerWidget {
 
   const _GroceryItemTile({required this.item, this.showDragHandle = false});
 
+  void _showEditDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => _EditGroceryItemDialog(item: item),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
@@ -409,6 +416,7 @@ class _GroceryItemTile extends ConsumerWidget {
           ),
           child: InkWell(
             onTap: () => ref.read(groceryListProvider.notifier).toggleItem(item.id),
+            onLongPress: () => _showEditDialog(context),
             child: Row(
               children: [
                 // Image or Category Icon
@@ -506,6 +514,124 @@ class _QuantityPicker extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
       ),
+    );
+  }
+}
+
+class _EditGroceryItemDialog extends ConsumerStatefulWidget {
+  final GroceryItem item;
+
+  const _EditGroceryItemDialog({required this.item});
+
+  @override
+  ConsumerState<_EditGroceryItemDialog> createState() => _EditGroceryItemDialogState();
+}
+
+class _EditGroceryItemDialogState extends ConsumerState<_EditGroceryItemDialog> {
+  late TextEditingController _nameController;
+  late TextEditingController _quantityController;
+  late TextEditingController _categoryController;
+  late String _selectedCategory;
+  late String _selectedUnit;
+
+  final units = ['stk', 'g', 'kg', 'ml', 'l', 'pk', 'bakke', 'poser'];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.item.name);
+    _quantityController = TextEditingController(text: widget.item.quantity);
+    _categoryController = TextEditingController(text: widget.item.category);
+    _selectedCategory = widget.item.category;
+    _selectedUnit = widget.item.unit ?? 'stk';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _quantityController.dispose();
+    _categoryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final groceryList = ref.watch(groceryListProvider);
+    final existingCategories = groceryList.when(
+      data: (items) => items.map((i) => i.category).toSet().toList(),
+      loading: () => <String>[],
+      error: (_, __) => <String>[],
+    );
+
+    final allCategories = {...['Grønt', 'Mejeri', 'Kød', 'Frost', 'Brød', 'Andet'], ...existingCategories}.toList();
+
+    return AlertDialog(
+      title: const Text('Rediger vare'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Navn',
+                hintText: 'Indtast varens navn',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Mængde'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedUnit,
+                    decoration: const InputDecoration(labelText: 'Enhed'),
+                    items: units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                    onChanged: (v) => setState(() => _selectedUnit = v!),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedCategory,
+              decoration: const InputDecoration(labelText: 'Kategori'),
+              items: allCategories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+              onChanged: (v) => setState(() => _selectedCategory = v!),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuller'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_nameController.text.isNotEmpty) {
+              final updatedItem = widget.item.copyWith(
+                name: _nameController.text,
+                quantity: _quantityController.text,
+                unit: _selectedUnit,
+                category: _selectedCategory,
+              );
+              ref.read(groceryListProvider.notifier).updateItem(updatedItem);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('Gem'),
+        ),
+      ],
     );
   }
 }

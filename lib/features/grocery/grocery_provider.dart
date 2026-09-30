@@ -82,6 +82,18 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .update({'quantity': newQuantity});
   }
 
+  Future<void> updateItem(GroceryItem item) async {
+    final householdId = ref.read(householdProvider).householdId;
+    if (householdId == null) return;
+
+    await _firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('grocery_list')
+        .doc(item.id)
+        .update(item.toMap());
+  }
+
   Future<void> clearCheckedItems() async {
     final householdId = ref.read(householdProvider).householdId;
     if (householdId == null || state.value == null) return;

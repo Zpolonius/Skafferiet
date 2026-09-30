@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skafferiet/features/grocery/grocery_provider.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
+import 'package:skafferiet/core/models/grocery_item.dart';
 
 class MockFirestore extends Mock implements FirebaseFirestore {}
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -152,6 +153,89 @@ void main() {
 
       final items = await container.read(groceryListProvider.future);
       expect(items, isEmpty);
+    });
+
+    test('updateItem opdaterer korrekte data i Firestore', () async {
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+
+      final mockHouseholdsCollection = MockCollectionReference();
+      final mockHouseholdDoc = MockDocumentReference();
+      final mockGroceryCollection = MockCollectionReference();
+      final mockItemDoc = MockDocumentReference();
+
+      when(() => mockFirestore.collection('households')).thenReturn(mockHouseholdsCollection);
+      when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
+      when(() => mockHouseholdDoc.collection('grocery_list')).thenReturn(mockGroceryCollection);
+      when(() => mockGroceryCollection.doc('test-item-id')).thenReturn(mockItemDoc);
+      when(() => mockItemDoc.update(any())).thenAnswer((_) async {});
+
+      final container = ProviderContainer(
+        overrides: [
+          householdProvider.overrideWith((ref) => HouseholdNotifier(
+            firestore: mockFirestore,
+            auth: mockAuth,
+          )),
+          groceryListProvider.overrideWith(() => GroceryListNotifier(
+            firestore: mockFirestore,
+          )),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(householdProvider.notifier).state =
+          HouseholdState(householdId: 'hh-123');
+
+      final testItem = GroceryItem(
+        id: 'test-item-id',
+        name: 'Updated Mælk',
+        category: 'Mejeri',
+        quantity: '2',
+        unit: 'l',
+        source: 'manual',
+        createdAt: DateTime.now(),
+      );
+
+      await container.read(groceryListProvider.notifier).updateItem(testItem);
+
+      verify(() => mockItemDoc.update(testItem.toMap())).called(1);
+    });
+
+    test('updateItem gør ingenting når householdId er null', () async {
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+
+      final mockHouseholdsCollection = MockCollectionReference();
+      final mockHouseholdDoc = MockDocumentReference();
+      final mockGroceryCollection = MockCollectionReference();
+
+      when(() => mockFirestore.collection('households')).thenReturn(mockHouseholdsCollection);
+      when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
+      when(() => mockHouseholdDoc.collection('grocery_list')).thenReturn(mockGroceryCollection);
+
+      final container = ProviderContainer(
+        overrides: [
+          householdProvider.overrideWith((ref) => HouseholdNotifier(
+            firestore: mockFirestore,
+            auth: mockAuth,
+          )),
+          groceryListProvider.overrideWith(() => GroceryListNotifier(
+            firestore: mockFirestore,
+          )),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final testItem = GroceryItem(
+        id: 'test-item-id',
+        name: 'Mælk',
+        category: 'Mejeri',
+        quantity: '1',
+        source: 'manual',
+        createdAt: DateTime.now(),
+      );
+
+      await container.read(groceryListProvider.notifier).updateItem(testItem);
+
+      verifyNever(() => mockGroceryCollection.doc(any()));
     });
   });
 }
