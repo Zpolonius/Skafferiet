@@ -42,9 +42,10 @@ class ProfileScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: household.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
+      body: SafeArea(
+        child: household.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
@@ -168,7 +169,8 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
-    );
+        ),
+      ),
   }
 
   void _showInviteDialog(BuildContext context, WidgetRef ref) {

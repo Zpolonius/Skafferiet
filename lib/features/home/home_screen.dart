@@ -26,8 +26,9 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: CustomScrollView(
-        slivers: [
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
           _buildAppBar(context, authState),
           SliverToBoxAdapter(
             child: Padding(
