@@ -20,11 +20,10 @@ class RecipeDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final recipes = ref.watch(recipesProvider);
     return Scaffold(
-      body: SafeArea(
-        child: recipes.when(
-          data: (recipeList) {
-            final recipe = recipeList.firstWhere((r) => r.id == recipeId);
-            return CustomScrollView(
+      body: recipes.when(
+        data: (recipeList) {
+          final recipe = recipeList.firstWhere((r) => r.id == recipeId);
+          return CustomScrollView(
             slivers: [
               // Header with Image
           SliverAppBar(
@@ -177,12 +176,12 @@ class RecipeDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
+      );
     },
     loading: () => const Center(child: CircularProgressIndicator()),
     error: (err, stack) => Center(child: Text('Fejl: $err')),
     ),
-    ),
+  );
 }
 
   void _addIngredientsToList(BuildContext context, WidgetRef ref, dynamic recipe) {

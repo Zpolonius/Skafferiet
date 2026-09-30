@@ -205,6 +205,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 

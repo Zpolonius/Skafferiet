@@ -143,6 +143,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 

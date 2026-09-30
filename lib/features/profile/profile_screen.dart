@@ -169,8 +169,8 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
-        ),
       ),
+    );
   }
 
   void _showInviteDialog(BuildContext context, WidgetRef ref) {
