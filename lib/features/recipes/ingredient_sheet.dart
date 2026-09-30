@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/models/recipe.dart';
@@ -10,6 +12,9 @@ Future<Ingredient?> showIngredientSheet(BuildContext context, {Ingredient? initi
   return showModalBottomSheet<Ingredient>(
     context: context,
     isScrollControlled: true,
+    // Over bundmenuen og under statuslinjen/kameraet.
+    useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (context) => IngredientSheet(initial: initial),
   );
@@ -165,7 +170,8 @@ class _IngredientSheetState extends State<IngredientSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        // Tastaturet dækker hjem-stregen, så brug den største af de to.
+        bottom: math.max(MediaQuery.of(context).viewInsets.bottom, MediaQuery.of(context).viewPadding.bottom) + 24,
         top: 24,
         left: 24,
         right: 24,
