@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
+import 'app_bottom_sheet.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
 
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + sheetBottomInset(context)),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

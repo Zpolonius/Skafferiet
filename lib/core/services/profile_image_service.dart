@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// Available actions when configuring user profile image.
@@ -111,8 +112,10 @@ class FirebaseProfileImageService implements ProfileImageService {
     BuildContext context, {
     bool showDeleteOption = false,
   }) {
-    return showModalBottomSheet<ProfileImageAction>(
+    return showAppBottomSheet<ProfileImageAction>(
       context: context,
+      isScrollControlled: false,
+      backgroundColor: null,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

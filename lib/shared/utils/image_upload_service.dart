@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../widgets/app_bottom_sheet.dart';
 import 'package:uuid/uuid.dart';
 
 class ImageUploadService {
@@ -30,8 +31,10 @@ class ImageUploadService {
   }
 
   static Future<ImageSource?> _showSourceSheet(BuildContext context) {
-    return showModalBottomSheet<ImageSource>(
+    return showAppBottomSheet<ImageSource>(
       context: context,
+      isScrollControlled: false,
+      backgroundColor: null,
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [

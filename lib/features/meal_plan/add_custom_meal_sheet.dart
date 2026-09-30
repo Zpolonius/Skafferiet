@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'meal_plan_provider.dart';
 
 class AddCustomMealSheet extends ConsumerStatefulWidget {
@@ -140,7 +141,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           
           // Bottom Button — ekstra plads til hjem-stregen i bunden
           Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + sheetBottomInset(context)),
             child: Column(
               children: [
                 Row(

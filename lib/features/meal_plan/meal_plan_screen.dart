@@ -9,6 +9,7 @@ import '../../shared/widgets/profile_avatar.dart';
 import '../grocery/grocery_provider.dart';
 import 'meal_plan_provider.dart';
 
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'add_custom_meal_sheet.dart';
 
 class MealPlanScreen extends ConsumerWidget {
@@ -21,12 +22,8 @@ class MealPlanScreen extends ConsumerWidget {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showModalBottomSheet(
+        onPressed: () => showAppBottomSheet(
           context: context,
-          isScrollControlled: true,
-          // Over bundmenuen og under statuslinjen/kameraet.
-          useRootNavigator: true,
-          useSafeArea: true,
           builder: (context) => const AddCustomMealSheet(),
         ),
         label: const Text('Tilføj måltid'),
@@ -180,12 +177,8 @@ class MealPlanScreen extends ConsumerWidget {
   }
 
   void _showEditSlot(BuildContext context, String day, String type, MealSlot slot) {
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => AddCustomMealSheet(initialDay: day, initialCategory: type),
     );
   }
