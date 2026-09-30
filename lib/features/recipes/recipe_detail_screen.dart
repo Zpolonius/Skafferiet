@@ -6,7 +6,7 @@ import '../recipes/recipes_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../../core/models/recipe.dart';
 import '../../core/models/grocery_item.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 import '../../shared/widgets/add_to_meal_plan_sheet.dart';
 import 'package:uuid/uuid.dart';
 import 'edit_recipe_screen.dart';
@@ -34,7 +34,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                 imageUrl: recipe.imageUrl ?? 'https://via.placeholder.com/400x300',
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
+                  color: context.colors.surfaceContainer,
                   child: const Center(child: CircularProgressIndicator()),
                 ),
                 errorWidget: (context, url, error) => const Icon(Icons.error),
@@ -43,9 +43,9 @@ class RecipeDetailScreen extends ConsumerWidget {
             leading: Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                backgroundColor: Colors.white.withValues(alpha: 0.9),
+                backgroundColor: context.colors.surfaceContainerLowest.withValues(alpha: 0.9),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+                  icon: Icon(Icons.arrow_back, color: context.colors.onSurface),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -54,9 +54,9 @@ class RecipeDetailScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: CircleAvatar(
-                  backgroundColor: Colors.white.withValues(alpha: 0.9),
+                  backgroundColor: context.colors.surfaceContainerLowest.withValues(alpha: 0.9),
                   child: IconButton(
-                    icon: const Icon(Icons.edit, color: AppColors.onSurface),
+                    icon: Icon(Icons.edit, color: context.colors.onSurface),
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => EditRecipeScreen(recipe: recipe)),
@@ -77,13 +77,13 @@ class RecipeDetailScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                        color: context.colors.primaryContainer.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         recipe.category.name.toUpperCase(),
                         style: GoogleFonts.beVietnamPro(
-                          color: AppColors.primary,
+                          color: context.colors.primary,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1,
@@ -92,7 +92,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.schedule, size: 18, color: AppColors.outline),
+                        Icon(Icons.schedule, size: 18, color: context.colors.outline),
                         const SizedBox(width: 4),
                         Text('25 min', style: Theme.of(context).textTheme.labelSmall),
                       ],
@@ -115,7 +115,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                         icon: const Icon(Icons.shopping_basket),
                         label: const Text('Tilføj til indkøb'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primaryContainer,
+                          backgroundColor: context.colors.primaryContainer,
                         ),
                       ),
                     ),
@@ -126,8 +126,8 @@ class RecipeDetailScreen extends ConsumerWidget {
                         icon: const Icon(Icons.calendar_today),
                         label: const Text('Til madplan'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.secondaryContainer,
-                          foregroundColor: AppColors.onSecondaryContainer,
+                          backgroundColor: context.colors.secondaryContainer,
+                          foregroundColor: context.colors.onSecondaryContainer,
                         ),
                       ),
                     ),
@@ -147,8 +147,8 @@ class RecipeDetailScreen extends ConsumerWidget {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
+                        decoration: BoxDecoration(
+                          color: context.colors.primary,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -163,7 +163,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                         '${ing.quantity} ${ing.unit}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: AppColors.onSurfaceVariant,
+                          color: context.colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -200,7 +200,7 @@ class RecipeDetailScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${recipe.ingredients.length} ingredienser tilføjet til indkøbslisten'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: context.colors.primary,
         behavior: SnackBarBehavior.floating,
       ),
     );

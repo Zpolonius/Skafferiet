@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/grocery_item.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
@@ -62,7 +62,7 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryContainer,
+                                    color: context.colors.primaryContainer,
                                   ),
                                 ),
                               ],
@@ -73,7 +73,7 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                   IconButton(
                                     icon: Icon(
                                       _isReorderMode ? Icons.check_rounded : Icons.sort,
-                                      color: _isReorderMode ? AppColors.primary : AppColors.outline,
+                                      color: _isReorderMode ? context.colors.primary : context.colors.outline,
                                     ),
                                     tooltip: _isReorderMode ? 'Gem rækkefølge' : 'Sorter liste',
                                     onPressed: () => setState(() {
@@ -83,12 +83,12 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                   ),
                                 if (itemsList.any((i) => i.isChecked))
                                   IconButton(
-                                    icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.primary),
+                                    icon: Icon(Icons.delete_sweep_outlined, color: context.colors.primary),
                                     onPressed: () => ref.read(groceryListProvider.notifier).clearCheckedItems(),
                                     tooltip: 'Fjern markerede',
                                   ),
                                 PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, color: AppColors.outline),
+                                  icon: Icon(Icons.more_vert, color: context.colors.outline),
                                   onSelected: (value) {
                                     if (value == 'clear_all') {
                                       _showClearAllDialog(context, ref);
@@ -107,13 +107,13 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                         ],
                                       ),
                                     ),
-                                    const PopupMenuItem(
+                                    PopupMenuItem(
                                       value: 'clear_all',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.delete_forever_outlined, size: 20, color: AppColors.error),
-                                          SizedBox(width: 12),
-                                          Text('Tøm listen', style: TextStyle(color: AppColors.error)),
+                                          Icon(Icons.delete_forever_outlined, size: 20, color: context.colors.error),
+                                          const SizedBox(width: 12),
+                                          Text('Tøm listen', style: TextStyle(color: context.colors.error)),
                                         ],
                                       ),
                                     ),
@@ -136,15 +136,15 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           ),
                         ],
                         if (_isReorderMode)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
                             child: Row(
                               children: [
-                                Icon(Icons.drag_indicator, size: 16, color: AppColors.outline),
-                                SizedBox(width: 6),
+                                Icon(Icons.drag_indicator, size: 16, color: context.colors.outline),
+                                const SizedBox(width: 6),
                                 Text(
                                   'Hold og træk for at ændre rækkefølge',
-                                  style: TextStyle(fontSize: 12, color: AppColors.outline),
+                                  style: TextStyle(fontSize: 12, color: context.colors.outline),
                                 ),
                               ],
                             ),
@@ -206,7 +206,7 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                       child: Text(
                         category,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.primary,
+                              color: context.colors.primary,
                               fontWeight: FontWeight.bold,
                             ),
                       ),
@@ -277,7 +277,7 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
               ref.read(groceryListProvider.notifier).clearAllItems();
               Navigator.pop(context);
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(foregroundColor: context.colors.error),
             child: const Text('Tøm liste'),
           ),
         ],
@@ -336,16 +336,16 @@ class _FilterChip extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+            color: isSelected ? context.colors.primary : context.colors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.outlineVariant,
+              color: isSelected ? context.colors.primary : context.colors.outlineVariant,
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.onSurface,
+              color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               fontSize: 13,
             ),
@@ -362,9 +362,9 @@ class _SearchBar extends StatelessWidget {
     return TextField(
       decoration: InputDecoration(
         hintText: 'Søg i din indkøbsliste...',
-        prefixIcon: const Icon(Icons.search, color: AppColors.outline),
+        prefixIcon: Icon(Icons.search, color: context.colors.outline),
         filled: true,
-        fillColor: AppColors.surfaceContainerLowest,
+        fillColor: context.colors.surfaceContainerLowest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -392,8 +392,8 @@ class _GroceryItemTile extends ConsumerWidget {
           children: [
             SlidableAction(
               onPressed: (_) => ref.read(groceryListProvider.notifier).removeItem(item.id),
-              backgroundColor: AppColors.errorContainer,
-              foregroundColor: AppColors.error,
+              backgroundColor: context.colors.errorContainer,
+              foregroundColor: context.colors.error,
               icon: Icons.delete_outline,
               label: 'Slet',
               borderRadius: BorderRadius.circular(16),
@@ -403,9 +403,9 @@ class _GroceryItemTile extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
+            color: context.colors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.outlineVariant),
+            border: Border.all(color: context.colors.outlineVariant),
           ),
           child: InkWell(
             onTap: () => ref.read(groceryListProvider.notifier).toggleItem(item.id),
@@ -416,7 +416,7 @@ class _GroceryItemTile extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerHigh,
+                    color: context.colors.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
                     image: item.imageUrl != null
                         ? DecorationImage(
@@ -428,7 +428,7 @@ class _GroceryItemTile extends ConsumerWidget {
                   child: item.imageUrl == null
                       ? Icon(
                           _getCategoryIcon(item.category),
-                          color: AppColors.primary,
+                          color: context.colors.primary,
                           size: 24,
                         )
                       : null,
@@ -442,7 +442,7 @@ class _GroceryItemTile extends ConsumerWidget {
                         item.name,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               decoration: item.isChecked ? TextDecoration.lineThrough : null,
-                              color: item.isChecked ? AppColors.outline : AppColors.onSurface,
+                              color: item.isChecked ? context.colors.outline : context.colors.onSurface,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
@@ -454,9 +454,9 @@ class _GroceryItemTile extends ConsumerWidget {
                   ),
                 ),
                 if (showDragHandle)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Icon(Icons.drag_indicator, color: AppColors.outline, size: 22),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(Icons.drag_indicator, color: context.colors.outline, size: 22),
                   )
                 else if (!item.isChecked)
                   _QuantityPicker(
@@ -464,7 +464,7 @@ class _GroceryItemTile extends ConsumerWidget {
                     onChanged: (val) => ref.read(groceryListProvider.notifier).updateQuantity(item.id, val),
                   )
                 else
-                  const Icon(Icons.check_circle, color: AppColors.primary),
+                  Icon(Icons.check_circle, color: context.colors.primary),
               ],
             ),
           ),
@@ -496,13 +496,13 @@ class _QuantityPicker extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primaryFixed,
+        color: context.colors.primaryFixed,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         quantity,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.primary,
+              color: context.colors.primary,
               fontWeight: FontWeight.bold,
             ),
       ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
 
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
@@ -25,9 +25,9 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerLowest,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -50,7 +50,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
           const SizedBox(height: 8),
           Text(
             widget.recipe.title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.primary),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.colors.primary),
           ),
           const SizedBox(height: 24),
           
@@ -70,9 +70,9 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                     label: Text(day),
                     selected: isSelected,
                     onSelected: (val) => setState(() => selectedDay = val ? day : null),
-                    selectedColor: AppColors.primaryContainer,
+                    selectedColor: context.colors.primaryContainer,
                     labelStyle: GoogleFonts.beVietnamPro(
-                      color: isSelected ? Colors.white : AppColors.onSurface,
+                      color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
                       fontSize: 13,
                     ),
                   ),
@@ -92,9 +92,9 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                 label: Text(slot),
                 selected: isSelected,
                 onSelected: (val) => setState(() => selectedSlot = val ? slot : null),
-                selectedColor: AppColors.secondaryContainer,
+                selectedColor: context.colors.secondaryContainer,
                 labelStyle: GoogleFonts.beVietnamPro(
-                  color: isSelected ? AppColors.onSecondaryContainer : AppColors.onSurface,
+                  color: isSelected ? context.colors.onSecondaryContainer : context.colors.onSurface,
                   fontSize: 13,
                 ),
               );
@@ -116,7 +116,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${widget.recipe.title} tilføjet til $selectedDay ($selectedSlot)'),
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: context.colors.primary,
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -126,7 +126,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Noget gik galt: $e'),
-                            backgroundColor: AppColors.error,
+                            backgroundColor: context.colors.error,
                             behavior: SnackBarBehavior.floating,
                           ),
                         );

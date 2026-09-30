@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
 import 'meal_plan_provider.dart';
@@ -78,9 +78,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF8F9F8),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -91,16 +91,16 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
               children: [
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Color(0xFF0F5238)),
+                  icon: Icon(Icons.close, color: context.colors.primary),
                 ),
-                const Expanded(
+                Expanded(
                   child: Center(
                     child: Text(
                       'Tilføj eget måltid',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F5238),
+                        color: context.colors.primary,
                       ),
                     ),
                   ),
@@ -116,7 +116,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F2F0),
+                color: context.colors.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -146,7 +146,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
                     Checkbox(
                       value: _saveAsRecipe,
                       onChanged: (v) => setState(() => _saveAsRecipe = v ?? false),
-                      activeColor: AppColors.primary,
+                      activeColor: context.colors.primary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                     ),
                     const Text('Gem som opskrift', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
@@ -156,7 +156,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
                 FilledButton(
                   onPressed: () => _saveMeal(),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.colors.primary,
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
@@ -185,15 +185,15 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isActive ? Colors.white : Colors.transparent,
+            color: isActive ? context.colors.surfaceContainerLowest : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 13), blurRadius: 4, offset: const Offset(0, 2))] : null,
+            boxShadow: isActive ? [BoxShadow(color: context.colors.shadow.withAlpha(13), blurRadius: 4, offset: const Offset(0, 2))] : null,
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
-                color: isActive ? const Color(0xFF0F5238) : Colors.grey[600],
+                color: isActive ? context.colors.primary : context.colors.outline,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                 fontSize: 13,
               ),
@@ -214,10 +214,10 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           height: 180,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F2F0),
+            color: context.colors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.grey[300]!,
+              color: context.colors.surfaceContainerHighest,
               style: BorderStyle.solid,
               width: 1,
             ),
@@ -227,12 +227,12 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(color: Color(0xFFE0E4E0), shape: BoxShape.circle),
-                child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey, size: 24),
+                decoration: BoxDecoration(color: context.colors.surfaceContainerHighest, shape: BoxShape.circle),
+                child: Icon(Icons.add_a_photo_outlined, color: context.colors.outline, size: 24),
               ),
               const SizedBox(height: 12),
               const Text('Tilføj et indbydende billede', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              Text('JPEG eller PNG op til 5MB', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+              Text('JPEG eller PNG op til 5MB', style: TextStyle(color: context.colors.outline, fontSize: 11)),
             ],
           ),
         ),
@@ -244,9 +244,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           maxLines: 2,
           decoration: InputDecoration(
             hintText: 'Hvad skal I have at spise? (f.eks. Rugbrød med pålæg)',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 15),
+            hintStyle: TextStyle(color: context.colors.outlineVariant, fontSize: 15),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: context.colors.surfaceContainerLowest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -263,9 +263,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
               label: Text(cat.name),
               selected: isSelected,
               onSelected: (v) => setState(() => _selectedCategory = cat),
-              selectedColor: AppColors.primary,
+              selectedColor: context.colors.primary,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -281,7 +281,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         Container(
           width: 150,
           padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(100)),
+          decoration: BoxDecoration(color: context.colors.surfaceContainerLowest, borderRadius: BorderRadius.circular(100)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -290,7 +290,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('$_portions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  const Text('pers.', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('pers.', style: TextStyle(fontSize: 9, color: context.colors.outline)),
                 ],
               ),
               _buildCounterBtn(Icons.add, () => setState(() => _portions++)),
@@ -302,7 +302,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         // Ingredients
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: context.colors.surfaceContainerLowest, borderRadius: BorderRadius.circular(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -315,16 +315,16 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.primary, style: BorderStyle.solid),
+                    border: Border.all(color: context.colors.primary, style: BorderStyle.solid),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add, color: AppColors.primary, size: 18),
-                        SizedBox(width: 8),
-                        Text('Tilføj ingrediens', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        Icon(Icons.add, color: context.colors.primary, size: 18),
+                        const SizedBox(width: 8),
+                        Text('Tilføj ingrediens', style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -342,9 +342,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           maxLines: 4,
           decoration: InputDecoration(
             hintText: 'Tilføj noter eller detaljer...',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+            hintStyle: TextStyle(color: context.colors.outlineVariant, fontSize: 13),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: context.colors.surfaceContainerLowest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -369,8 +369,8 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(color: Color(0xFFF0F2F0), shape: BoxShape.circle),
-        child: Icon(icon, size: 18, color: const Color(0xFF0F5238)),
+        decoration: BoxDecoration(color: context.colors.surfaceContainerLow, shape: BoxShape.circle),
+        child: Icon(icon, size: 18, color: context.colors.primary),
       ),
     );
   }
@@ -380,7 +380,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Icon(Icons.remove, size: 16, color: Colors.grey),
+          Icon(Icons.remove, size: 16, color: context.colors.outline),
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
@@ -398,13 +398,13 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   Widget _buildMiniField(String hint, ValueChanged<String> onChanged) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: const Color(0xFFF0F2F0), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: context.colors.surfaceContainerLow, borderRadius: BorderRadius.circular(8)),
       child: TextField(
         onChanged: onChanged,
         style: const TextStyle(fontSize: 13),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+          hintStyle: TextStyle(color: context.colors.outline, fontSize: 13),
           isDense: true,
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
@@ -424,9 +424,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSelected ? context.colors.primary : context.colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected ? null : Border.all(color: Colors.grey[200]!),
+          border: isSelected ? null : Border.all(color: context.colors.surfaceContainer),
         ),
         child: Column(
           children: [
@@ -435,7 +435,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white.withValues(alpha: 0.8) : Colors.grey,
+                color: isSelected ? context.colors.onPrimary.withValues(alpha: 0.8) : context.colors.outline,
               ),
             ),
             const SizedBox(height: 4),
@@ -444,7 +444,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
               ),
             ),
           ],

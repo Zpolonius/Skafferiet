@@ -1,7 +1,9 @@
 # Dark Mode — analyse og plan
 
-**Status: ikke påbegyndt.** Dette dokument beskriver, hvorfor opgaven er
-væsentligt større end "tilføj en toggle", og hvordan den bør gribes an.
+**Status: trin 2 er færdigt (30. september 2026).** Alle widgets henter nu
+farver gennem temaet (`context.colors`), og en test forhindrer nye hardcodede
+farver. Tilbage er trin 1, 3 og 4. Afsnittene nedenfor beskriver udgangspunktet
+før oprydningen.
 
 Baseret på kodeanalyse 21. september 2026.
 
@@ -95,7 +97,17 @@ forkerte kontrastfarver til sine egne komponenter.
 fungere på en mørk flade. Den skal lysnes i den mørke palet for at opnå
 tilstrækkelig kontrast. Det samme gælder sekundærfarven `#895100`.
 
-### Trin 2 — Ryd de 220 direkte opslag op
+### Trin 2 — Ryd de 220 direkte opslag op ✅ Færdigt
+
+Udført: alle `AppColors.`-opslag, `Color(0x…)` og `Colors.*` uden for
+`lib/core/theme/` er erstattet med `context.colors.<rolle>`.
+`AppTheme.colorScheme` sætter nu *alle* roller fra `AppColors` (også
+`primaryFixed`, `secondaryFixed` osv., som `ColorScheme` understøtter direkte),
+så der var ikke brug for en `ThemeExtension`. Tekst oven på fotos bruger
+`PhotoOverlay`, som bevidst ikke skifter med temaet.
+`test/core/theme_colors_test.dart` håndhæver reglen.
+
+Oprindelig plan:
 
 Den tunge del. Fil for fil, startende med de største:
 

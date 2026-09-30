@@ -1,3 +1,4 @@
+import '../../core/theme/theme_context.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -133,10 +134,10 @@ class FirebaseProfileImageService implements ProfileImageService {
               ),
               if (showDeleteOption)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text(
+                  leading: Icon(Icons.delete_outline, color: context.colors.error),
+                  title: Text(
                     'Fjern profilbillede',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: context.colors.error),
                   ),
                   onTap: () => Navigator.pop(ctx, ProfileImageAction.delete),
                 ),

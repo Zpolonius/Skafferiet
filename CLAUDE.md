@@ -37,7 +37,9 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
 
 **Theme**:
-- "Kitchen Harmony" design system — always use `Theme.of(context).colorScheme` and `Theme.of(context).textTheme`, never hard-code colours.
+- "Kitchen Harmony" design system — always use `Theme.of(context).colorScheme` (shorthand: `context.colors`, from `lib/core/theme/theme_context.dart`) and `Theme.of(context).textTheme`, never hard-code colours.
+- `AppColors` may only be read inside `lib/core/theme/`. `AppTheme.colorScheme` sets every role from `AppColors`, so `context.colors.x == AppColors.x`. Text/icons on top of photos use `PhotoOverlay` (fixed white/black).
+- `test/core/theme_colors_test.dart` fails on any `AppColors.`, `Color(0x…)` or `Colors.*` (except `Colors.transparent`) outside `lib/core/theme/`, and if the scheme drifts from `AppColors`.
 - Primary: `#0F5238` (dark green), Secondary: `#895100` (brown). Fonts: Plus Jakarta Sans (headlines), Be Vietnam Pro (body).
 
 ## Firebase
@@ -55,7 +57,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 
 ## Dark mode
 
-Not implemented — there is no `darkTheme`, no `ThemeMode` and no toggle. Note that `AppColors` holds 47 hardcoded light `static const` values, and 220 widget call sites read them directly instead of going through the theme, so a toggle alone would change almost nothing. See `docs/DARK_MODE.md` before starting.
+Not implemented — there is no `darkTheme`, no `ThemeMode` and no toggle. All widgets already read colours through the theme (step 2 in `docs/DARK_MODE.md` is done), so what remains is a dark `ColorScheme`, a `ThemeMode` provider and the toggle. See `docs/DARK_MODE.md` before starting.
 
 ## Testing
 
