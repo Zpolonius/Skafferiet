@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/services/nutrition_calculator.dart';
 import '../../features/profile/household_provider.dart';
 import '../../shared/utils/image_upload_service.dart';
+import 'recipe_form_widgets.dart';
 import 'recipes_provider.dart';
 
 class CreateRecipeScreen extends ConsumerStatefulWidget {
@@ -15,12 +16,22 @@ class CreateRecipeScreen extends ConsumerStatefulWidget {
 
 class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   final _titleController = TextEditingController();
-  final _caloriesController = TextEditingController();
   final _timeController = TextEditingController();
+  final _nutrition = NutritionFormControllers();
   RecipeCategory _selectedCategory = RecipeCategory.aftensmad;
-  final List<Ingredient> _ingredients = [];
+  List<Ingredient> _ingredients = [];
+  int? _servings;
   String? _imageUrl;
   bool _isUploadingImage = false;
+  bool _showErrors = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _timeController.dispose();
+    _nutrition.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(BuildContext context) async {
     final householdId = ref.read(householdProvider).householdId;
@@ -53,23 +64,14 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               decoration: const InputDecoration(labelText: 'Titel', hintText: 'F.eks. Pasta Carbonara'),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _caloriesController,
-                    decoration: const InputDecoration(labelText: 'Kalorier', suffixText: 'kcal'),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _timeController,
-                    decoration: const InputDecoration(labelText: 'Tid', hintText: 'F.eks. 20 min'),
-                  ),
-                ),
-              ],
+            TextField(
+              controller: _timeController,
+              decoration: const InputDecoration(labelText: 'Tid', hintText: 'F.eks. 20 min'),
+            ),
+            const SizedBox(height: 16),
+            ServingsStepper(
+              value: _servings,
+              onChanged: (v) => setState(() => _servings = v),
             ),
             const SizedBox(height: 24),
             _buildSectionTitle('Kategori'),
@@ -85,54 +87,20 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               }).toList(),
             ),
             const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSectionTitle('Ingredienser'),
-                IconButton(
-                  onPressed: _addIngredient,
-                  icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-                ),
-              ],
+            _buildSectionTitle('Ingredienser'),
+            IngredientListEditor(
+              ingredients: _ingredients,
+              onChanged: (list) => setState(() => _ingredients = list),
             ),
-            ..._ingredients.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final ing = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        decoration: const InputDecoration(hintText: 'Navn'),
-                        onChanged: (val) => _ingredients[idx] = ing.copyWith(name: val),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        decoration: const InputDecoration(hintText: 'Mængde'),
-                        onChanged: (val) => _ingredients[idx] = ing.copyWith(quantity: double.tryParse(val) ?? 0),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        decoration: const InputDecoration(hintText: 'Enh.'),
-                        onChanged: (val) => _ingredients[idx] = ing.copyWith(unit: val),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _ingredients.removeAt(idx)),
-                      icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
-                    ),
-                  ],
-                ),
-              );
-            }),
+            const SizedBox(height: 32),
+            _buildSectionTitle('Næring pr. portion'),
+            NutritionFields(
+              controllers: _nutrition,
+              calculation: calculateNutrition(_ingredients),
+              servings: _servings,
+              showErrors: _showErrors,
+              onChanged: () => setState(() {}),
+            ),
             const SizedBox(height: 40),
             FilledButton(
               onPressed: _saveRecipe,
@@ -199,21 +167,28 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     );
   }
 
-  void _addIngredient() {
-    setState(() {
-      _ingredients.add(Ingredient(name: '', quantity: 0, unit: '', category: 'Andet'));
-    });
-  }
-
   Future<void> _saveRecipe() async {
+    if (_nutrition.hasErrors) {
+      setState(() => _showErrors = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ret de markerede næringsfelter')),
+      );
+      return;
+    }
+    final nutrition = _nutrition.resolve(calculateNutrition(_ingredients).perServing(_servings));
     final recipe = Recipe(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text,
       imageUrl: _imageUrl,
-      calories: int.tryParse(_caloriesController.text) ?? 0,
+      calories: nutrition.calories,
       time: _timeController.text,
       category: _selectedCategory,
       ingredients: _ingredients,
+      servings: _servings,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      nutritionFromIngredients: nutrition.fromIngredients,
     );
     
     try {

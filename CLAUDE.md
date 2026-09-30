@@ -35,6 +35,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
 - `GroceryItem` has a `source` field (`'manual'` or `'meal_plan'`) to distinguish origin.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
+- `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
 **Theme**:
 - "Kitchen Harmony" design system — always use `Theme.of(context).colorScheme` and `Theme.of(context).textTheme`, never hard-code colours.

@@ -77,6 +77,27 @@ service cloud.firestore {
     // Global recipes (householdId == null) are readable by all signed-in users.
     // Household-specific recipes are strictly restricted to members of that household.
     match /recipes/{recipeId} {
+      // Optional number field: missing, null, or a number within [0, max].
+      function optNumber(d, key, max) {
+        return d.get(key, null) == null ||
+               (d.get(key, null) is number && d.get(key, null) >= 0 && d.get(key, null) <= max);
+      }
+
+      // Nutrition per serving + servings must be sane numbers.
+      // (Per-ingredient nutrition sits inside the ingredients list, which rules
+      // cannot loop over; the app ignores invalid values there when reading.)
+      function validNutrition(d) {
+        return optNumber(d, 'calories', 10000) &&
+               optNumber(d, 'protein', 1000) &&
+               optNumber(d, 'carbs', 1000) &&
+               optNumber(d, 'fat', 1000) &&
+               (d.get('servings', null) == null ||
+                (d.get('servings', null) is int &&
+                 d.get('servings', null) >= 1 && d.get('servings', null) <= 100)) &&
+               (d.get('nutritionFromIngredients', null) == null ||
+                d.get('nutritionFromIngredients', null) is bool);
+      }
+
       allow read: if isSignedIn() && (
         !('householdId' in resource.data) ||
         resource.data.householdId == null ||
@@ -87,6 +108,7 @@ service cloud.firestore {
       );
 
       allow create: if isSignedIn() &&
+                       validNutrition(request.resource.data) &&
                        request.resource.data.createdBy == request.auth.uid &&
                        (
                          request.resource.data.householdId == null ||
@@ -96,7 +118,7 @@ service cloud.firestore {
                          )
                        );
 
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() && validNutrition(request.resource.data) && (
         resource.data.createdBy == request.auth.uid ||
         (
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
