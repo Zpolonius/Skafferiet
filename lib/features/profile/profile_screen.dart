@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/providers/profile_image_provider.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 import '../auth/auth_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../meal_plan/meal_plan_provider.dart';
@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     ref.listen(householdProvider.select((s) => s.error), (previous, next) {
       if (next != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next), backgroundColor: Colors.red),
+          SnackBar(content: Text(next), backgroundColor: context.colors.error),
         );
       }
     });
@@ -35,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9F8),
+      backgroundColor: context.colors.surface,
       appBar: AppBar(
         title: const Text('Profil'),
         centerTitle: true,
@@ -67,14 +67,14 @@ class ProfileScreen extends ConsumerWidget {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryContainer,
+                                  color: context.colors.primaryContainer,
                                 ),
                               ),
                               Text(
                                 user?.email ?? '',
                                 style: GoogleFonts.beVietnamPro(
                                   fontSize: 14,
-                                  color: AppColors.outline,
+                                  color: context.colors.outline,
                                 ),
                               ),
                             ],
@@ -155,8 +155,8 @@ class ProfileScreen extends ConsumerWidget {
                             icon: const Icon(Icons.logout),
                             label: const Text('Log ud'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side: const BorderSide(color: AppColors.error),
+                              foregroundColor: context.colors.error,
+                              side: BorderSide(color: context.colors.error),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16)),
                             ),
@@ -208,7 +208,7 @@ class ProfileScreen extends ConsumerWidget {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('Invitation sendt til $email'),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: context.colors.primary,
                   behavior: SnackBarBehavior.floating,
                 ));
               }
@@ -235,11 +235,11 @@ class _StatsRow extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: context.colors.shadow.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -273,7 +273,7 @@ class _StatCard extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: AppColors.primary,
+              color: context.colors.primary,
             ),
           ),
           const SizedBox(height: 4),
@@ -282,7 +282,7 @@ class _StatCard extends StatelessWidget {
             style: GoogleFonts.beVietnamPro(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: AppColors.outline,
+              color: context.colors.outline,
               letterSpacing: 0.8,
             ),
           ),
@@ -295,7 +295,7 @@ class _StatCard extends StatelessWidget {
 class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(width: 1, height: 40, color: Colors.grey[200]);
+    return Container(width: 1, height: 40, color: context.colors.surfaceContainer);
   }
 }
 
@@ -309,11 +309,11 @@ class _HouseholdDetailCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: context.colors.shadow.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -330,11 +330,11 @@ class _HouseholdDetailCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                    color: context.colors.primaryContainer.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.house_outlined,
-                      color: AppColors.primary, size: 20),
+                  child: Icon(Icons.house_outlined,
+                      color: context.colors.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -346,17 +346,17 @@ class _HouseholdDetailCard extends ConsumerWidget {
                         style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.bold, fontSize: 15),
                       ),
-                      const Text('Aktiv',
+                      Text('Aktiv',
                           style: TextStyle(
-                              color: Colors.green,
+                              color: context.colors.primary,
                               fontSize: 11,
                               fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      size: 18, color: AppColors.outline),
+                  icon: Icon(Icons.edit_outlined,
+                      size: 18, color: context.colors.outline),
                   tooltip: 'Omdøb husstand',
                   onPressed: () => _showRenameDialog(context, ref),
                 ),
@@ -364,7 +364,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
             ),
           ),
 
-          Divider(height: 1, color: Colors.grey[100]),
+          Divider(height: 1, color: context.colors.surfaceContainerLow),
 
           // Members section
           Padding(
@@ -377,7 +377,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
                   style: GoogleFonts.beVietnamPro(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.outline,
+                    color: context.colors.outline,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -395,8 +395,8 @@ class _HouseholdDetailCard extends ConsumerWidget {
                         CircleAvatar(
                           radius: 18,
                           backgroundColor: isOwner
-                              ? AppColors.primaryContainer
-                              : Colors.grey[300],
+                              ? context.colors.primaryContainer
+                              : context.colors.surfaceContainerHighest,
                           child: ClipOval(
                             child: photoUrl != null && photoUrl.isNotEmpty
                                 ? CachedNetworkImage(
@@ -416,8 +416,8 @@ class _HouseholdDetailCard extends ConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: isOwner
-                                            ? Colors.white
-                                            : Colors.black87,
+                                            ? context.colors.onPrimary
+                                            : context.colors.onSurface,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -427,8 +427,8 @@ class _HouseholdDetailCard extends ConsumerWidget {
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: isOwner
-                                          ? Colors.white
-                                          : Colors.black87,
+                                          ? context.colors.onPrimary
+                                          : context.colors.onSurface,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -449,14 +449,14 @@ class _HouseholdDetailCard extends ConsumerWidget {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: isOwner
-                                ? AppColors.primaryContainer
+                                ? context.colors.primaryContainer
                                     .withValues(alpha: 0.12)
-                                : Colors.grey[100],
+                                : context.colors.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isOwner
-                                  ? AppColors.primary.withValues(alpha: 0.25)
-                                  : Colors.grey[300]!,
+                                  ? context.colors.primary.withValues(alpha: 0.25)
+                                  : context.colors.surfaceContainerHighest,
                             ),
                           ),
                           child: Text(
@@ -465,8 +465,8 @@ class _HouseholdDetailCard extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: isOwner
-                                  ? AppColors.primary
-                                  : AppColors.outline,
+                                  ? context.colors.primary
+                                  : context.colors.outline,
                             ),
                           ),
                         ),
@@ -478,21 +478,21 @@ class _HouseholdDetailCard extends ConsumerWidget {
             ),
           ),
 
-          Divider(height: 1, color: Colors.grey[100]),
+          Divider(height: 1, color: context.colors.surfaceContainerLow),
 
           // Invite tile
           ListTile(
-            leading: const Icon(Icons.person_add_outlined,
-                color: AppColors.primary, size: 20),
+            leading: Icon(Icons.person_add_outlined,
+                color: context.colors.primary, size: 20),
             title: Text(
               'Inviter et medlem',
               style: GoogleFonts.beVietnamPro(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.primary),
+                  color: context.colors.primary),
             ),
-            trailing: const Icon(Icons.chevron_right,
-                size: 18, color: AppColors.outline),
+            trailing: Icon(Icons.chevron_right,
+                size: 18, color: context.colors.outline),
             onTap: () => _showInviteDialog(context, ref),
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
@@ -572,7 +572,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('Invitation sendt til $email'),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: context.colors.primary,
                   behavior: SnackBarBehavior.floating,
                 ));
               }
@@ -598,7 +598,7 @@ class _SectionHeader extends StatelessWidget {
       style: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.bold,
-        color: AppColors.primary,
+        color: context.colors.primary,
         letterSpacing: 0.5,
       ),
     );
@@ -621,16 +621,16 @@ class _ProfileTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(icon, color: AppColors.primary, size: 22),
+        leading: Icon(icon, color: context.colors.primary, size: 22),
         title: Text(title,
             style: GoogleFonts.beVietnamPro(
                 fontSize: 15, fontWeight: FontWeight.w500)),
         trailing:
-            const Icon(Icons.chevron_right, size: 20, color: AppColors.outline),
+            Icon(Icons.chevron_right, size: 20, color: context.colors.outline),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -650,17 +650,17 @@ class _InvitationCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.secondaryContainer.withValues(alpha: 0.1),
+        color: context.colors.secondaryContainer.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: AppColors.secondaryContainer.withValues(alpha: 0.3)),
+            color: context.colors.secondaryContainer.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Invitation modtaget!',
               style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  fontWeight: FontWeight.bold, color: context.colors.primary)),
           const SizedBox(height: 4),
           Text(
             '${invite['fromUserName'] ?? 'Nogen'} har inviteret dig til "${invite['fromHouseholdName'] ?? 'et Skafferi'}".',
@@ -702,22 +702,22 @@ class _NoHouseholdCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: context.colors.outlineVariant),
       ),
       child: Column(
         children: [
-          const Icon(Icons.house_siding_rounded,
-              size: 48, color: AppColors.outlineVariant),
+          Icon(Icons.house_siding_rounded,
+              size: 48, color: context.colors.outlineVariant),
           const SizedBox(height: 16),
           const Text('Du er ikke i en husstand endnu',
               style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Bliv inviteret via e-mail, indtast en kode eller opret din egen herunder.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.outline),
+            style: TextStyle(fontSize: 12, color: context.colors.outline),
           ),
           const SizedBox(height: 24),
           Row(
@@ -849,9 +849,9 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
             await ref.read(authProvider.notifier).removeProfilePhoto();
         if (mounted && success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profilbillede fjernet'),
-              backgroundColor: AppColors.primary,
+            SnackBar(
+              content: const Text('Profilbillede fjernet'),
+              backgroundColor: context.colors.primary,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -862,9 +862,9 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
             await ref.read(authProvider.notifier).updateProfilePhoto(newUrl);
         if (mounted && success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profilbillede opdateret'),
-              backgroundColor: AppColors.primary,
+            SnackBar(
+              content: const Text('Profilbillede opdateret'),
+              backgroundColor: context.colors.primary,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -890,7 +890,7 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundColor: AppColors.primaryContainer,
+            backgroundColor: context.colors.primaryContainer,
             child: ClipOval(
               child: photoUrl != null && photoUrl.isNotEmpty
                   ? CachedNetworkImage(
@@ -898,28 +898,28 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => const SizedBox(
+                      placeholder: (context, url) => SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: context.colors.onPrimary,
                         ),
                       ),
                       errorWidget: (context, url, error) => Text(
                         widget.initial,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
-                          color: Colors.white,
+                          color: context.colors.onPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     )
                   : Text(
                       widget.initial,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 32,
-                        color: Colors.white,
+                        color: context.colors.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -929,7 +929,7 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: PhotoOverlay.scrim.withValues(alpha: 0.4),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
@@ -938,7 +938,7 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
                     height: 28,
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
-                      color: Colors.white,
+                      color: PhotoOverlay.foreground,
                     ),
                   ),
                 ),
@@ -950,21 +950,21 @@ class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: context.colors.primary,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: context.colors.surfaceContainerLowest, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: context.colors.shadow.withValues(alpha: 0.15),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.camera_alt_rounded,
                 size: 16,
-                color: Colors.white,
+                color: context.colors.onPrimary,
               ),
             ),
           ),

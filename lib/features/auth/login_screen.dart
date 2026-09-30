@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -51,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (authState.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authState.error!), backgroundColor: Colors.red),
+          SnackBar(content: Text(authState.error!), backgroundColor: context.colors.error),
         );
       });
     }
@@ -64,8 +64,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.primaryContainer.withValues(alpha: 0.2),
-              Colors.white,
+              context.colors.primaryContainer.withValues(alpha: 0.2),
+              context.colors.surfaceContainerLowest,
             ],
           ),
         ),
@@ -81,11 +81,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.colors.surfaceContainerLowest,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: context.colors.shadow.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -111,7 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? 'Log ind for at styre din madplan og indkøb.'
                         : 'Begynd din rejse mod en nemmere hverdag i køkkenet.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.onSurfaceVariant,
+                          color: context.colors.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 48),
@@ -184,10 +184,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: authState.isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.onPrimary),
                           )
                         : Text(_isLogin ? 'Log ind' : 'Opret konto'),
                   ),

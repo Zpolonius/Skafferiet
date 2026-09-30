@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/providers/connectivity_provider.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_context.dart';
 
 /// A subtle, non-intrusive banner that informs users when the app is offline
 /// or when connectivity has just been restored.
@@ -20,20 +20,20 @@ class OfflineBanner extends ConsumerWidget {
       curve: Curves.easeInOutCubic,
       child: status == NetworkStatus.online
           ? const SizedBox.shrink()
-          : _buildBannerContent(status),
+          : _buildBannerContent(context, status),
     );
   }
 
-  Widget _buildBannerContent(NetworkStatus status) {
+  Widget _buildBannerContent(BuildContext context, NetworkStatus status) {
     final isOffline = status == NetworkStatus.offline;
 
     final bgColor =
-        isOffline ? AppColors.secondaryFixed : AppColors.primaryFixed;
+        isOffline ? context.colors.secondaryFixed : context.colors.primaryFixed;
     final fgColor =
-        isOffline ? AppColors.onSecondaryFixed : AppColors.onPrimaryFixed;
+        isOffline ? context.colors.onSecondaryFixed : context.colors.onPrimaryFixed;
     final borderColor = isOffline
-        ? AppColors.secondaryFixedDim.withValues(alpha: 0.4)
-        : AppColors.primaryFixedDim.withValues(alpha: 0.4);
+        ? context.colors.secondaryFixedDim.withValues(alpha: 0.4)
+        : context.colors.primaryFixedDim.withValues(alpha: 0.4);
     final icon = isOffline
         ? Icons.wifi_off_rounded
         : Icons.cloud_done_outlined;

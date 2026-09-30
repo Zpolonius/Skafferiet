@@ -1,3 +1,4 @@
+import 'core/theme/theme_context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -195,12 +196,12 @@ class ScaffoldWithNavBar extends StatelessWidget {
           const OfflineBanner(),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.colors.surfaceContainerLowest,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
+                  color: context.colors.primaryContainer.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, -4),
                 ),
@@ -262,8 +263,8 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? const Color(0xFF0F5238) : Colors.grey[400];
-    final bgColor = isActive ? const Color(0xFFE7F3ED) : Colors.transparent;
+    final color = isActive ? context.colors.primary : context.colors.outlineVariant;
+    final bgColor = isActive ? context.colors.primary.withValues(alpha: 0.1) : Colors.transparent;
 
     return GestureDetector(
       onTap: onTap,
