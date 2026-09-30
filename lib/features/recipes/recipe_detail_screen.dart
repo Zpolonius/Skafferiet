@@ -9,6 +9,7 @@ import '../../core/models/grocery_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_to_meal_plan_sheet.dart';
 import 'package:uuid/uuid.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_recipe_screen.dart';
 
 class RecipeDetailScreen extends ConsumerWidget {
@@ -209,10 +210,8 @@ class RecipeDetailScreen extends ConsumerWidget {
   }
 
   void _showAddToMealPlan(BuildContext context, Recipe recipe) {
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => AddToMealPlanSheet(recipe: recipe),
     );
   }

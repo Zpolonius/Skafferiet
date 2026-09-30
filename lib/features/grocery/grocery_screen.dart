@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import 'grocery_provider.dart';
 
 class GroceryScreen extends ConsumerStatefulWidget {
@@ -255,10 +256,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
   }
 
   void _showAddItemSheet(BuildContext context) {
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => const AddGroceryItemSheet(),
     );
   }
