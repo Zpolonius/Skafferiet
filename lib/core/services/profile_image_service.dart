@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:skafferiet/core/theme/theme_context.dart';
 
 /// Available actions when configuring user profile image.
 enum ProfileImageAction {
@@ -136,10 +137,10 @@ class FirebaseProfileImageService implements ProfileImageService {
               ),
               if (showDeleteOption)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text(
+                  leading: Icon(Icons.delete_outline, color: context.colors.error),
+                  title: Text(
                     'Fjern profilbillede',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: context.colors.error),
                   ),
                   onTap: () => Navigator.pop(ctx, ProfileImageAction.delete),
                 ),

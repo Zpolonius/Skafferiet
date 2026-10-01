@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/meal_plan.dart';
-import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../grocery/grocery_provider.dart';
 import 'meal_plan_provider.dart';
 
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'add_custom_meal_sheet.dart';
+import '../../core/theme/theme_context.dart';
 
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
@@ -28,8 +27,8 @@ class MealPlanScreen extends ConsumerWidget {
         ),
         label: const Text('Tilføj måltid'),
         icon: const Icon(Icons.add),
-        backgroundColor: const Color(0xFF0F5238),
-        foregroundColor: Colors.white,
+        backgroundColor: context.colors.primary,
+        foregroundColor: context.colors.onPrimary,
       ),
       body: SafeArea(
         child: mealPlan.when(
@@ -52,10 +51,10 @@ class MealPlanScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Text(
                                   'Madplan',
-                                  style: GoogleFonts.plusJakartaSans(
+                                  style: context.text.headlineLarge?.copyWith(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryContainer,
+                                    color: context.colors.primaryContainer,
                                   ),
                                 ),
                               ],
@@ -74,14 +73,22 @@ class MealPlanScreen extends ConsumerWidget {
                           onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
                         ),
                         const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Wrap: på en smal telefon (fx 390 pt) ryger knappen ned
+                        // på næste linje i stedet for at løbe ud over kanten.
+                        SizedBox(
+                          width: double.infinity,
+                          child: Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 12,
+                          runSpacing: 8,
                           children: [
-                            Row(
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
-                                  '$selectedDay\'s Madplan',
-                                  style: Theme.of(context).textTheme.displayMedium,
+                                  '${selectedDay}ens madplan',
+                                  style: context.text.displayMedium,
                                 ),
                                 if (dailyPlan.totalCalories > 0) ...[
                                   const SizedBox(width: 10),
@@ -91,24 +98,24 @@ class MealPlanScreen extends ConsumerWidget {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: AppColors.secondaryFixed,
+                                        color: context.colors.secondaryFixed,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.local_fire_department,
                                             size: 14,
-                                            color: AppColors.secondary,
+                                            color: context.colors.secondary,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${NumberFormat('#,###', 'da_DK').format(dailyPlan.totalCalories)} kcal',
-                                            style: GoogleFonts.plusJakartaSans(
+                                            style: context.text.titleSmall?.copyWith(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
-                                              color: AppColors.onSecondaryFixedVariant,
+                                              color: context.colors.onSecondaryFixedVariant,
                                             ),
                                           ),
                                         ],
@@ -123,12 +130,13 @@ class MealPlanScreen extends ConsumerWidget {
                               icon: const Icon(Icons.sync_alt, size: 18),
                               label: const Text('Overfør til indkøb', style: TextStyle(fontSize: 12)),
                               style: TextButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                backgroundColor: AppColors.primaryFixed.withValues(alpha: 0.5),
+                                foregroundColor: context.colors.primary,
+                                backgroundColor: context.colors.primaryFixed.withValues(alpha: 0.5),
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                               ),
                             ),
                           ],
+                        ),
                         ),
                       ],
                     ),
@@ -190,7 +198,7 @@ class MealPlanScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$count varer overført til indkøbslisten'),
-          backgroundColor: AppColors.primary,
+          backgroundColor: context.colors.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -201,10 +209,10 @@ class MealPlanScreen extends ConsumerWidget {
 class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const TextField(
+    return TextField(
       decoration: InputDecoration(
         hintText: 'Find opskrifter til din plan...',
-        prefixIcon: Icon(Icons.search, color: AppColors.outline),
+        prefixIcon: Icon(Icons.search, color: context.colors.outline),
       ),
     );
   }
@@ -242,14 +250,14 @@ class _WeeklyCarousel extends StatelessWidget {
               width: 65,
               margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+                color: isSelected ? context.colors.primary : context.colors.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.outlineVariant,
+                  color: isSelected ? context.colors.primary : context.colors.outlineVariant,
                 ),
                 boxShadow: isSelected ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: context.colors.primary.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
@@ -261,7 +269,7 @@ class _WeeklyCarousel extends StatelessWidget {
                   Text(
                     day.substring(0, 3).toUpperCase(),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isSelected ? Colors.white70 : AppColors.outline,
+                      color: isSelected ? context.colors.onPrimary.withValues(alpha: 0.7) : context.colors.outline,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -269,10 +277,10 @@ class _WeeklyCarousel extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${date.day}',
-                    style: GoogleFonts.plusJakartaSans(
+                    style: context.text.titleMedium?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : AppColors.onSurface,
+                      color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
                     ),
                   ),
                 ],
@@ -300,10 +308,10 @@ class _WeekNavigation extends ConsumerWidget {
       children: [
         Text(
           'Uge $weekNum',
-          style: GoogleFonts.plusJakartaSans(
+          style: context.text.titleMedium?.copyWith(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: AppColors.primaryContainer,
+            color: context.colors.primaryContainer,
           ),
         ),
         Row(
@@ -337,11 +345,11 @@ class _NavBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
+          color: context.colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.outlineVariant),
+          border: Border.all(color: context.colors.outlineVariant),
         ),
-        child: Icon(icon, size: 20, color: AppColors.primary),
+        child: Icon(icon, size: 20, color: context.colors.primary),
       ),
     );
   }
@@ -369,7 +377,7 @@ class _MealSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.outline),
+              Icon(icon, size: 18, color: context.colors.outline),
               const SizedBox(width: 8),
               Text(title, style: Theme.of(context).textTheme.labelSmall),
             ],
@@ -400,22 +408,30 @@ class _FilledSlotCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: context.colors.outlineVariant),
       ),
       child: Row(
         children: [
+          // Opskrifter uden billede fik før NetworkImage('') — en fejl hver
+          // gang kortet blev tegnet. Nu vises et ikon i stedet.
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
+              color: context.colors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
-              image: DecorationImage(
-                image: NetworkImage(recipe.imageUrl ?? ''),
-                fit: BoxFit.cover,
-              ),
+              image: (recipe.imageUrl?.isNotEmpty ?? false)
+                  ? DecorationImage(
+                      image: NetworkImage(recipe.imageUrl!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
+            child: (recipe.imageUrl?.isNotEmpty ?? false)
+                ? null
+                : Icon(Icons.restaurant_menu_outlined, color: context.colors.outline),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -437,7 +453,7 @@ class _FilledSlotCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.outline),
+          Icon(Icons.chevron_right, color: context.colors.outline),
         ],
       ),
     );
@@ -462,13 +478,13 @@ class _DirectEntryCardState extends ConsumerState<_DirectEntryCard> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: context.colors.outlineVariant),
       ),
       child: Row(
         children: [
-          const Icon(Icons.edit_note, color: AppColors.primary),
+          Icon(Icons.edit_note, color: context.colors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -484,12 +500,12 @@ class _DirectEntryCardState extends ConsumerState<_DirectEntryCard> {
               _isAdded ? Icons.check : Icons.add_shopping_cart,
               size: 20,
             ),
-            color: _isAdded ? Colors.green[700] : AppColors.primary,
+            color: _isAdded ? context.colors.primary : context.colors.primary,
             tooltip: _isAdded ? 'Allerede tilføjet til indkøbsliste' : 'Tilføj til indkøbsliste',
             style: IconButton.styleFrom(
               backgroundColor: _isAdded
-                  ? Colors.green.withValues(alpha: 0.15)
-                  : AppColors.primaryFixed.withValues(alpha: 0.4),
+                  ? context.colors.primary.withValues(alpha: 0.15)
+                  : context.colors.primaryFixed.withValues(alpha: 0.4),
               padding: const EdgeInsets.all(8),
             ),
             onPressed: _isAdded
@@ -517,7 +533,7 @@ class _DirectEntryCardState extends ConsumerState<_DirectEntryCard> {
                   },
           ),
           const SizedBox(width: 4),
-          const Icon(Icons.chevron_right, color: AppColors.outline),
+          Icon(Icons.chevron_right, color: context.colors.outline),
         ],
       ),
     );
@@ -535,10 +551,10 @@ class _EmptySlotCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.outlineVariant.withValues(alpha: 0.5),
+          color: context.colors.outlineVariant.withValues(alpha: 0.5),
           style: BorderStyle.solid,
         ),
       ),
@@ -547,22 +563,25 @@ class _EmptySlotCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.05),
+              color: context.colors.primaryContainer.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.add_circle_outline, 
-              color: AppColors.primary.withValues(alpha: 0.4),
+              color: context.colors.primary.withValues(alpha: 0.4),
               size: 20,
             ),
           ),
           const SizedBox(width: 16),
-          Text(
-            'Tilføj ${title.toLowerCase()}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.outline.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w500,
-                ),
+          // Expanded: ved stor tekst brydes linjen i stedet for at løbe ud.
+          Expanded(
+            child: Text(
+              'Tilføj ${title.toLowerCase()}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.colors.outline.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
           ),
         ],
       ),

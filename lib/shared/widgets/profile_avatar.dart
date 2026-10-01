@@ -2,8 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
 import '../../features/auth/auth_provider.dart';
+import 'package:skafferiet/core/theme/theme_context.dart';
 
 /// Top bar user avatar that renders the user's profile image if available,
 /// with graceful fallback to their initial or person icon.
@@ -29,11 +29,11 @@ class ProfileAvatar extends ConsumerWidget {
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.primaryContainer, width: 2),
+          border: Border.all(color: context.colors.primaryContainer, width: 2),
         ),
         child: CircleAvatar(
           radius: 18,
-          backgroundColor: AppColors.primaryFixed,
+          backgroundColor: context.colors.primaryFixed,
           child: ClipOval(
             child: photoUrl != null && photoUrl.isNotEmpty
                 ? CachedNetworkImage(
@@ -48,19 +48,19 @@ class ProfileAvatar extends ConsumerWidget {
                     ),
                     errorWidget: (context, url, error) => Text(
                       initial,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                        color: context.colors.primary,
                       ),
                     ),
                   )
                 : Text(
                     initial,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: context.colors.primary,
                     ),
                   ),
           ),

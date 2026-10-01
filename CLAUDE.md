@@ -49,9 +49,9 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
 **Theme**:
-- "Kitchen Harmony" design system — spec in `design/kitchen_harmony/DESIGN.md`, screen mockups in `design/*/screen.png`. Always use `Theme.of(context).colorScheme` and `Theme.of(context).textTheme`, never hard-code colours or call `GoogleFonts` in widgets.
+- "Kitchen Harmony" design system — spec in `design/kitchen_harmony/DESIGN.md`, screen mockups in `design/*/screen.png`. Always use `context.colors` / `context.text` (`core/theme/theme_context.dart`, shorthand for `Theme.of(context).colorScheme` / `.textTheme`); never hard-code colours or call `GoogleFonts` in widgets.
 - `AppTheme` maps every Material 3 text role and colour role (incl. `surfaceContainer*` and `*Fixed`) to the tokens, so any role is safe to use. `test/core/app_theme_test.dart` checks this.
-- `test/design_system_test.dart` fails if a converted file uses `Colors.*`, `Color(0x…)`, `AppColors.*` or `GoogleFonts.*`. Add a file to its list once it has been converted.
+- `test/design_system_test.dart` fails if any file in `lib/` (except `app_theme.dart`/`app_colors.dart`) uses `Colors.*` (other than `transparent`), `Color(0x…)`, `AppColors.*` or `GoogleFonts.*`.
 - Settings-style screens use `SectionTitle`, `SettingsGroup`, `SettingsTile` and `showResultSnackBar` from `shared/widgets/settings_list.dart`.
 - Primary: `#0F5238` (dark green), Secondary: `#895100` (brown). Fonts: Plus Jakarta Sans (headlines), Be Vietnam Pro (body).
 

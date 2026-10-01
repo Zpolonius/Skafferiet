@@ -93,6 +93,13 @@ class _LoadedMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> with Mock im
         dinner: MealSlot(),
         snack: MealSlot(),
       ),
+      // En dag uden måltider må ikke tælle som planlagt.
+      'wednesday': DailyPlan(
+        breakfast: MealSlot(),
+        lunch: MealSlot(),
+        dinner: MealSlot(),
+        snack: MealSlot(),
+      ),
     },
   );
 }
@@ -178,7 +185,8 @@ void main() {
 
       expect(find.text('3'), findsOneWidget); // 3 recipes
       expect(find.text('5'), findsOneWidget); // 5 grocery items
-      expect(find.text('2'), findsOneWidget); // 2 meal plan days
+      expect(find.text('2'), findsOneWidget); // 2 planlagte dage (onsdag er tom)
+      expect(find.text('PLANLAGTE DAGE'), findsOneWidget);
     });
   });
 
