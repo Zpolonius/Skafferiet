@@ -1,7 +1,9 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skafferiet/features/auth/auth_error_messages.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -110,5 +112,111 @@ void main() {
       expect(await notifier.sendPasswordReset('mig@example.com'), isNull);
       verify(() => mockAuth.sendPasswordResetEmail(email: 'mig@example.com')).called(1);
     });
+  });
+
+  group('skift navn og adgangskode', () {
+    late MockFirebaseAuth mockAuth;
+    late MockUser mockUser;
+
+    setUpAll(() {
+      registerFallbackValue(EmailAuthProvider.credential(email: 'x', password: 'y'));
+    });
+
+    setUp(() {
+      mockAuth = MockFirebaseAuth();
+      mockUser = MockUser();
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.uid).thenReturn('me');
+      when(() => mockUser.email).thenReturn('me@example.com');
+    });
+
+    test('nyt navn gemmes i login-kontoen og i profilen', () async {
+      final db = FakeFirebaseFirestore();
+      when(() => mockUser.updateDisplayName(any())).thenAnswer((_) async {});
+      when(() => mockUser.reload()).thenAnswer((_) async {});
+      final notifier = AuthNotifier(auth: mockAuth, firestore: db);
+
+      expect(await notifier.updateDisplayName('  Nyt Navn '), isNull);
+
+      verify(() => mockUser.updateDisplayName('Nyt Navn')).called(1);
+      expect((await db.doc('users/me').get()).data()?['displayName'], 'Nyt Navn');
+    });
+
+    test('tomt eller for langt navn afvises uden at skrive', () async {
+      final notifier = AuthNotifier(auth: mockAuth, firestore: FakeFirebaseFirestore());
+
+      expect(await notifier.updateDisplayName('   '), 'Indtast dit navn.');
+      expect(await notifier.updateDisplayName('x' * 51), 'Navnet må højst være 50 tegn.');
+      verifyNever(() => mockUser.updateDisplayName(any()));
+    });
+
+    test('adgangskode: logger ind igen med den nuværende og sætter den nye', () async {
+      when(() => mockUser.reauthenticateWithCredential(any()))
+          .thenAnswer((_) async => MockUserCredential());
+      when(() => mockUser.updatePassword(any())).thenAnswer((_) async {});
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(await notifier.changePassword(currentPassword: 'gammel', newPassword: 'ny-kode'), isNull);
+
+      final credential = verify(() => mockUser.reauthenticateWithCredential(captureAny()))
+          .captured.single as AuthCredential;
+      expect(credential.providerId, 'password');
+      verify(() => mockUser.updatePassword('ny-kode')).called(1);
+    });
+
+    test('forkert nuværende adgangskode: den nye sættes ikke', () async {
+      when(() => mockUser.reauthenticateWithCredential(any()))
+          .thenThrow(FirebaseAuthException(code: 'invalid-credential'));
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(
+        await notifier.changePassword(currentPassword: 'forkert', newPassword: 'ny-kode'),
+        'Den nuværende adgangskode er forkert.',
+      );
+      verifyNever(() => mockUser.updatePassword(any()));
+    });
+
+    test('for svag ny adgangskode giver en forståelig besked', () async {
+      when(() => mockUser.reauthenticateWithCredential(any()))
+          .thenAnswer((_) async => MockUserCredential());
+      when(() => mockUser.updatePassword(any()))
+          .thenThrow(FirebaseAuthException(code: 'weak-password'));
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(
+        await notifier.changePassword(currentPassword: 'gammel', newPassword: '123456'),
+        'Den nye adgangskode er for svag.',
+      );
+    });
+  });
+
+  group('fejlbeskeder', () {
+    test('samme fejl giver samme besked overalt — med mulighed for en egen formulering', () {
+      expect(authErrorMessage('too-many-requests', fallback: 'x'),
+          'For mange forsøg. Vent lidt, og prøv igen.');
+      expect(authErrorMessage('ukendt-kode', fallback: 'Prøv igen.'), 'Prøv igen.');
+      expect(
+        authErrorMessage('weak-password', fallback: 'x', overrides: {'weak-password': 'Egen'}),
+        'Egen',
+      );
+    });
+
+    for (final code in ['user-not-found', 'wrong-password', 'invalid-credential']) {
+      test('login afslører ikke, om e-mailen har en konto ($code)', () async {
+        final mockAuth = MockFirebaseAuth();
+        when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+        when(() => mockAuth.currentUser).thenReturn(null);
+        when(() => mockAuth.signInWithEmailAndPassword(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            )).thenThrow(FirebaseAuthException(code: code));
+        final notifier = AuthNotifier(auth: mockAuth);
+
+        await notifier.login('x@example.com', 'forkert');
+
+        expect(notifier.state.error, 'Forkert e-mail eller adgangskode.');
+      });
+    }
   });
 }

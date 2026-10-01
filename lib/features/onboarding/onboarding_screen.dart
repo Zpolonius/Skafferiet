@@ -7,6 +7,7 @@ import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../profile/household_provider.dart';
+import 'household_setup_widgets.dart';
 import 'starter_recipes.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -28,14 +29,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Step 2 data
   final Set<String> _selectedPreferences = {'Børnevenligt', 'Hurtigt & nemt (<30 min)'};
 
-  final List<Map<String, String>> _availablePreferences = [
-    {'label': 'Børnevenligt', 'icon': '👶'},
-    {'label': 'Hurtigt & nemt (<30 min)', 'icon': '⏱️'},
-    {'label': 'Grønt & Sundt', 'icon': '🥗'},
-    {'label': 'Budgetvenligt', 'icon': '💰'},
-    {'label': 'Klassisk hverdagsmad', 'icon': '🇩🇰'},
-    {'label': 'Vegetarisk / Plantebaseret', 'icon': '🌱'},
-  ];
 
   // Step 3 data
   Recipe? _selectedStarterRecipe = starterRecipes.first;
@@ -316,7 +309,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ),
           const Gap(12),
-          _CounterCard(
+          CounterCard(
             title: 'Voksne',
             subtitle: '13+ år',
             count: _adultsCount,
@@ -324,7 +317,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             onChanged: (val) => setState(() => _adultsCount = val),
           ),
           const Gap(12),
-          _CounterCard(
+          CounterCard(
             title: 'Børn',
             subtitle: '0-12 år',
             count: _childrenCount,
@@ -391,60 +384,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ),
           const Gap(28),
-          Wrap(
-            spacing: 10,
-            runSpacing: 12,
-            children: _availablePreferences.map((pref) {
-              final label = pref['label']!;
-              final icon = pref['icon']!;
-              final isSelected = _selectedPreferences.contains(label);
-
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      _selectedPreferences.remove(label);
-                    } else {
-                      _selectedPreferences.add(label);
-                    }
-                  });
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primaryContainer.withValues(alpha: 0.12)
-                        : AppColors.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.outlineVariant,
-                      width: isSelected ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(icon, style: const TextStyle(fontSize: 18)),
-                      const Gap(8),
-                      Text(
-                        label,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? AppColors.primary : AppColors.onSurface,
-                        ),
-                      ),
-                      if (isSelected) ...[
-                        const Gap(8),
-                        const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+          PreferenceChips(
+            selected: _selectedPreferences,
+            onToggle: (label) => setState(() {
+              if (!_selectedPreferences.remove(label)) _selectedPreferences.add(label);
+            }),
           ),
         ],
       ),
@@ -705,113 +649,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CounterCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final int count;
-  final bool canDecrement;
-  final ValueChanged<int> onChanged;
-
-  const _CounterCard({
-    required this.title,
-    required this.subtitle,
-    required this.count,
-    this.canDecrement = true,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.onSurface,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.outline,
-                    ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              _CircleBtn(
-                icon: Icons.remove,
-                onTap: (count > 0 && canDecrement) ? () => onChanged(count - 1) : null,
-              ),
-              SizedBox(
-                width: 40,
-                child: Text(
-                  '$count',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-              ),
-              _CircleBtn(
-                icon: Icons.add,
-                onTap: count < 10 ? () => onChanged(count + 1) : null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CircleBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _CircleBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final isEnabled = onTap != null;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: isEnabled
-              ? AppColors.primaryContainer.withValues(alpha: 0.1)
-              : AppColors.surfaceContainerHigh,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isEnabled ? AppColors.primary : AppColors.outline,
-        ),
       ),
     );
   }

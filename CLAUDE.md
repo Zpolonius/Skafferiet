@@ -37,6 +37,9 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 **Firestore data model**:
 - All user data is scoped to a `householdId` — collections are `households` (with subcollections `grocery_list`, `meal_plans`, `recurring_items`), `recipes`, `invitations`, `users`, `join_codes`.
 - Joining a household requires proof the rules can check: the joiner writes `joinedWith: {type: 'code'|'invite', id}` in the same batch as adding themselves to `members`. Codes live in `join_codes/{code}` (10 chars, expire). See `HouseholdNotifier._switchHousehold`.
+- Membership changes go through `HouseholdNotifier._commitMembershipChange` (pass `householdIdAfter`). Leaving gives the user a fresh household in the same batch; a sole member cannot leave. Removing a member also deletes the household's `join_codes` (members may list them by `householdId`). A user who gets `permission-denied` on their household (removed) is given a fresh household and a `HouseholdState.notice`, shown app-wide via the `ScaffoldMessenger` key in `main.dart`.
+- Household dialogs shared by the profile and `/profile/household` live in `features/profile/household_dialogs.dart`; the onboarding pickers reused by `/profile/preferences` in `features/onboarding/household_setup_widgets.dart`. Sending, listing and cancelling invitations is `InvitationService` (`features/profile/invitation_service.dart`); accepting one is a membership change and stays in `HouseholdNotifier`.
+- Firebase Auth error codes are translated in one place, `features/auth/auth_error_messages.dart`; pass `overrides` for wording specific to one screen. Login never says whether the e-mail exists.
 - `users/{uid}.householdId` may only point at a household the user is a member of; only members can read a household.
 - Account deletion (`features/profile/account_deletion_service.dart`) runs the cleanup client-side in a fixed order; `rules_test/` mirrors the same queries. Call `HouseholdNotifier.pauseForAccountDeletion()` first, or deleting the profile triggers auto-creation of a new household.
 - The privacy policy text lives in `features/legal/privacy_policy_content.dart`; after editing it run `dart run tool/export_privacy_policy.dart` (a test compares it to `docs/PRIVACY_POLICY.md`). Publisher contact details are in `core/app_info.dart`.
@@ -46,7 +49,10 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
 **Theme**:
-- "Kitchen Harmony" design system — always use `Theme.of(context).colorScheme` and `Theme.of(context).textTheme`, never hard-code colours.
+- "Kitchen Harmony" design system — spec in `design/kitchen_harmony/DESIGN.md`, screen mockups in `design/*/screen.png`. Always use `Theme.of(context).colorScheme` and `Theme.of(context).textTheme`, never hard-code colours or call `GoogleFonts` in widgets.
+- `AppTheme` maps every Material 3 text role and colour role (incl. `surfaceContainer*` and `*Fixed`) to the tokens, so any role is safe to use. `test/core/app_theme_test.dart` checks this.
+- `test/design_system_test.dart` fails if a converted file uses `Colors.*`, `Color(0x…)`, `AppColors.*` or `GoogleFonts.*`. Add a file to its list once it has been converted.
+- Settings-style screens use `SectionTitle`, `SettingsGroup`, `SettingsTile` and `showResultSnackBar` from `shared/widgets/settings_list.dart`.
 - Primary: `#0F5238` (dark green), Secondary: `#895100` (brown). Fonts: Plus Jakarta Sans (headlines), Be Vietnam Pro (body).
 
 ## Firebase

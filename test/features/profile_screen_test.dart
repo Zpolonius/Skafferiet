@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -108,6 +107,7 @@ Widget _buildProfileScreen({
   MealPlanNotifier Function()? mealPlanFactory,
   AuthState? authState,
   GoRouter? router,
+  _MockAuthNotifier Function(User user)? authNotifier,
 }) {
   final mockUser = _MockUser();
   when(() => mockUser.displayName).thenReturn('Test Bruger');
@@ -118,7 +118,8 @@ Widget _buildProfileScreen({
   return ProviderScope(
     overrides: [
       authProvider.overrideWith(
-        (ref) => _MockAuthNotifier(authState ?? AuthState(user: mockUser)),
+        (ref) => authNotifier?.call(mockUser) ??
+            _MockAuthNotifier(authState ?? AuthState(user: mockUser)),
       ),
       householdProvider.overrideWith((ref) => householdNotifier),
       recipesProvider.overrideWith(recipesFactory ?? () => _EmptyRecipesNotifier()),
@@ -181,8 +182,8 @@ void main() {
     });
   });
 
-  group('Household detail card', () {
-    testWidgets('shows Ejer badge for household admin', (tester) async {
+  group('Husstandskort', () {
+    testWidgets('viser navn, antal medlemmer og om man er ejer', (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -190,12 +191,9 @@ void main() {
         HouseholdState(
           householdId: 'hh-1',
           householdName: 'Familie Skafferi',
-          adminUid: 'admin-uid',
-          members: ['admin-uid', 'member-uid'],
-          memberNames: {
-            'admin-uid': 'Admin Bruger',
-            'member-uid': 'Alm. Bruger',
-          },
+          adminUid: 'test-uid',
+          members: ['test-uid', 'member-uid'],
+          memberNames: {'test-uid': 'Test Bruger', 'member-uid': 'Alm. Bruger'},
           isLoading: false,
         ),
       );
@@ -206,38 +204,13 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ejer'), findsOneWidget);
-      expect(find.text('Admin Bruger'), findsOneWidget);
+      expect(find.text('Familie Skafferi'), findsOneWidget);
+      expect(find.text('2 medlemmer · Du er ejer'), findsOneWidget);
+      // "Aktiv" var hårdkodet og sagde intet.
+      expect(find.text('Aktiv'), findsNothing);
     });
 
-    testWidgets('shows Kan redigere badge for non-admin member', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final notifier = _MockHouseholdNotifier(
-        HouseholdState(
-          householdId: 'hh-1',
-          adminUid: 'admin-uid',
-          members: ['admin-uid', 'member-uid'],
-          memberNames: {
-            'admin-uid': 'Ejer Person',
-            'member-uid': 'Redaktør Person',
-          },
-          isLoading: false,
-        ),
-      );
-
-      await tester.pumpWidget(_buildProfileScreen(
-        householdState: notifier.state,
-        householdNotifier: notifier,
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Kan redigere'), findsOneWidget);
-      expect(find.text('Redaktør Person'), findsOneWidget);
-    });
-
-    testWidgets('shows household name in header', (tester) async {
+    testWidgets('almindeligt medlem får ikke at vide, at de er ejer', (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -245,9 +218,8 @@ void main() {
         HouseholdState(
           householdId: 'hh-1',
           householdName: 'Vores Skafferi',
-          adminUid: 'uid-1',
-          members: ['uid-1'],
-          memberNames: {'uid-1': 'Bruger'},
+          adminUid: 'admin-uid',
+          members: ['admin-uid', 'test-uid', 'c', 'd', 'e'],
           isLoading: false,
         ),
       );
@@ -258,84 +230,25 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Vores Skafferi'), findsOneWidget);
+      expect(find.text('5 medlemmer'), findsOneWidget);
+      expect(find.text('+1'), findsOneWidget); // 4 avatarer + "+1"
     });
   });
 
-  group('Rename dialog', () {
-    testWidgets('opens dialog when edit icon is tapped', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final notifier = _MockHouseholdNotifier(
+  group('Modtaget invitation', () {
+    HouseholdState withInvite({List<String> members = const ['test-uid', 'partner']}) =>
         HouseholdState(
           householdId: 'hh-1',
-          householdName: 'Gammelt Navn',
-          adminUid: 'uid-1',
-          members: ['uid-1'],
-          memberNames: {'uid-1': 'Bruger'},
-          isLoading: false,
-        ),
-      );
-      when(() => notifier.renameHousehold(any())).thenAnswer((_) async {});
-
-      await tester.pumpWidget(_buildProfileScreen(
-        householdState: notifier.state,
-        householdNotifier: notifier,
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.edit_outlined));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Omdøb husstand'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-    });
-
-    testWidgets('calls renameHousehold with entered name on confirm', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final notifier = _MockHouseholdNotifier(
-        HouseholdState(
-          householdId: 'hh-1',
-          householdName: 'Gammelt Navn',
-          adminUid: 'uid-1',
-          members: ['uid-1'],
-          memberNames: {'uid-1': 'Bruger'},
-          isLoading: false,
-        ),
-      );
-      when(() => notifier.renameHousehold(any())).thenAnswer((_) async {});
-
-      await tester.pumpWidget(_buildProfileScreen(
-        householdState: notifier.state,
-        householdNotifier: notifier,
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.edit_outlined));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), 'Nyt Husstandsnavn');
-      await tester.tap(find.text('Gem'));
-      await tester.pumpAndSettle();
-
-      verify(() => notifier.renameHousehold('Nyt Husstandsnavn')).called(1);
-    });
-  });
-
-  group('Invitationskode', () {
-    HouseholdState inHousehold() => HouseholdState(
-          householdId: 'hh-1',
-          householdName: 'Familie Skafferi',
+          householdName: 'Gammelt Hjem',
           adminUid: 'test-uid',
-          members: ['test-uid'],
-          memberNames: {'test-uid': 'Test Bruger'},
+          members: members,
           isLoading: false,
+          invitations: const [
+            {'id': 'inv1', 'fromUserName': 'Ole', 'fromHouseholdName': 'Oles Hus'},
+          ],
         );
 
-    Future<void> pumpProfile(WidgetTester tester, _MockHouseholdNotifier notifier) async {
+    Future<void> pump(WidgetTester tester, _MockHouseholdNotifier notifier) async {
       await tester.binding.setSurfaceSize(const Size(390, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(_buildProfileScreen(
@@ -345,81 +258,35 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('Del invitationskode viser den nye kode formateret', (tester) async {
-      final notifier = _MockHouseholdNotifier(inHousehold());
-      when(() => notifier.createJoinCode()).thenAnswer((_) async => 'ABCDEFGHJK');
-      await pumpProfile(tester, notifier);
+    testWidgets('advarer om at den nuværende husstand forlades — fortryd accepterer ikke',
+        (tester) async {
+      final notifier = _MockHouseholdNotifier(withInvite());
+      await pump(tester, notifier);
 
-      await tester.tap(find.text('Del invitationskode'));
+      await tester.tap(find.text('Accepter'));
       await tester.pumpAndSettle();
 
-      expect(find.text('ABCDE-FGHJK'), findsOneWidget);
-      expect(find.text('Koden virker i 7 dage.'), findsOneWidget);
-      verify(() => notifier.createJoinCode()).called(1);
+      expect(find.text('Deltag i "Oles Hus"?'), findsOneWidget);
+      expect(find.textContaining('Du forlader "Gammelt Hjem"'), findsOneWidget);
+      expect(find.textContaining('De andre medlemmer beholder'), findsOneWidget);
+
+      await tester.tap(find.text('Annuller'));
+      await tester.pumpAndSettle();
+      verifyNever(() => notifier.acceptInvitation(any()));
     });
 
-    testWidgets('Kopiér kode lægger koden i udklipsholderen', (tester) async {
-      final notifier = _MockHouseholdNotifier(inHousehold());
-      when(() => notifier.createJoinCode()).thenAnswer((_) async => 'ABCDEFGHJK');
-      String? copied;
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (call) async {
-          if (call.method == 'Clipboard.setData') {
-            copied = (call.arguments as Map)['text'] as String?;
-          }
-          return null;
-        },
-      );
-      addTearDown(() => tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null));
-      await pumpProfile(tester, notifier);
+    testWidgets('eneste medlem får at vide, at data ikke kan hentes igen', (tester) async {
+      final notifier = _MockHouseholdNotifier(withInvite(members: ['test-uid']));
+      when(() => notifier.acceptInvitation(any())).thenAnswer((_) async {});
+      await pump(tester, notifier);
 
-      await tester.tap(find.text('Del invitationskode'));
+      await tester.tap(find.text('Accepter'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Kopiér kode'));
-      await tester.pumpAndSettle();
+      expect(find.textContaining('kan ikke hentes igen'), findsOneWidget);
 
-      expect(copied, 'ABCDE-FGHJK');
-      expect(find.text('Kopieret'), findsOneWidget);
-    });
-
-    testWidgets('fejl ved oprettelse giver en forståelig besked', (tester) async {
-      final notifier = _MockHouseholdNotifier(inHousehold());
-      when(() => notifier.createJoinCode()).thenAnswer((_) async => null);
-      await pumpProfile(tester, notifier);
-
-      await tester.tap(find.text('Del invitationskode'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Koden kunne ikke laves'), findsOneWidget);
-    });
-
-    testWidgets('Deltag i en anden husstand advarer og sender koden videre', (tester) async {
-      final notifier = _MockHouseholdNotifier(inHousehold());
-      when(() => notifier.joinHousehold(any())).thenAnswer((_) async {});
-      await pumpProfile(tester, notifier);
-
-      await tester.tap(find.text('Deltag i en anden husstand'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Du forlader "Familie Skafferi"'), findsOneWidget);
-
-      await tester.enterText(find.byType(TextField), 'abcde-fghjk');
       await tester.tap(find.text('Deltag'));
       await tester.pumpAndSettle();
-
-      verify(() => notifier.joinHousehold('abcde-fghjk')).called(1);
-    });
-
-    testWidgets('omdøb-feltet begrænser navnet til 60 tegn', (tester) async {
-      final notifier = _MockHouseholdNotifier(inHousehold());
-      await pumpProfile(tester, notifier);
-
-      await tester.tap(find.byIcon(Icons.edit_outlined));
-      await tester.pumpAndSettle();
-
-      expect(tester.widget<TextField>(find.byType(TextField)).maxLength, 60);
+      verify(() => notifier.acceptInvitation('inv1')).called(1);
     });
   });
 
@@ -435,17 +302,24 @@ void main() {
                   path: 'delete-account',
                   builder: (_, __) => const Text('SLET-KONTO-SKÆRM'),
                 ),
+                GoRoute(path: 'household', builder: (_, __) => const Text('HUSSTAND-SKÆRM')),
+                GoRoute(path: 'preferences', builder: (_, __) => const Text('PRÆFERENCE-SKÆRM')),
+                GoRoute(path: 'help', builder: (_, __) => const Text('HJÆLP-SKÆRM')),
+                GoRoute(
+                  path: 'change-password',
+                  builder: (_, __) => const Text('ADGANGSKODE-SKÆRM'),
+                ),
               ],
             ),
             GoRoute(path: '/privacy', builder: (_, __) => const Text('PRIVATLIV-SKÆRM')),
           ],
         );
 
-    Future<void> pumpWithRouter(WidgetTester tester) async {
+    Future<void> pumpWithRouter(WidgetTester tester, {HouseholdState? household}) async {
       await tester.binding.setSurfaceSize(const Size(390, 1600));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final notifier = _MockHouseholdNotifier(
-        HouseholdState(householdId: 'hh-1', isLoading: false),
+        household ?? HouseholdState(householdId: 'hh-1', householdName: 'Hjem', isLoading: false),
       );
       await tester.pumpWidget(_buildProfileScreen(
         householdState: notifier.state,
@@ -454,6 +328,40 @@ void main() {
       ));
       await tester.pumpAndSettle();
     }
+
+    for (final (tile, screen) in [
+      ('Husstand & deling', 'HUSSTAND-SKÆRM'),
+      ('Præferencer & Diæt', 'PRÆFERENCE-SKÆRM'),
+      ('Hjælp & Support', 'HJÆLP-SKÆRM'),
+      ('Skift adgangskode', 'ADGANGSKODE-SKÆRM'),
+    ]) {
+      testWidgets('$tile åbner sin side', (tester) async {
+        await pumpWithRouter(tester);
+
+        await tester.ensureVisible(find.text(tile));
+        await tester.tap(find.text(tile));
+        await tester.pumpAndSettle();
+
+        expect(find.text(screen), findsOneWidget);
+      });
+    }
+
+    testWidgets('husstandskortet åbner Husstand & deling', (tester) async {
+      await pumpWithRouter(tester);
+
+      await tester.tap(find.text('Hjem'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('HUSSTAND-SKÆRM'), findsOneWidget);
+    });
+
+    testWidgets('uden husstand er husstandens menupunkter slået fra', (tester) async {
+      await pumpWithRouter(tester, household: HouseholdState(isLoading: false));
+
+      final tile = tester.widget<ListTile>(
+          find.ancestor(of: find.text('Præferencer & Diæt'), matching: find.byType(ListTile)));
+      expect(tile.enabled, false);
+    });
 
     testWidgets('Slet konto åbner slet-konto-skærmen', (tester) async {
       await pumpWithRouter(tester);
@@ -476,9 +384,9 @@ void main() {
     });
   });
 
-  group('Menu tiles', () {
-    testWidgets('shows all 5 menu items', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
+  group('Menu', () {
+    testWidgets('viser de færdige menupunkter — ingen "kommer snart"', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1600));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final notifier = _MockHouseholdNotifier(
@@ -492,31 +400,95 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Mine opskrifter'), findsOneWidget);
-      expect(find.text('Delte lister'), findsOneWidget);
-      expect(find.text('Notifikationer'), findsOneWidget);
+      expect(find.text('Faste varer & indkøbsdag'), findsOneWidget);
+      expect(find.text('Husstand & deling'), findsOneWidget);
       expect(find.text('Præferencer & Diæt'), findsOneWidget);
       expect(find.text('Hjælp & Support'), findsOneWidget);
+      expect(find.text('Skift navn'), findsOneWidget);
+      expect(find.text('Skift adgangskode'), findsOneWidget);
+      // Apple afviser apps med pladsholdere.
+      expect(find.text('Notifikationer'), findsNothing);
+      expect(find.text('Delte lister'), findsNothing);
     });
+  });
 
-    testWidgets('tapping Notifikationer shows snackbar', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 1200));
+  group('Skift navn og log ud', () {
+    late _MockAuthNotifier auth;
+
+    Future<void> pump(WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-
       final notifier = _MockHouseholdNotifier(
         HouseholdState(householdId: 'hh-1', isLoading: false),
       );
-
       await tester.pumpWidget(_buildProfileScreen(
         householdState: notifier.state,
         householdNotifier: notifier,
+        authNotifier: (user) => auth = _MockAuthNotifier(AuthState(user: user)),
       ));
       await tester.pumpAndSettle();
+    }
 
-      await tester.ensureVisible(find.text('Notifikationer'));
-      await tester.tap(find.text('Notifikationer'));
+    testWidgets('Skift navn gemmer det nye navn', (tester) async {
+      await pump(tester);
+      when(() => auth.updateDisplayName(any())).thenAnswer((_) async => null);
+
+      await tester.tap(find.text('Skift navn'));
+      await tester.pumpAndSettle();
+      final field = find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextFormField));
+      expect(tester.widget<EditableText>(find.descendant(of: field, matching: find.byType(EditableText)))
+          .controller.text, 'Test Bruger');
+
+      await tester.enterText(field, 'Nyt Navn');
+      await tester.tap(find.text('Gem'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Notifikationer kommer snart!'), findsOneWidget);
+      verify(() => auth.updateDisplayName('Nyt Navn')).called(1);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Dit navn er opdateret.'), findsOneWidget);
+    });
+
+    testWidgets('Skift navn: tomt navn afvises, og fejl vises i dialogen', (tester) async {
+      await pump(tester);
+      when(() => auth.updateDisplayName(any()))
+          .thenAnswer((_) async => 'Navnet kunne ikke gemmes.');
+
+      await tester.tap(find.text('Skift navn'));
+      await tester.pumpAndSettle();
+      final field = find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextFormField));
+
+      await tester.enterText(field, '   ');
+      await tester.tap(find.text('Gem'));
+      await tester.pumpAndSettle();
+      expect(find.text('Indtast dit navn'), findsOneWidget);
+      verifyNever(() => auth.updateDisplayName(any()));
+
+      await tester.enterText(field, 'Nyt Navn');
+      await tester.tap(find.text('Gem'));
+      await tester.pumpAndSettle();
+      expect(find.text('Navnet kunne ikke gemmes.'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsOneWidget);
+    });
+
+    testWidgets('Log ud spørger først — fortryd logger ikke ud', (tester) async {
+      await pump(tester);
+      when(() => auth.logout()).thenAnswer((_) async {});
+
+      // OutlinedButton.icon er en underklasse, så vi finder knappen på teksten.
+      await tester.ensureVisible(find.text('Log ud'));
+      await tester.tap(find.text('Log ud'));
+      await tester.pumpAndSettle();
+      expect(find.text('Log ud?'), findsOneWidget);
+
+      await tester.tap(find.text('Annuller'));
+      await tester.pumpAndSettle();
+      verifyNever(() => auth.logout());
+
+      await tester.tap(find.text('Log ud'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Log ud'));
+      await tester.pumpAndSettle();
+      verify(() => auth.logout()).called(1);
     });
   });
 

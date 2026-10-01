@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/auth_error_messages.dart';
 
 /// Fejl under sletning af konto, med en besked der kan vises til brugeren.
 class AccountDeletionException implements Exception {
@@ -75,23 +76,13 @@ class AccountDeletionService {
     }
   }
 
-  String _messageFor(String code) {
-    switch (code) {
-      case 'wrong-password':
-      case 'invalid-credential':
-      case 'INVALID_LOGIN_CREDENTIALS':
-        return 'Forkert adgangskode.';
-      case 'too-many-requests':
-        return 'For mange forsøg. Vent lidt, og prøv igen.';
-      case 'network-request-failed':
-      case 'unavailable':
-        return 'Ingen forbindelse. Tjek dit internet, og prøv igen.';
-      case 'requires-recent-login':
-        return 'Log ud og ind igen, og prøv så at slette kontoen.';
-      default:
-        return 'Kontoen kunne ikke slettes. Prøv igen.';
-    }
-  }
+  String _messageFor(String code) => authErrorMessage(
+        code,
+        fallback: 'Kontoen kunne ikke slettes. Prøv igen.',
+        overrides: const {
+          'requires-recent-login': 'Log ud og ind igen, og prøv så at slette kontoen.',
+        },
+      );
 
   Future<void> _cleanUpHousehold(String uid) async {
     final userDoc = await _firestore.collection('users').doc(uid).get();
@@ -121,7 +112,12 @@ class AccountDeletionService {
         .where('fromHouseholdId', isEqualTo: householdId)
         .where('fromUid', isEqualTo: uid));
 
+    final joinCodes =
+        _firestore.collection('join_codes').where('householdId', isEqualTo: householdId);
+
     if (others.isNotEmpty) {
+      // Koder brugeren har lavet bærer brugerens ID.
+      await _deleteAll(joinCodes.where('createdBy', isEqualTo: uid));
       // Andre bruger stadig husstanden: meld ud og giv ejerskabet videre.
       // Opskrifter brugeren har lavet bliver i husstanden.
       await householdRef.update({
@@ -140,15 +136,17 @@ class AccountDeletionService {
       // Uden ejerrettigheder (ældre husstande) må man kun slette sine egne.
       keep: isAdmin ? null : (doc) => doc.data()['createdBy'] != uid,
     );
-    await _deleteAll(_firestore
-        .collection('invitations')
-        .where('fromHouseholdId', isEqualTo: householdId));
+    await _deleteAll(
+        _firestore.collection('invitations').where('fromHouseholdId', isEqualTo: householdId));
+    await _deleteAll(joinCodes);
     await _deleteStorageFolder('households/$householdId');
 
     if (isAdmin) {
       await householdRef.delete();
     } else {
-      await householdRef.update({'members': FieldValue.arrayRemove([uid])});
+      await householdRef.update({
+        'members': FieldValue.arrayRemove([uid])
+      });
     }
   }
 
@@ -188,9 +186,7 @@ class AccountDeletionService {
     bool Function(QueryDocumentSnapshot<Map<String, dynamic>> doc)? keep,
   }) async {
     final snapshot = await query.get();
-    final docs = keep == null
-        ? snapshot.docs
-        : snapshot.docs.where((doc) => !keep(doc)).toList();
+    final docs = keep == null ? snapshot.docs : snapshot.docs.where((doc) => !keep(doc)).toList();
     for (var i = 0; i < docs.length; i += _batchLimit) {
       final batch = _firestore.batch();
       for (final doc in docs.skip(i).take(_batchLimit)) {

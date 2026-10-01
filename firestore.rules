@@ -260,7 +260,9 @@ service cloud.firestore {
     // combinations) so they cannot be guessed, and they expire.
     match /join_codes/{code} {
       allow get: if isSignedIn();
-      allow list: if false;
+      // Members may list their own household's codes (query on householdId),
+      // so the admin can void them all when removing someone.
+      allow list: if isMember(resource.data.householdId);
 
       allow create: if isSignedIn() &&
                        code.matches('^[A-HJ-NP-Z2-9]{10}$') &&
