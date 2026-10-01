@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/grocery_item.dart';
+import '../../core/models/recurring_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/empty_state_widget.dart';
@@ -10,6 +12,8 @@ import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_grocery_item_dialog.dart';
 import 'grocery_provider.dart';
+import 'recurring/recurring_item_sheet.dart';
+import 'recurring/recurring_items_provider.dart';
 
 class GroceryScreen extends ConsumerStatefulWidget {
   const GroceryScreen({super.key});
@@ -30,15 +34,14 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
       body: SafeArea(
         child: items.when(
           data: (itemsList) {
-            final uniqueCategories = itemsList
-                .map((i) => i.category)
-                .toSet()
-                .toList()
-              ..sort();
+            final uniqueCategories =
+                itemsList.map((i) => i.category).toSet().toList()..sort();
 
             final filtered = _selectedCategory == null
                 ? itemsList
-                : itemsList.where((i) => i.category == _selectedCategory).toList();
+                : itemsList
+                    .where((i) => i.category == _selectedCategory)
+                    .toList();
 
             final categories = filtered.isEmpty
                 ? <String, List<GroceryItem>>{}
@@ -57,7 +60,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           children: [
                             Row(
                               children: [
-                                Image.asset('assets/images/logo.png', height: 32),
+                                Image.asset('assets/images/logo.png',
+                                    height: 32),
                                 const SizedBox(width: 12),
                                 Text(
                                   'Indkøb',
@@ -74,36 +78,64 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                 if (itemsList.isNotEmpty)
                                   IconButton(
                                     icon: Icon(
-                                      _isReorderMode ? Icons.check_rounded : Icons.sort,
-                                      color: _isReorderMode ? AppColors.primary : AppColors.outline,
+                                      _isReorderMode
+                                          ? Icons.check_rounded
+                                          : Icons.sort,
+                                      color: _isReorderMode
+                                          ? AppColors.primary
+                                          : AppColors.outline,
                                     ),
-                                    tooltip: _isReorderMode ? 'Gem rækkefølge' : 'Sorter liste',
+                                    tooltip: _isReorderMode
+                                        ? 'Gem rækkefølge'
+                                        : 'Sorter liste',
                                     onPressed: () => setState(() {
                                       _isReorderMode = !_isReorderMode;
-                                      if (_isReorderMode) _selectedCategory = null;
+                                      if (_isReorderMode) {
+                                        _selectedCategory = null;
+                                      }
                                     }),
                                   ),
                                 if (itemsList.any((i) => i.isChecked))
                                   IconButton(
-                                    icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.primary),
-                                    onPressed: () => ref.read(groceryListProvider.notifier).clearCheckedItems(),
+                                    icon: const Icon(
+                                        Icons.delete_sweep_outlined,
+                                        color: AppColors.primary),
+                                    onPressed: () => ref
+                                        .read(groceryListProvider.notifier)
+                                        .clearCheckedItems(),
                                     tooltip: 'Fjern markerede',
                                   ),
                                 PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, color: AppColors.outline),
+                                  icon: const Icon(Icons.more_vert,
+                                      color: AppColors.outline),
                                   onSelected: (value) {
                                     if (value == 'clear_all') {
                                       _showClearAllDialog(context, ref);
                                     } else if (value == 'clear_checked') {
-                                      ref.read(groceryListProvider.notifier).clearCheckedItems();
+                                      ref
+                                          .read(groceryListProvider.notifier)
+                                          .clearCheckedItems();
+                                    } else if (value == 'recurring') {
+                                      context.push('/grocery/recurring');
                                     }
                                   },
                                   itemBuilder: (context) => [
                                     const PopupMenuItem(
+                                      value: 'recurring',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.event_repeat, size: 20),
+                                          SizedBox(width: 12),
+                                          Text('Faste varer'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
                                       value: 'clear_checked',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.check_box_outlined, size: 20),
+                                          Icon(Icons.check_box_outlined,
+                                              size: 20),
                                           SizedBox(width: 12),
                                           Text('Fjern markerede'),
                                         ],
@@ -113,9 +145,12 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                       value: 'clear_all',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.delete_forever_outlined, size: 20, color: AppColors.error),
+                                          Icon(Icons.delete_forever_outlined,
+                                              size: 20, color: AppColors.error),
                                           SizedBox(width: 12),
-                                          Text('Tøm listen', style: TextStyle(color: AppColors.error)),
+                                          Text('Tøm listen',
+                                              style: TextStyle(
+                                                  color: AppColors.error)),
                                         ],
                                       ),
                                     ),
@@ -134,7 +169,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           _CategoryFilterRow(
                             categories: uniqueCategories,
                             selected: _selectedCategory,
-                            onSelected: (cat) => setState(() => _selectedCategory = cat),
+                            onSelected: (cat) =>
+                                setState(() => _selectedCategory = cat),
                           ),
                         ],
                         if (_isReorderMode)
@@ -142,11 +178,13 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                             padding: EdgeInsets.only(top: 8),
                             child: Row(
                               children: [
-                                Icon(Icons.drag_indicator, size: 16, color: AppColors.outline),
+                                Icon(Icons.drag_indicator,
+                                    size: 16, color: AppColors.outline),
                                 SizedBox(width: 6),
                                 Text(
                                   'Hold og træk for at ændre rækkefølge',
-                                  style: TextStyle(fontSize: 12, color: AppColors.outline),
+                                  style: TextStyle(
+                                      fontSize: 12, color: AppColors.outline),
                                 ),
                               ],
                             ),
@@ -161,7 +199,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                     child: EmptyStateWidget(
                       icon: Icons.shopping_basket_outlined,
                       title: 'Indkøbslisten er tom',
-                      message: 'Tilføj varer manuelt eller overfør ingredienser direkte fra madplanen.',
+                      message:
+                          'Tilføj varer manuelt eller overfør ingredienser direkte fra madplanen.',
                       actionLabel: 'Tilføj første vare',
                       onAction: () => _showAddItemSheet(context),
                     ),
@@ -172,7 +211,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                     child: EmptyStateWidget(
                       icon: Icons.filter_alt_off,
                       title: 'Ingen varer fundet',
-                      message: 'Der er ingen varer i kategorien "$_selectedCategory".',
+                      message:
+                          'Der er ingen varer i kategorien "$_selectedCategory".',
                       actionLabel: 'Vis alle varer',
                       onAction: () => setState(() => _selectedCategory = null),
                     ),
@@ -187,7 +227,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                         final reordered = [...itemsList];
                         final moved = reordered.removeAt(oldIndex);
                         reordered.insert(newIndex, moved);
-                        ref.read(groceryListProvider.notifier)
+                        ref
+                            .read(groceryListProvider.notifier)
                             .reorderItems(reordered.map((i) => i.id).toList());
                       },
                       itemBuilder: (context, index) {
@@ -195,40 +236,42 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                         return ReorderableDelayedDragStartListener(
                           key: ValueKey(item.id),
                           index: index,
-                          child: _GroceryItemTile(item: item, showDragHandle: true),
+                          child: _GroceryItemTile(
+                              item: item, showDragHandle: true),
                         );
                       },
                     ),
                   )
                 else
-                for (final category in categories.keys) ...[
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                      child: Text(
-                        category,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                  for (final category in categories.keys) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: Text(
+                          category,
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
                     ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = categories[category]![index];
-                          return _GroceryItemTile(item: item);
-                        },
-                        childCount: categories[category]!.length,
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final item = categories[category]![index];
+                            return _GroceryItemTile(item: item);
+                          },
+                          childCount: categories[category]!.length,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             );
@@ -245,7 +288,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
     );
   }
 
-  Map<String, List<GroceryItem>> _groupItemsByCategory(List<GroceryItem> items) {
+  Map<String, List<GroceryItem>> _groupItemsByCategory(
+      List<GroceryItem> items) {
     final Map<String, List<GroceryItem>> categories = {};
     for (final item in items) {
       if (!categories.containsKey(item.category)) {
@@ -268,7 +312,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Tøm indkøbslisten?'),
-        content: const Text('Er du sikker på, at du vil slette alle varer fra listen? Denne handling kan ikke fortrydes.'),
+        content: const Text(
+            'Er du sikker på, at du vil slette alle varer fra listen? Denne handling kan ikke fortrydes.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -311,10 +356,10 @@ class _CategoryFilterRow extends StatelessWidget {
             onTap: () => onSelected(null),
           ),
           ...categories.map((cat) => _FilterChip(
-            label: cat,
-            isSelected: selected == cat,
-            onTap: () => onSelected(cat),
-          )),
+                label: cat,
+                isSelected: selected == cat,
+                onTap: () => onSelected(cat),
+              )),
         ],
       ),
     );
@@ -326,7 +371,8 @@ class _FilterChip extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
+  const _FilterChip(
+      {required this.label, required this.isSelected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +384,9 @@ class _FilterChip extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.outlineVariant,
@@ -382,15 +430,32 @@ class _GroceryItemTile extends ConsumerWidget {
 
   const _GroceryItemTile({required this.item, this.showDragHandle = false});
 
-  void _showEditDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showEditDialog(
+    BuildContext context,
+    RecurringItem? recurringItem,
+  ) async {
+    final result = await showDialog<Object?>(
       context: context,
-      builder: (context) => EditGroceryItemDialog(item: item),
+      builder: (context) =>
+          EditGroceryItemDialog(item: item, recurringItem: recurringItem),
     );
+    if (result is! ManageRecurringRequest || !context.mounted) return;
+    if (recurringItem != null) {
+      await RecurringItemSheet.show(context, existing: recurringItem);
+    } else {
+      await RecurringItemSheet.show(context, fromGroceryItem: result.item);
+    }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Kun aktive faste varer – er den faste vare stoppet, er varen almindelig.
+    final recurringId = item.recurringId;
+    final recurringItem = recurringId == null
+        ? null
+        : ref.watch(recurringItemsProvider.select((items) =>
+            items.valueOrNull?.where((r) => r.id == recurringId).firstOrNull));
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Slidable(
@@ -400,7 +465,7 @@ class _GroceryItemTile extends ConsumerWidget {
           extentRatio: 0.5,
           children: [
             SlidableAction(
-              onPressed: (_) => _showEditDialog(context),
+              onPressed: (_) => _showEditDialog(context, recurringItem),
               backgroundColor: AppColors.primaryFixed,
               foregroundColor: AppColors.primary,
               icon: Icons.edit_outlined,
@@ -408,7 +473,8 @@ class _GroceryItemTile extends ConsumerWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             SlidableAction(
-              onPressed: (_) => ref.read(groceryListProvider.notifier).removeItem(item.id),
+              onPressed: (_) =>
+                  ref.read(groceryListProvider.notifier).removeItem(item.id),
               backgroundColor: AppColors.errorContainer,
               foregroundColor: AppColors.error,
               icon: Icons.delete_outline,
@@ -425,9 +491,12 @@ class _GroceryItemTile extends ConsumerWidget {
             border: Border.all(color: AppColors.outlineVariant),
           ),
           child: InkWell(
-            onTap: () => ref.read(groceryListProvider.notifier).toggleItem(item.id),
+            onTap: () =>
+                ref.read(groceryListProvider.notifier).toggleItem(item.id),
             // I sorteringstilstand bruges long-press til at trække varen.
-            onLongPress: showDragHandle ? null : () => _showEditDialog(context),
+            onLongPress: showDragHandle
+                ? null
+                : () => _showEditDialog(context, recurringItem),
             child: Row(
               children: [
                 // Image or Category Icon
@@ -460,14 +529,36 @@ class _GroceryItemTile extends ConsumerWidget {
                       Text(
                         item.name,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              decoration: item.isChecked ? TextDecoration.lineThrough : null,
-                              color: item.isChecked ? AppColors.outline : AppColors.onSurface,
+                              decoration: item.isChecked
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: item.isChecked
+                                  ? AppColors.outline
+                                  : AppColors.onSurface,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
-                      Text(
-                        item.category,
-                        style: Theme.of(context).textTheme.labelSmall,
+                      Row(
+                        children: [
+                          if (recurringItem != null) ...[
+                            Icon(
+                              Icons.event_repeat,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                              semanticLabel: 'Fast vare',
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Flexible(
+                            child: Text(
+                              recurringItem != null
+                                  ? '${item.category} · ${recurringItem.recurrence.label}'
+                                  : item.category,
+                              style: Theme.of(context).textTheme.labelSmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -475,12 +566,15 @@ class _GroceryItemTile extends ConsumerWidget {
                 if (showDragHandle)
                   const Padding(
                     padding: EdgeInsets.only(left: 8),
-                    child: Icon(Icons.drag_indicator, color: AppColors.outline, size: 22),
+                    child: Icon(Icons.drag_indicator,
+                        color: AppColors.outline, size: 22),
                   )
                 else if (!item.isChecked)
                   _QuantityPicker(
                     quantity: item.quantity,
-                    onChanged: (val) => ref.read(groceryListProvider.notifier).updateQuantity(item.id, val),
+                    onChanged: (val) => ref
+                        .read(groceryListProvider.notifier)
+                        .updateQuantity(item.id, val),
                   )
                 else
                   const Icon(Icons.check_circle, color: AppColors.primary),
@@ -494,12 +588,18 @@ class _GroceryItemTile extends ConsumerWidget {
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
-      case 'Frugt & Grønt': return Icons.apple;
-      case 'Mejeri': return Icons.egg_alt;
-      case 'Kød & Fisk': return Icons.restaurant;
-      case 'Frost': return Icons.ac_unit;
-      case 'Drikkevarer': return Icons.local_drink;
-      default: return Icons.shopping_basket;
+      case 'Frugt & Grønt':
+        return Icons.apple;
+      case 'Mejeri':
+        return Icons.egg_alt;
+      case 'Kød & Fisk':
+        return Icons.restaurant;
+      case 'Frost':
+        return Icons.ac_unit;
+      case 'Drikkevarer':
+        return Icons.local_drink;
+      default:
+        return Icons.shopping_basket;
     }
   }
 }
