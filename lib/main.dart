@@ -41,8 +41,7 @@ void main() async {
 class _AuthRouterNotifier extends ChangeNotifier {
   _AuthRouterNotifier(WidgetRef ref) {
     ref.listenManual<AuthState>(authProvider, (_, __) => notifyListeners());
-    ref.listenManual<HouseholdState>(
-        householdProvider, (_, __) => notifyListeners());
+    ref.listenManual<HouseholdState>(householdProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -157,9 +156,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
       return '/';
     }
-    if (!householdState.hasCompletedOnboarding &&
-        !householdState.isLoading &&
-        !isOnboarding) {
+    if (!householdState.hasCompletedOnboarding && !householdState.isLoading && !isOnboarding) {
       return '/onboarding';
     }
     if (householdState.hasCompletedOnboarding && isOnboarding) {
@@ -222,7 +219,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
   static const _board = AppNavDestination(
     icon: Icons.push_pin_outlined,
     activeIcon: Icons.push_pin,
-    label: 'Opslagstavle',
+    label: 'Tavle',
+    semanticLabel: 'Opslagstavle',
     branchIndex: 4,
   );
 

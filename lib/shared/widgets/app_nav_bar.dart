@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 class AppNavDestination {
   final IconData icon;
   final IconData activeIcon;
+
+  /// Kort tekst under ikonet.
   final String label;
+
+  /// Det, skærmlæsere siger. Standard er [label].
+  final String? semanticLabel;
 
   /// Grenens indeks i `StatefulShellRoute`.
   final int branchIndex;
@@ -13,15 +18,16 @@ class AppNavDestination {
     required this.icon,
     required this.activeIcon,
     required this.label,
+    this.semanticLabel,
     required this.branchIndex,
   });
+
+  String get spokenLabel => semanticLabel ?? label;
 }
 
 /// Bundmenu med en hævet, rund knap i midten, der sidder i et udsnit
-/// ("dråbe") i baren. Aktiv fane markeres med farve og en prik.
-///
-/// Fanerne er kun ikoner; navnet læses op af skærmlæsere og vises som
-/// tooltip ved langt tryk.
+/// ("dråbe") i baren. Hver fane har ikon og en kort tekst; den aktive fane
+/// er grøn med fed tekst og en prik.
 class AppNavBar extends StatelessWidget {
   final List<AppNavDestination> leading;
   final AppNavDestination center;
@@ -74,12 +80,20 @@ class AppNavBar extends StatelessWidget {
                   child: Row(
                     children: [
                       for (final d in leading) Expanded(child: _tab(d)),
-                      // Plads til midterknappen; prikken under den vises her.
+                      // Plads til midterknappen. Teksten under den står på
+                      // linje med de andre fanetekster, og er også trykbar.
                       SizedBox(
                         width: centerSize + 2 * _notchGap + 8,
-                        child: Align(
-                          alignment: const Alignment(0, 0.75),
-                          child: _ActiveDot(visible: centerActive, color: cs.primary),
+                        child: ExcludeSemantics(
+                          child: InkResponse(
+                            onTap: () => onSelect(center.branchIndex),
+                            radius: 28,
+                            child: _TabContent(
+                              icon: null,
+                              label: center.label,
+                              isActive: centerActive,
+                            ),
+                          ),
                         ),
                       ),
                       for (final d in trailing) Expanded(child: _tab(d)),
@@ -118,38 +132,79 @@ class _NavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final color = isActive ? cs.primary : cs.outline;
-
     return Semantics(
       button: true,
       selected: isActive,
-      label: destination.label,
+      label: destination.spokenLabel,
       onTap: onTap,
       excludeSemantics: true,
-      child: Tooltip(
-        message: destination.label,
-        child: InkResponse(
-          onTap: onTap,
-          radius: 28,
-          child: SizedBox.expand(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    isActive ? destination.activeIcon : destination.icon,
-                    key: ValueKey(isActive),
-                    color: color,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                _ActiveDot(visible: isActive, color: cs.primary),
-              ],
+      child: InkResponse(
+        onTap: onTap,
+        radius: 28,
+        child: _TabContent(
+          icon: isActive ? destination.activeIcon : destination.icon,
+          label: destination.label,
+          isActive: isActive,
+        ),
+      ),
+    );
+  }
+}
+
+/// Ikon, tekst og prik. Uden [icon] står pladsen tom, så midterfanens
+/// tekst flugter med de andre (knappen ligger ovenover).
+class _TabContent extends StatelessWidget {
+  final IconData? icon;
+  final String label;
+  final bool isActive;
+
+  const _TabContent({required this.icon, required this.label, required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = isActive ? cs.primary : cs.outline;
+
+    // Store systemskrifter må gerne gøre teksten større, men ikke så meget
+    // at den sprænger baren.
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.2,
+      child: SizedBox.expand(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 26,
+              child: icon == null
+                  ? null
+                  : AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(icon, key: ValueKey(icon), color: color, size: 24),
+                    ),
             ),
-          ),
+            const SizedBox(height: 2),
+            // På smalle telefoner med stor skrift skrumper teksten hellere
+            // end at blive klippet ("Opskrif…").
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 11,
+                        height: 1.2,
+                        letterSpacing: 0,
+                        color: color,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 3),
+            _ActiveDot(visible: isActive, color: cs.primary),
+          ],
         ),
       ),
     );
@@ -170,26 +225,23 @@ class _CenterButton extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isActive,
-      label: destination.label,
+      label: destination.spokenLabel,
       onTap: onTap,
       excludeSemantics: true,
-      child: Tooltip(
-        message: destination.label,
-        child: Material(
-          color: cs.primary,
-          shape: const CircleBorder(),
-          elevation: 4,
-          shadowColor: cs.primary.withValues(alpha: 0.4),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox.square(
-              dimension: AppNavBar.centerSize,
-              child: Icon(
-                isActive ? destination.activeIcon : destination.icon,
-                color: cs.onPrimary,
-                size: 28,
-              ),
+      child: Material(
+        color: cs.primary,
+        shape: const CircleBorder(),
+        elevation: 4,
+        shadowColor: cs.primary.withValues(alpha: 0.4),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox.square(
+            dimension: AppNavBar.centerSize,
+            child: Icon(
+              isActive ? destination.activeIcon : destination.icon,
+              color: cs.onPrimary,
+              size: 28,
             ),
           ),
         ),
@@ -211,8 +263,8 @@ class _ActiveDot extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutBack,
       child: Container(
-        width: 6,
-        height: 6,
+        width: 5,
+        height: 5,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );

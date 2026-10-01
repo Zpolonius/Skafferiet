@@ -22,13 +22,18 @@ const _c = AppNavDestination(
 const _d = AppNavDestination(
     icon: Icons.push_pin_outlined,
     activeIcon: Icons.push_pin,
-    label: 'Opslagstavle',
+    label: 'Tavle',
+    semanticLabel: 'Opslagstavle',
     branchIndex: 4);
 
 void main() {
-  Future<List<int>> pumpBar(WidgetTester tester, {int current = 2}) async {
+  Future<List<int>> pumpBar(WidgetTester tester, {int current = 2, double textScale = 1}) async {
     final selected = <int>[];
     await tester.pumpWidget(MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: Scaffold(
         bottomNavigationBar: AppNavBar(
           leading: const [_a, _b],
@@ -48,6 +53,34 @@ void main() {
     for (final label in ['Madplan', 'Indkøb', 'Hjem', 'Opskrifter', 'Opslagstavle']) {
       expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
     }
+  });
+
+  testWidgets('fanerne viser korte tekster under ikonerne', (tester) async {
+    await pumpBar(tester);
+    for (final label in ['Madplan', 'Indkøb', 'Hjem', 'Opskrifter', 'Tavle']) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+  });
+
+  testWidgets('teksten under midterknappen skifter også til Hjem', (tester) async {
+    final selected = await pumpBar(tester, current: 0);
+    await tester.tap(find.text('Hjem'));
+    expect(selected, [2]);
+  });
+
+  testWidgets('stor systemskrift sprænger ikke baren (smal telefon)', (tester) async {
+    tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await pumpBar(tester, textScale: 2);
+    expect(tester.takeException(), isNull);
+    // Hele ordet står inden for sin fane i stedet for at blive klippet.
+    final label = tester.getRect(find.text('Opskrifter'));
+    final tab = tester.getRect(
+      find.ancestor(of: find.text('Opskrifter'), matching: find.byType(InkResponse)).first,
+    );
+    expect(label.left, greaterThanOrEqualTo(tab.left));
+    expect(label.right, lessThanOrEqualTo(tab.right));
   });
 
   testWidgets('tryk sender grenens indeks', (tester) async {
