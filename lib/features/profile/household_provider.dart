@@ -20,6 +20,10 @@ class HouseholdState {
   final int childrenCount;
   final List<String> preferences;
 
+  /// Husstandens faste indkøbsdag (1 = mandag … 7 = søndag), eller `null`
+  /// hvis den ikke er valgt endnu.
+  final int? shoppingWeekday;
+
   HouseholdState({
     this.householdId,
     this.householdName,
@@ -34,6 +38,7 @@ class HouseholdState {
     this.adultsCount = 2,
     this.childrenCount = 2,
     this.preferences = const [],
+    this.shoppingWeekday,
   });
 
   HouseholdState copyWith({
@@ -51,6 +56,8 @@ class HouseholdState {
     int? adultsCount,
     int? childrenCount,
     List<String>? preferences,
+    int? shoppingWeekday,
+    bool clearShoppingWeekday = false,
   }) {
     return HouseholdState(
       householdId: householdId ?? this.householdId,
@@ -66,6 +73,9 @@ class HouseholdState {
       adultsCount: adultsCount ?? this.adultsCount,
       childrenCount: childrenCount ?? this.childrenCount,
       preferences: preferences ?? this.preferences,
+      shoppingWeekday: clearShoppingWeekday
+          ? null
+          : (shoppingWeekday ?? this.shoppingWeekday),
     );
   }
 }
@@ -144,6 +154,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       if (doc.exists) {
         final data = doc.data()!;
         final memberUids = List<String>.from(data['members'] ?? []);
+        final shoppingWeekday = _parseWeekday(data['shoppingWeekday']);
         
         // Hent navne og billeder for alle medlemmer
         final details = await _fetchMemberDetails(memberUids);
@@ -158,6 +169,9 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           adultsCount: data['adultsCount'] ?? 2,
           childrenCount: data['childrenCount'] ?? 2,
           preferences: List<String>.from(data['preferences'] ?? []),
+          // Nulstilles eksplicit, så en tidligere husstands dag ikke hænger ved.
+          shoppingWeekday: shoppingWeekday,
+          clearShoppingWeekday: shoppingWeekday == null,
           hasCompletedOnboarding: hasCompletedOnboarding,
           isLoading: false,
         );
@@ -170,6 +184,11 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       state = state.copyWith(isLoading: false, error: 'Kunne ikke hente husstand');
     });
   }
+
+  static int? _parseWeekday(Object? value) =>
+      value is int && value >= DateTime.monday && value <= DateTime.sunday
+          ? value
+          : null;
 
   Future<({Map<String, String> names, Map<String, String?> photos})> _fetchMemberDetails(List<String> uids) async {
     final Map<String, String> names = {};
@@ -420,7 +439,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'householdId': FieldValue.delete(),
       });
       
-      state = state.copyWith(householdId: null, members: [], memberNames: {}, clearError: true);
+      state = state.copyWith(householdId: null, members: [], memberNames: {}, clearError: true, clearShoppingWeekday: true);
     } catch (e) {
       developer.log('FEJL ved udmeldelse af husstand', error: e, name: 'household_provider');
       state = state.copyWith(error: 'Kunne ikke forlade husstanden');

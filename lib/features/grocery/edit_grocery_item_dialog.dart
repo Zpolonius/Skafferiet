@@ -2,19 +2,34 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
+import '../../core/models/recurring_item.dart';
+import 'grocery_defaults.dart';
 import 'grocery_provider.dart';
-
-const _defaultUnits = ['stk', 'g', 'kg', 'ml', 'l', 'pk', 'bakke', 'poser'];
-const _defaultCategories = ['Grønt', 'Mejeri', 'Kød', 'Frost', 'Brød', 'Andet'];
 
 /// Sentinel for "ingen enhed" – en DropdownMenuItem kan ikke have `null` som
 /// en valgbar værdi, der kan skelnes fra "intet valgt".
 const _noUnit = '';
 
+/// Returneres fra dialogen, når brugeren vil oprette eller redigere en fast
+/// vare. Kalderen åbner så den rette skærm, da dialogen er lukket. [item]
+/// har de værdier brugeren lige har gemt.
+class ManageRecurringRequest {
+  final GroceryItem item;
+
+  const ManageRecurringRequest(this.item);
+}
+
 class EditGroceryItemDialog extends ConsumerStatefulWidget {
   final GroceryItem item;
 
-  const EditGroceryItemDialog({super.key, required this.item});
+  /// Den faste vare som [item] stammer fra, hvis den stadig er aktiv.
+  final RecurringItem? recurringItem;
+
+  const EditGroceryItemDialog({
+    super.key,
+    required this.item,
+    this.recurringItem,
+  });
 
   @override
   ConsumerState<EditGroceryItemDialog> createState() =>
@@ -46,8 +61,9 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
     // den – så varens egen enhed tilføjes altid.
     _units = [
       _noUnit,
-      ..._defaultUnits,
-      if (!_defaultUnits.contains(_selectedUnit) && _selectedUnit != _noUnit)
+      ...defaultGroceryUnits,
+      if (!defaultGroceryUnits.contains(_selectedUnit) &&
+          _selectedUnit != _noUnit)
         _selectedUnit,
     ];
   }
@@ -59,7 +75,23 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  bool get _isDirty =>
+      _nameController.text.trim() != widget.item.name ||
+      _quantityController.text.trim() != widget.item.quantity ||
+      _selectedCategory != widget.item.category ||
+      (_selectedUnit == _noUnit ? null : _selectedUnit) != widget.item.unit;
+
+  /// Gemmer først eventuelle ændringer, så de ikke går tabt, og lukker så
+  /// dialogen med en [ManageRecurringRequest].
+  Future<void> _manageRecurring() async {
+    if (_isDirty) {
+      await _save(manageRecurring: true);
+    } else {
+      Navigator.pop(context, ManageRecurringRequest(widget.item));
+    }
+  }
+
+  Future<void> _save({bool manageRecurring = false}) async {
     final name = _nameController.text.trim();
     final quantity = _quantityController.text.trim();
 
@@ -79,7 +111,27 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
             unit: _selectedUnit == _noUnit ? null : _selectedUnit,
             category: _selectedCategory,
           );
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      if (manageRecurring) {
+        Navigator.pop(
+          context,
+          ManageRecurringRequest(GroceryItem(
+            id: widget.item.id,
+            name: name,
+            category: _selectedCategory,
+            quantity: quantity,
+            unit: _selectedUnit == _noUnit ? null : _selectedUnit,
+            imageUrl: widget.item.imageUrl,
+            isChecked: widget.item.isChecked,
+            source: widget.item.source,
+            recurringId: widget.item.recurringId,
+            createdAt: widget.item.createdAt,
+            sortOrder: widget.item.sortOrder,
+          )),
+        );
+      } else {
+        Navigator.pop(context);
+      }
     } on FirebaseException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -108,7 +160,7 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
     // Den valgte kategori tilføjes altid, så dropdown'en ikke crasher hvis en
     // anden i husstanden fjerner den sidste vare i kategorien imens.
     final allCategories = {
-      ..._defaultCategories,
+      ...defaultGroceryCategories,
       ...existingCategories,
       _selectedCategory,
     }.toList();
@@ -182,6 +234,20 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
                   ? null
                   : (v) => setState(() => _selectedCategory = v!),
             ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('edit_recurring'),
+                onPressed: _isSaving ? null : _manageRecurring,
+                icon: const Icon(Icons.event_repeat),
+                label: Text(
+                  widget.recurringItem == null
+                      ? 'Køb fast (gentag automatisk)'
+                      : 'Fast vare · ${widget.recurringItem!.recurrence.label}',
+                ),
+              ),
+            ),
             if (_saveError != null) ...[
               const SizedBox(height: 16),
               Text(
@@ -201,7 +267,7 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
           child: const Text('Annuller'),
         ),
         FilledButton(
-          onPressed: _isSaving ? null : _save,
+          onPressed: _isSaving ? null : () => _save(),
           child: _isSaving
               ? const SizedBox(
                   width: 18,

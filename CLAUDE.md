@@ -33,7 +33,8 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 
 **Firestore data model**:
 - All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
-- `GroceryItem` has a `source` field (`'manual'` or `'meal_plan'`) to distinguish origin.
+- `GroceryItem` has a `source` field (`'manual'`, `'meal_plan'`, `'recipe'` or `'recurring'`) to distinguish origin; recurring ones also carry `recurringId`.
+- **Fast genkøb** (`lib/features/grocery/recurring/`): `households/{id}/recurring_items` holds items re-added on a fixed interval (every 1–4 weeks on the household's `shoppingWeekday`, or monthly on a fixed date). There is no backend — `RecurringAutoAdder` (wraps the shell in `main.dart`) adds due items when the app opens/resumes and at midnight, one day before the shopping date, in a Firestore transaction with a deterministic grocery doc ID (`rec_<id>_<date>`) so two devices can't duplicate. Skipped if the previous one is still unchecked. Date maths is pure and tested in `core/services/recurring_schedule.dart`; dates are stored as `yyyy-MM-dd` strings.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
