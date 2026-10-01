@@ -148,26 +148,32 @@ class _BoardGrid extends ConsumerWidget {
               ),
             );
 
-        return SingleChildScrollView(
-          // Plads i bunden, så FAB'en ikke dækker den sidste seddel.
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var col = 0; col < columns; col++) ...[
-                if (col > 0) const Gap(12),
-                Expanded(
-                  child: Column(
-                    children: [
-                      for (var i = col; i < notes.length; i += columns) ...[
-                        card(notes[i]),
-                        const Gap(12),
+        // Prikmønstret ligger fast bag sedlerne, ligesom en tavle.
+        return CustomPaint(
+          painter: _BoardDotsPainter(
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.45),
+          ),
+          child: SingleChildScrollView(
+            // Plads i bunden, så FAB'en ikke dækker den sidste seddel.
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 96),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var col = 0; col < columns; col++) ...[
+                  if (col > 0) const Gap(16),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        for (var i = col; i < notes.length; i += columns) ...[
+                          card(notes[i]),
+                          const Gap(20),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
@@ -215,4 +221,26 @@ class _BoardGrid extends ConsumerWidget {
       }
     }
   }
+}
+
+/// Diskret prikmønster, der får baggrunden til at ligne en opslagstavle.
+class _BoardDotsPainter extends CustomPainter {
+  final Color color;
+
+  const _BoardDotsPainter({required this.color});
+
+  static const double _spacing = 22;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    for (var y = _spacing / 2; y < size.height; y += _spacing) {
+      for (var x = _spacing / 2; x < size.width; x += _spacing) {
+        canvas.drawCircle(Offset(x, y), 1.2, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BoardDotsPainter old) => old.color != color;
 }

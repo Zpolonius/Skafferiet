@@ -47,6 +47,19 @@ void main() {
     expect(find.text('Ny seddel'), findsOneWidget);
   });
 
+  testWidgets('kun fastgjorte sedler har en knappenål', (tester) async {
+    await pumpBoard(
+        tester,
+        FakeBoardRepository([
+          textNote('1', text: 'Vigtig', pinned: true),
+          textNote('2', text: 'Almindelig'),
+        ]));
+    expect(find.bySemanticsLabel('Fastgjort'), findsOneWidget);
+    final pinned = find.ancestor(of: find.text('Vigtig'), matching: find.byType(BoardNoteCard));
+    expect(
+        find.descendant(of: pinned, matching: find.bySemanticsLabel('Fastgjort')), findsOneWidget);
+  });
+
   testWidgets('Slet vises kun på egne sedler for almindelige medlemmer', (tester) async {
     await pumpBoard(
         tester,
