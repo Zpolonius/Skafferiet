@@ -35,6 +35,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
 - `GroceryItem` has a `source` field (`'manual'` or `'meal_plan'`) to distinguish origin.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
+- The bulletin board (`/board`, `lib/features/board/`) stores notes in `households/{id}/board_notes`. `BoardNote` is a sealed class (`TextNote`, `PhotoNote`, `ChecklistNote`); the provider only knows the abstract `BoardRepository` (`core/services/board_repository.dart`), so tests use `FakeBoardRepository`. Limits live in `BoardNoteLimits` **and** `firestore.rules` — change both.
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
 **Theme**:

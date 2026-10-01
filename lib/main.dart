@@ -16,6 +16,7 @@ import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/board/board_screen.dart';
 import 'shared/widgets/offline_banner.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
@@ -128,6 +129,10 @@ class _MyAppState extends ConsumerState<MyApp> {
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
+        ),
+        GoRoute(
+          path: '/board',
+          builder: (context, state) => const BoardScreen(),
         ),
       ],
     );

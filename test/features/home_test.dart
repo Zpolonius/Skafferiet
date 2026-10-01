@@ -81,4 +81,25 @@ void main() {
     expect(find.text('Tilføj måltid'), findsOneWidget);
     expect(find.text('Tilføj vare'), findsOneWidget);
   });
+
+  testWidgets('HomeScreen viser opslagstavlen med tom-tekst', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => MockAuthNotifier(AuthState())),
+          householdProvider.overrideWith((ref) => MockHouseholdNotifier(HouseholdState())),
+          recipesProvider.overrideWith(() => MockRecipesNotifier()),
+          mealPlanProvider.overrideWith(() => MockMealPlanNotifier()),
+        ],
+        child: const MaterialApp(
+          home: HomeScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Opslagstavlen'), findsOneWidget);
+    expect(find.text('Ingen sedler endnu – sæt den første op'), findsOneWidget);
+  });
 }

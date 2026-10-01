@@ -71,6 +71,50 @@ service cloud.firestore {
       match /meal_plans/{weekId} {
         allow read, write: if isMember(householdId);
       }
+
+      // ── Opslagstavle ───────────────────────────────────────────────────────
+      // Grænserne svarer til BoardNoteLimits i lib/core/models/board_note.dart.
+      match /board_notes/{noteId} {
+        function validNote(d) {
+          return d.authorId is string &&
+                 d.createdAt is int &&
+                 d.isPinned is bool &&
+                 (
+                   (d.type == 'text' &&
+                    d.keys().hasOnly(['type', 'authorId', 'createdAt', 'isPinned', 'text']) &&
+                    d.text is string && d.text.size() > 0 && d.text.size() <= 500) ||
+                   (d.type == 'photo' &&
+                    d.keys().hasOnly(['type', 'authorId', 'createdAt', 'isPinned', 'imageUrl', 'caption']) &&
+                    d.caption is string && d.caption.size() <= 200 &&
+                    // Kun billeder fra husstandens egen tavle-mappe i Storage.
+                    d.imageUrl is string && d.imageUrl.size() <= 2048 &&
+                    d.imageUrl.matches('https://firebasestorage[.]googleapis[.]com/v0/b/[^/]+/o/households%2F' +
+                                       householdId + '%2Fboard%2F[^/?]+[?].*')) ||
+                   (d.type == 'checklist' &&
+                    d.keys().hasOnly(['type', 'authorId', 'createdAt', 'isPinned', 'title', 'items', 'done']) &&
+                    d.title is string && d.title.size() > 0 && d.title.size() <= 80 &&
+                    d.items is list && d.items.size() > 0 && d.items.size() <= 20 &&
+                    d.done is list && d.done.size() <= d.items.size())
+                 );
+        }
+
+        allow read: if isMember(householdId);
+
+        // Man kan kun skrive sedler i eget navn.
+        allow create: if isMember(householdId) &&
+                         request.resource.data.authorId == request.auth.uid &&
+                         validNote(request.resource.data);
+
+        // Alle i husstanden må fastgøre og krydse af – intet andet kan ændres.
+        allow update: if isMember(householdId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['isPinned', 'done']) &&
+                         validNote(request.resource.data);
+
+        // Kun forfatteren eller husstandens admin må slette.
+        allow delete: if isMember(householdId) &&
+                         (resource.data.authorId == request.auth.uid || isAdmin(householdId));
+      }
     }
 
     // ── Recipes ───────────────────────────────────────────────────────────────
