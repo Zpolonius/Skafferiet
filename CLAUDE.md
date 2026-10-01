@@ -13,7 +13,10 @@ flutter analyze                                         # Static analysis
 dart format .                                           # Format code
 dart run build_runner build --delete-conflicting-outputs  # Regenerate Riverpod/codegen files
 flutterfire configure                                   # Reconfigure Firebase
+cd rules_test && npm install && npm test                # Test firestore.rules against the emulator (needs Java 11+)
 ```
+
+After any change to `firestore.rules`, run the rules tests in `rules_test/` and add a test for the new rule.
 
 After adding or modifying any `@riverpod`-annotated provider, run `build_runner` to regenerate `.g.dart` files.
 
@@ -32,7 +35,9 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - Recipe sub-routes: `/recipes/create`, `/recipes/:id`.
 
 **Firestore data model**:
-- All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
+- All user data is scoped to a `householdId` — collections are `households` (with subcollections `grocery_list`, `meal_plans`, `recurring_items`), `recipes`, `invitations`, `users`, `join_codes`.
+- Joining a household requires proof the rules can check: the joiner writes `joinedWith: {type: 'code'|'invite', id}` in the same batch as adding themselves to `members`. Codes live in `join_codes/{code}` (10 chars, expire). See `HouseholdNotifier._switchHousehold`.
+- `users/{uid}.householdId` may only point at a household the user is a member of; only members can read a household.
 - `GroceryItem` has a `source` field (`'manual'`, `'meal_plan'`, `'recipe'` or `'recurring'`) to distinguish origin; recurring ones also carry `recurringId`.
 - **Fast genkøb** (`lib/features/grocery/recurring/`): `households/{id}/recurring_items` holds items re-added on a fixed interval (every 1–4 weeks on the household's `shoppingWeekday`, or monthly on a fixed date). There is no backend — `RecurringAutoAdder` (wraps the shell in `main.dart`) adds due items when the app opens/resumes and at midnight, one day before the shopping date, in a Firestore transaction with a deterministic grocery doc ID (`rec_<id>_<date>`) so two devices can't duplicate. Skipped if the previous one is still unchecked. Date maths is pure and tested in `core/services/recurring_schedule.dart`; dates are stored as `yyyy-MM-dd` strings.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.

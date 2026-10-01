@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -501,6 +502,40 @@ class _HouseholdDetailCard extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right,
                 size: 18, color: AppColors.outline),
             onTap: () => _showInviteDialog(context, ref),
+          ),
+
+          // Share code tile
+          ListTile(
+            leading: const Icon(Icons.vpn_key_outlined,
+                color: AppColors.primary, size: 20),
+            title: Text(
+              'Del invitationskode',
+              style: GoogleFonts.beVietnamPro(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary),
+            ),
+            trailing: const Icon(Icons.chevron_right,
+                size: 18, color: AppColors.outline),
+            onTap: () => showDialog(
+              context: context,
+              builder: (_) => const _JoinCodeDialog(),
+            ),
+          ),
+
+          // Join another household tile
+          ListTile(
+            leading: const Icon(Icons.login_outlined,
+                color: AppColors.outline, size: 20),
+            title: Text(
+              'Deltag i en anden husstand',
+              style: GoogleFonts.beVietnamPro(
+                  fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            trailing: const Icon(Icons.chevron_right,
+                size: 18, color: AppColors.outline),
+            onTap: () => _showJoinDialog(context, ref,
+                currentHouseholdName: household.householdName),
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
@@ -521,6 +556,7 @@ class _HouseholdDetailCard extends ConsumerWidget {
           controller: controller,
           decoration: const InputDecoration(hintText: 'Navn på husstand'),
           autofocus: true,
+          maxLength: _maxHouseholdNameLength,
           textCapitalization: TextCapitalization.sentences,
         ),
         actions: [
@@ -593,6 +629,159 @@ class _HouseholdDetailCard extends ConsumerWidget {
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
+
+/// Under reglernes grænse på 100 tegn, så der er plads til visning.
+const _maxHouseholdNameLength = 60;
+
+/// Dialog hvor brugeren indtaster en invitationskode. Er brugeren allerede i
+/// en husstand, står det tydeligt, at den forlades.
+void _showJoinDialog(BuildContext context, WidgetRef ref,
+    {String? currentHouseholdName}) {
+  final controller = TextEditingController();
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Deltag med kode'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'F.eks. ABCDE-FGHJK',
+              prefixIcon: Icon(Icons.vpn_key_outlined),
+            ),
+            textCapitalization: TextCapitalization.characters,
+            autocorrect: false,
+          ),
+          if (currentHouseholdName != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Du forlader "$currentHouseholdName", når du deltager i en ny husstand.',
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuller')),
+        FilledButton(
+          onPressed: () {
+            final code = controller.text.trim();
+            if (code.isNotEmpty) {
+              ref.read(householdProvider.notifier).joinHousehold(code);
+              Navigator.pop(ctx);
+            }
+          },
+          child: const Text('Deltag'),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Laver en ny invitationskode og viser den, så den kan kopieres og deles.
+class _JoinCodeDialog extends ConsumerStatefulWidget {
+  const _JoinCodeDialog();
+
+  @override
+  ConsumerState<_JoinCodeDialog> createState() => _JoinCodeDialogState();
+}
+
+class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
+  late final Future<String?> _code;
+  bool _copied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _code = ref.read(householdProvider.notifier).createJoinCode();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return AlertDialog(
+      title: const Text('Invitationskode'),
+      content: FutureBuilder<String?>(
+        future: _code,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const SizedBox(
+              height: 80,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final code = snapshot.data;
+          if (code == null) {
+            return const Text('Koden kunne ikke laves. Tjek din forbindelse og prøv igen.');
+          }
+          final formatted = formatJoinCode(code);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Del koden med dem, der skal være med. De vælger '
+                '"Deltag i en anden husstand" på deres profil.',
+                style: text.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SelectableText(
+                  formatted,
+                  key: const Key('join_code_text'),
+                  textAlign: TextAlign.center,
+                  style: text.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    color: colors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Koden virker i ${joinCodeValidity.inDays} dage.',
+                textAlign: TextAlign.center,
+                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              // Bekræftelsen vises på knappen: en SnackBar ville ligge
+              // bag dialogens mørke baggrund.
+              TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: formatted));
+                  if (mounted) setState(() => _copied = true);
+                },
+                icon: Icon(_copied ? Icons.check : Icons.copy_outlined),
+                label: Text(_copied ? 'Kopieret' : 'Kopiér kode'),
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Luk'),
+        ),
+      ],
+    );
+  }
+}
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -749,39 +938,6 @@ class _NoHouseholdCard extends ConsumerWidget {
     );
   }
 
-  void _showJoinDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Deltag med kode'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'F.eks. SK-123456',
-            prefixIcon: Icon(Icons.vpn_key_outlined),
-          ),
-          textCapitalization: TextCapitalization.characters,
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuller')),
-          FilledButton(
-            onPressed: () {
-              final code = controller.text.trim().toUpperCase();
-              if (code.isNotEmpty) {
-                ref.read(householdProvider.notifier).joinHousehold(code);
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Deltag'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController(text: 'Mit Skafferi');
     showDialog(
@@ -792,6 +948,7 @@ class _NoHouseholdCard extends ConsumerWidget {
           controller: controller,
           decoration: const InputDecoration(hintText: 'Navn på husstand'),
           autofocus: true,
+          maxLength: _maxHouseholdNameLength,
         ),
         actions: [
           TextButton(
