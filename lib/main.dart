@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
@@ -25,6 +24,7 @@ import 'features/home/home_screen.dart';
 import 'shared/widgets/offline_banner.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:skafferiet/core/theme/theme_context.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -243,12 +243,12 @@ class ScaffoldWithNavBar extends StatelessWidget {
           const OfflineBanner(),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.colors.surfaceContainerLowest,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
+                  color: context.colors.primaryContainer.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, -4),
                 ),
@@ -310,8 +310,8 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? const Color(0xFF0F5238) : Colors.grey[400];
-    final bgColor = isActive ? const Color(0xFFE7F3ED) : Colors.transparent;
+    final color = isActive ? context.colors.primary : context.colors.outline;
+    final bgColor = isActive ? context.colors.primaryFixed.withValues(alpha: 0.4) : Colors.transparent;
 
     return GestureDetector(
       onTap: onTap,
@@ -330,7 +330,7 @@ class _NavBarItem extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.plusJakartaSans(
+              style: context.text.titleSmall?.copyWith(
                 color: color,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,

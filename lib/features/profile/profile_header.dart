@@ -175,14 +175,16 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
   }
 }
 
-/// Tallene under navnet: opskrifter, dage i ugens madplan og varer på listen.
+/// Tallene under navnet: opskrifter, planlagte dage i denne uge og varer på listen.
 class ProfileStatsRow extends ConsumerWidget {
   const ProfileStatsRow({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recipeCount = ref.watch(recipesProvider).value?.length;
-    final mealDays = ref.watch(mealPlanProvider).value?.days.length;
+    // Dage i denne uge med mindst ét måltid — tomme dage tæller ikke med.
+    final mealDays =
+        ref.watch(mealPlanProvider).value?.days.values.where((day) => !day.isEmpty).length;
     final groceryCount = ref.watch(groceryListProvider).value?.length;
     final divider = SizedBox(
       height: 40,
@@ -197,7 +199,7 @@ class ProfileStatsRow extends ConsumerWidget {
           children: [
             _Stat(value: recipeCount, label: 'OPSKRIFTER'),
             divider,
-            _Stat(value: mealDays, label: 'MADPLANER'),
+            _Stat(value: mealDays, label: 'PLANLAGTE DAGE'),
             divider,
             _Stat(value: groceryCount, label: 'GEMTE VARER'),
           ],

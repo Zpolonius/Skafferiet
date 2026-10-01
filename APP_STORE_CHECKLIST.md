@@ -119,15 +119,17 @@ Ingen "Kommer snart" tilbage — Apple afviser apps med pladsholdere (retningsli
 
 ## 🧪 4. QA & UI-oprydning
 
-- [ ] Login: fejl-snackbaren vises igen ved hver genopbygning, så længe fejlen står i state (`login_screen.dart`, `addPostFrameCallback` i `build`)
+- [x] Login: fejl-snackbaren blev vist igen ved hver genopbygning — nu `ref.listen`, så den kun vises, når fejlen ændrer sig (test fanger den gamle fejl)
 - [x] Login: "Har du ikke en konto? Tilmeld dig" løb ud af skærmen ved stor tekst — nu `Wrap`
 - [x] Profilskærmen bruger hårdkodede farver — hele profilen og dens undersider følger nu temaet og mockuppene (`profilside_1`, `del_samarbejd_1`); `test/design_system_test.dart` holder dem rene
 - [x] Temaet manglede de fleste tekstroller (dialogtitler, ListTile m.m. faldt tilbage til Roboto) og fladefarverne (`surfaceContainer*`) — nu komplet og testet
-- [ ] Resten af appen (login, onboarding, madplan, indkøb, opskrifter, bundmenu) bruger stadig `AppColors`/`GoogleFonts` direkte — læg dem om én ad gangen og tilføj dem til `test/design_system_test.dart`
-- [ ] Stats-label "MADPLANER" tæller dage i *denne uge* — omdøb eller tæl rigtigt
+- [x] Hele appen går nu gennem temaet (`context.colors`/`context.text`) — ca. 325 hårdkodede farver og skrifter i 19 filer lagt om; `test/design_system_test.dart` dækker hele `lib/`. Skærmbilleder før/efter var stort set ens
+- [x] Madplanen: overskrift og "Overfør til indkøb" løb 26 px ud over kanten på en 390 pt bred iPhone — nu `Wrap`. "Mandag's Madplan" → "Mandagens madplan"
+- [x] Skygge i "Tilføj eget måltid" var helt sort (`alpha: 13` i stedet for 0–1)
+- [x] Stats-label "MADPLANER" talte alle dage i ugen — nu "PLANLAGTE DAGE", og kun dage med mindst ét måltid tæller
 - [x] "Aktiv" ved husstanden er hårdkodet — fjernet i punkt 3
 - [x] Invitationsdialogen findes i to identiske kopier — nu én, i `household_dialogs.dart`
-- [x] `TextEditingController`s i profilens dialoger disposes nu (dialogerne ejer selv deres felter). Tjek resten af appen
+- [x] `TextEditingController`s disposes nu overalt — også i "Tilføj vare", "Tilføj eget måltid" og "Rediger måltid"
 - [x] Widget-tests for hvert nyt menupunkt (`profile_screen_test.dart`, `household_screen_test.dart`, `profile_subpages_test.dart`)
 - [ ] Test på fysisk iPhone (kamera/galleri-tilladelser, tastatur, safe area)
 - [ ] Screenshots (6.9" og 6.5" iPhone), app-beskrivelse, nøgleord, kategori

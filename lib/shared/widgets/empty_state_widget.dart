@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
 import 'package:gap/gap.dart';
+import 'package:skafferiet/core/theme/theme_context.dart';
 
 class EmptyStateWidget extends StatelessWidget {
   final String title;
@@ -30,13 +30,13 @@ class EmptyStateWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                color: context.colors.primaryContainer.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 64,
-                color: AppColors.primary,
+                color: context.colors.primary,
               ),
             ),
             const Gap(24),
@@ -44,7 +44,7 @@ class EmptyStateWidget extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
+                    color: context.colors.onSurface,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -52,7 +52,7 @@ class EmptyStateWidget extends StatelessWidget {
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: context.colors.onSurfaceVariant,
                   ),
               textAlign: TextAlign.center,
             ),

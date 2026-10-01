@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:gap/gap.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../profile/household_provider.dart';
 import 'household_setup_widgets.dart';
 import 'starter_recipes.dart';
+import '../../core/theme/theme_context.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -150,7 +149,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.colors.surface,
         body: SafeArea(
           child: Column(
             children: [
@@ -190,10 +189,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const Gap(8),
                   Text(
                     'Skafferiet',
-                    style: GoogleFonts.plusJakartaSans(
+                    style: context.text.titleMedium?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: context.colors.primary,
                     ),
                   ),
                 ],
@@ -201,10 +200,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               if (_currentStep == 2)
                 TextButton(
                   onPressed: _isSubmitting ? null : _skipMealSelection,
-                  child: const Text(
+                  child: Text(
                     'Spring over',
                     style: TextStyle(
-                      color: AppColors.outline,
+                      color: context.colors.outline,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -212,10 +211,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               else
                 Text(
                   'Trin ${_currentStep + 1} af 3',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: context.text.titleSmall?.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.outline,
+                    color: context.colors.outline,
                   ),
                 ),
             ],
@@ -226,8 +225,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: LinearProgressIndicator(
               value: (_currentStep + 1) / 3,
               minHeight: 6,
-              backgroundColor: AppColors.surfaceContainerHigh,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              backgroundColor: context.colors.surfaceContainerHigh,
+              valueColor: AlwaysStoppedAnimation<Color>(context.colors.primary),
             ),
           ),
         ],
@@ -245,36 +244,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.1),
+              color: context.colors.primaryContainer.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.family_restroom_rounded, color: AppColors.primary, size: 32),
+            child: Icon(Icons.family_restroom_rounded, color: context.colors.primary, size: 32),
           ),
           const Gap(16),
           Text(
             'Hvem spiser med?',
-            style: GoogleFonts.plusJakartaSans(
+            style: context.text.headlineLarge?.copyWith(
               fontSize: 26,
               fontWeight: FontWeight.bold,
-              color: AppColors.onSurface,
+              color: context.colors.onSurface,
             ),
           ),
           const Gap(8),
-          const Text(
+          Text(
             'Giv jeres husstand et navn og fortæl, hvor mange I typisk er ved middagsbordet.',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.onSurfaceVariant,
+              color: context.colors.onSurfaceVariant,
               height: 1.4,
             ),
           ),
           const Gap(28),
           Text(
             'Husstandens navn',
-            style: GoogleFonts.plusJakartaSans(
+            style: context.text.titleSmall?.copyWith(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
+              color: context.colors.onSurface,
             ),
           ),
           const Gap(8),
@@ -282,30 +281,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             controller: _householdNameController,
             decoration: InputDecoration(
               hintText: 'F.eks. Familien Jensens Skafferi',
-              prefixIcon: const Icon(Icons.home_outlined, color: AppColors.primary),
+              prefixIcon: Icon(Icons.home_outlined, color: context.colors.primary),
               filled: true,
-              fillColor: AppColors.surfaceContainerLowest,
+              fillColor: context.colors.surfaceContainerLowest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppColors.outlineVariant),
+                borderSide: BorderSide(color: context.colors.outlineVariant),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppColors.outlineVariant),
+                borderSide: BorderSide(color: context.colors.outlineVariant),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                borderSide: BorderSide(color: context.colors.primary, width: 2),
               ),
             ),
           ),
           const Gap(28),
           Text(
             'Familiestørrelse',
-            style: GoogleFonts.plusJakartaSans(
+            style: context.text.titleSmall?.copyWith(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
+              color: context.colors.onSurface,
             ),
           ),
           const Gap(12),
@@ -328,17 +327,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.08),
+              color: context.colors.primaryContainer.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+                Icon(Icons.info_outline, size: 18, color: context.colors.primary),
                 const Gap(8),
                 Text(
                   'Giver ca. ${_adultsCount + _childrenCount} portioner pr. opskrift',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.primary,
+                        color: context.colors.primary,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
@@ -360,26 +359,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.1),
+              color: context.colors.primaryContainer.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.restaurant_menu_rounded, color: AppColors.primary, size: 32),
+            child: Icon(Icons.restaurant_menu_rounded, color: context.colors.primary, size: 32),
           ),
           const Gap(16),
           Text(
             'Familiens madstil',
-            style: GoogleFonts.plusJakartaSans(
+            style: context.text.headlineLarge?.copyWith(
               fontSize: 26,
               fontWeight: FontWeight.bold,
-              color: AppColors.onSurface,
+              color: context.colors.onSurface,
             ),
           ),
           const Gap(8),
-          const Text(
+          Text(
             'Vælg de temaer, der bedst beskriver jeres hverdag. Vælg én, flere eller spring over (valgfrit).',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.onSurfaceVariant,
+              color: context.colors.onSurfaceVariant,
               height: 1.4,
             ),
           ),
@@ -405,26 +404,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.1),
+              color: context.colors.primaryContainer.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.dinner_dining_rounded, color: AppColors.primary, size: 32),
+            child: Icon(Icons.dinner_dining_rounded, color: context.colors.primary, size: 32),
           ),
           const Gap(16),
           Text(
             'Hvad skal I have i aften?',
-            style: GoogleFonts.plusJakartaSans(
+            style: context.text.headlineLarge?.copyWith(
               fontSize: 26,
               fontWeight: FontWeight.bold,
-              color: AppColors.onSurface,
+              color: context.colors.onSurface,
             ),
           ),
           const Gap(8),
-          const Text(
+          Text(
             'Vælg et måltid, så lægger vi det i madplanen og overfører ingredienserne til indkøbslisten med det samme.',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.onSurfaceVariant,
+              color: context.colors.onSurfaceVariant,
               height: 1.4,
             ),
           ),
@@ -446,11 +445,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primaryContainer.withValues(alpha: 0.08)
-                        : AppColors.surfaceContainerLowest,
+                        ? context.colors.primaryContainer.withValues(alpha: 0.08)
+                        : context.colors.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.outlineVariant,
+                      color: isSelected ? context.colors.primary : context.colors.outlineVariant,
                       width: isSelected ? 2 : 1,
                     ),
                   ),
@@ -466,8 +465,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           errorBuilder: (_, __, ___) => Container(
                             width: 64,
                             height: 64,
-                            color: AppColors.surfaceContainerHigh,
-                            child: const Icon(Icons.restaurant, color: AppColors.outline),
+                            color: context.colors.surfaceContainerHigh,
+                            child: Icon(Icons.restaurant, color: context.colors.outline),
                           ),
                         ),
                       ),
@@ -478,30 +477,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           children: [
                             Text(
                               recipe.title,
-                              style: GoogleFonts.plusJakartaSans(
+                              style: context.text.titleSmall?.copyWith(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.onSurface,
+                                color: context.colors.onSurface,
                               ),
                             ),
                             const Gap(4),
                             Text(
                               '🔥 ${recipe.calories} kcal • ⏱️ ${recipe.time}',
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: AppColors.onSurfaceVariant,
+                                    color: context.colors.onSurfaceVariant,
                                   ),
                             ),
                             const Gap(4),
                             Text(
                               '${recipe.ingredients.length} ingredienser til indkøb',
-                              style: const TextStyle(fontSize: 12, color: AppColors.primary),
+                              style: TextStyle(fontSize: 12, color: context.colors.primary),
                             ),
                           ],
                         ),
                       ),
                       Icon(
                         isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: isSelected ? AppColors.primary : AppColors.outline,
+                        color: isSelected ? context.colors.primary : context.colors.outline,
                       ),
                     ],
                   ),
@@ -520,11 +519,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: _isCustomMeal
-                    ? AppColors.primaryContainer.withValues(alpha: 0.08)
-                    : AppColors.surfaceContainerLowest,
+                    ? context.colors.primaryContainer.withValues(alpha: 0.08)
+                    : context.colors.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _isCustomMeal ? AppColors.primary : AppColors.outlineVariant,
+                  color: _isCustomMeal ? context.colors.primary : context.colors.outlineVariant,
                   width: _isCustomMeal ? 2 : 1,
                 ),
               ),
@@ -536,25 +535,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.secondaryFixed,
+                          color: context.colors.secondaryFixed,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.edit_note, color: AppColors.secondary, size: 24),
+                        child: Icon(Icons.edit_note, color: context.colors.secondary, size: 24),
                       ),
                       const Gap(14),
                       Expanded(
                         child: Text(
                           'Eller skriv jeres eget måltid',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: context.text.titleSmall?.copyWith(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
+                            color: context.colors.onSurface,
                           ),
                         ),
                       ),
                       Icon(
                         _isCustomMeal ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: _isCustomMeal ? AppColors.primary : AppColors.outline,
+                        color: _isCustomMeal ? context.colors.primary : context.colors.outline,
                       ),
                     ],
                   ),
@@ -572,10 +571,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         hintText: 'F.eks. Hakkebøffer med bløde løg',
                         errorText: _customMealError,
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: context.colors.surfaceContainerLowest,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.outlineVariant),
+                          borderSide: BorderSide(color: context.colors.outlineVariant),
                         ),
                       ),
                     ),
@@ -593,10 +592,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surfaceContainerLowest,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: context.colors.shadow.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -610,7 +609,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                side: const BorderSide(color: AppColors.outlineVariant),
+                side: BorderSide(color: context.colors.outlineVariant),
               ),
               child: const Text('Tilbage'),
             ),
@@ -628,22 +627,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       }
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: context.colors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(color: context.colors.onPrimary, strokeWidth: 2),
                     )
                   : Text(
                       _currentStep == 2 ? 'Færdiggør og åbn Skafferiet' : 'Næste',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: context.text.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: context.colors.surfaceContainerLowest,
                       ),
                     ),
             ),

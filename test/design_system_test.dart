@@ -2,15 +2,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-// Kitchen Harmony-reglen (CLAUDE.md): farver og skrifter hentes fra
-// Theme.of(context) — aldrig hårdkodet. Testen holder de filer, der allerede
-// følger reglen, rene. Når en ældre skærm er lagt om, tilføjes den her.
-const _followsDesignSystem = [
-  'lib/features/profile',
-  'lib/features/legal',
-  'lib/features/onboarding/household_setup_widgets.dart',
-  'lib/shared/widgets/confirm_dialog.dart',
-  'lib/shared/widgets/settings_list.dart',
+// Kitchen Harmony-reglen (CLAUDE.md): farver og skrifter hentes fra temaet
+// (`context.colors` / `context.text`) — aldrig hårdkodet. Kun temaet selv må
+// kende de konkrete værdier.
+const _checked = ['lib'];
+const _themeDefinition = [
+  'lib/core/theme/app_theme.dart',
+  'lib/core/theme/app_colors.dart',
 ];
 
 final _forbidden = {
@@ -21,14 +19,10 @@ final _forbidden = {
 };
 
 void main() {
-  test('skærme der følger designsystemet, hårdkoder ikke farver eller skrifter', () {
+  test('ingen widgets hårdkoder farver eller skrifter — alt går gennem temaet', () {
     final files = <File>[
-      for (final path in _followsDesignSystem)
-        if (FileSystemEntity.isDirectorySync(path))
-          ...Directory(path).listSync(recursive: true).whereType<File>()
-        else
-          File(path),
-    ].where((f) => f.path.endsWith('.dart'));
+      for (final path in _checked) ...Directory(path).listSync(recursive: true).whereType<File>(),
+    ].where((f) => f.path.endsWith('.dart') && !_themeDefinition.contains(f.path));
 
     final violations = <String>[];
     for (final file in files) {
