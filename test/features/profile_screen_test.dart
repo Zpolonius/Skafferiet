@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
@@ -106,6 +107,7 @@ Widget _buildProfileScreen({
   GroceryListNotifier Function()? groceryFactory,
   MealPlanNotifier Function()? mealPlanFactory,
   AuthState? authState,
+  GoRouter? router,
 }) {
   final mockUser = _MockUser();
   when(() => mockUser.displayName).thenReturn('Test Bruger');
@@ -123,7 +125,9 @@ Widget _buildProfileScreen({
       groceryListProvider.overrideWith(groceryFactory ?? () => _EmptyGroceryNotifier()),
       mealPlanProvider.overrideWith(mealPlanFactory ?? () => _EmptyMealPlanNotifier()),
     ],
-    child: const MaterialApp(home: ProfileScreen()),
+    child: router != null
+        ? MaterialApp.router(routerConfig: router)
+        : const MaterialApp(home: ProfileScreen()),
   );
 }
 
@@ -416,6 +420,59 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.widget<TextField>(find.byType(TextField)).maxLength, 60);
+    });
+  });
+
+  group('Konto', () {
+    GoRouter testRouter() => GoRouter(
+          initialLocation: '/profile',
+          routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (_, __) => const ProfileScreen(),
+              routes: [
+                GoRoute(
+                  path: 'delete-account',
+                  builder: (_, __) => const Text('SLET-KONTO-SKÆRM'),
+                ),
+              ],
+            ),
+            GoRoute(path: '/privacy', builder: (_, __) => const Text('PRIVATLIV-SKÆRM')),
+          ],
+        );
+
+    Future<void> pumpWithRouter(WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final notifier = _MockHouseholdNotifier(
+        HouseholdState(householdId: 'hh-1', isLoading: false),
+      );
+      await tester.pumpWidget(_buildProfileScreen(
+        householdState: notifier.state,
+        householdNotifier: notifier,
+        router: testRouter(),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Slet konto åbner slet-konto-skærmen', (tester) async {
+      await pumpWithRouter(tester);
+
+      await tester.ensureVisible(find.text('Slet konto'));
+      await tester.tap(find.text('Slet konto'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SLET-KONTO-SKÆRM'), findsOneWidget);
+    });
+
+    testWidgets('Privatlivspolitik åbner politikken', (tester) async {
+      await pumpWithRouter(tester);
+
+      await tester.ensureVisible(find.text('Privatlivspolitik'));
+      await tester.tap(find.text('Privatlivspolitik'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PRIVATLIV-SKÆRM'), findsOneWidget);
     });
   });
 

@@ -402,3 +402,106 @@ describe('normal brug', () => {
     await assertSucceeds(getDocs(collection(db('alice'), 'households/HH_A/grocery_list')));
   });
 });
+
+// ── Slet konto ────────────────────────────────────────────────────────────────
+// Samme forespørgsler i samme rækkefølge som AccountDeletionService i appen.
+
+async function deleteMatching(s, q) {
+  const snap = await getDocs(q);
+  for (const d of snap.docs) await deleteDoc(d.ref);
+}
+
+describe('slet konto', () => {
+  async function seedEvesHousehold() {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const s = ctx.firestore();
+      await setDoc(doc(s, 'households/HH_E/grocery_list/e1'), { name: 'Æg' });
+      await setDoc(doc(s, 'households/HH_E/meal_plans/2026-09-28'), { days: {} });
+      await setDoc(doc(s, 'recipes/eveR'), { title: 'Eves ret', householdId: 'HH_E', createdBy: 'eve' });
+      // Lavet af et tidligere medlem, der har forladt husstanden.
+      await setDoc(doc(s, 'recipes/zedR'), { title: 'Zeds ret', householdId: 'HH_E', createdBy: 'zed' });
+      await setDoc(doc(s, 'invitations/fromEve'), {
+        fromHouseholdId: 'HH_E', fromUid: 'eve', toUserEmail: 'x@example.com', status: 'pending',
+      });
+      await setDoc(doc(s, 'invitations/toEve'), {
+        fromHouseholdId: 'HH_A', fromUid: 'alice', toUserEmail: 'eve@example.com', status: 'declined',
+      });
+    });
+  }
+
+  test('eneste medlem (ejer) kan slette hele husstanden og sin profil', async () => {
+    await seedEvesHousehold();
+    const s = db('eve');
+    await assertSucceeds(getDoc(doc(s, 'users/eve')));
+    await assertSucceeds(getDoc(doc(s, 'households/HH_E')));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
+      where('fromHouseholdId', '==', 'HH_E'), where('fromUid', '==', 'eve'))));
+    await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/grocery_list')));
+    await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/meal_plans')));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'recipes'),
+      where('householdId', '==', 'HH_E'))));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
+      where('fromHouseholdId', '==', 'HH_E'))));
+    await assertSucceeds(deleteDoc(doc(s, 'households/HH_E')));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
+      where('toUserEmail', '==', 'eve@example.com'))));
+    await assertSucceeds(deleteDoc(doc(s, 'users/eve')));
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const left = await getDocs(query(collection(ctx.firestore(), 'recipes'),
+        where('householdId', '==', 'HH_E')));
+      if (!left.empty) throw new Error('Opskrifter blev ikke slettet');
+    });
+  });
+
+  test('medlem med andre i husstanden melder sig ud og sletter sine invitationer', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'invitations/fromBob'), {
+        fromHouseholdId: 'HH_A', fromUid: 'bob', toUserEmail: 'y@example.com', status: 'pending',
+      });
+    });
+    const s = db('bob');
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
+      where('fromHouseholdId', '==', 'HH_A'), where('fromUid', '==', 'bob'))));
+    await assertSucceeds(updateDoc(doc(s, 'households/HH_A'), { members: arrayRemove('bob') }));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
+      where('toUserEmail', '==', 'bob@example.com'))));
+    await assertSucceeds(deleteDoc(doc(s, 'users/bob')));
+  });
+
+  test('eve kan ikke slette Familien A\'s opskrifter, selvom hun er ejer af sin egen husstand', async () => {
+    await assertFails(deleteDoc(doc(db('eve'), 'recipes/r1')));
+  });
+
+  test('bob (ikke ejer) kan ikke slette alice\'s opskrift', async () => {
+    await assertFails(deleteDoc(doc(db('bob'), 'recipes/r1')));
+  });
+
+  test('ejeren alice kan slette en opskrift et tidligere medlem har lavet', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'recipes/oldR'), { title: 'Gammel', householdId: 'HH_A', createdBy: 'zed' });
+    });
+    await assertSucceeds(deleteDoc(doc(db('alice'), 'recipes/oldR')));
+  });
+
+  test('eve kan ikke slette en invitation til carol fra en anden husstand', async () => {
+    await assertFails(deleteDoc(doc(db('eve'), 'invitations/inv1')));
+  });
+
+  test('carol kan slette en invitation til hende selv', async () => {
+    await assertSucceeds(deleteDoc(doc(db('carol'), 'invitations/inv1')));
+  });
+
+  test('man kan ikke sende en invitation i en andens navn (fromUid)', async () => {
+    await assertFails(setDoc(doc(db('bob'), 'invitations/fake'), {
+      fromHouseholdId: 'HH_A', fromUid: 'alice', toUserEmail: 'z@example.com', status: 'pending',
+    }));
+    await assertSucceeds(setDoc(doc(db('bob'), 'invitations/real'), {
+      fromHouseholdId: 'HH_A', fromUid: 'bob', toUserEmail: 'z@example.com', status: 'pending',
+    }));
+  });
+
+  test('man kan ikke slette en andens profil', async () => {
+    await assertFails(deleteDoc(doc(db('eve'), 'users/alice')));
+  });
+});

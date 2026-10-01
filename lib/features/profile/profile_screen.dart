@@ -145,6 +145,22 @@ class ProfileScreen extends ConsumerWidget {
                             const SnackBar(content: Text('Kommer snart')),
                           ),
                         ),
+                        const SizedBox(height: 32),
+
+                        // ── Konto ────────────────────────────────────────
+                        const _SectionHeader(title: 'Konto'),
+                        const SizedBox(height: 12),
+                        _ProfileTile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privatlivspolitik',
+                          onTap: () => context.push('/privacy'),
+                        ),
+                        _ProfileTile(
+                          icon: Icons.delete_forever_outlined,
+                          title: 'Slet konto',
+                          color: Theme.of(context).colorScheme.error,
+                          onTap: () => context.push('/profile/delete-account'),
+                        ),
                         const SizedBox(height: 40),
 
                         // ── Logout ───────────────────────────────────────
@@ -799,10 +815,14 @@ class _ProfileTile extends StatelessWidget {
   final String title;
   final VoidCallback? onTap;
 
+  /// Farve på ikon og tekst, fx fejlfarven til "Slet konto".
+  final Color? color;
+
   const _ProfileTile({
     required this.icon,
     required this.title,
     this.onTap,
+    this.color,
   });
 
   @override
@@ -814,10 +834,10 @@ class _ProfileTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(icon, color: AppColors.primary, size: 22),
+        leading: Icon(icon, color: color ?? AppColors.primary, size: 22),
         title: Text(title,
             style: GoogleFonts.beVietnamPro(
-                fontSize: 15, fontWeight: FontWeight.w500)),
+                fontSize: 15, fontWeight: FontWeight.w500, color: color)),
         trailing:
             const Icon(Icons.chevron_right, size: 20, color: AppColors.outline),
         onTap: onTap,

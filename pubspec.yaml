@@ -16,7 +16,6 @@ dependencies:
   firebase_auth: ^6.4.0
   cloud_firestore: ^6.3.0
   firebase_storage: ^13.3.0
-  firebase_messaging: ^16.2.0
 
   # State Management
   flutter_riverpod: ^2.5.1
@@ -54,6 +53,9 @@ dev_dependencies:
   riverpod_test: ^0.1.9
   mocktail: ^1.0.5
   flutter_launcher_icons: ^0.14.3
+  fake_cloud_firestore: 4.1.0+1
+  firebase_auth_mocks: 0.15.1
+  firebase_storage_mocks: 0.8.1
 
 flutter:
   uses-material-design: true
