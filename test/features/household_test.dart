@@ -406,9 +406,7 @@ void main() {
       expect(notifier.state.error, 'Invitationen findes ikke længere');
     });
 
-    test('forlad husstand som eneste medlem: intet ejerskab at give videre', () async {
-      final oldRef = docRef(households, 'households', 'SK-OLD');
-      final userRef = docRef(users, 'users', 'me');
+    test('forlad husstand som eneste medlem afvises — data ville ellers stå tilbage uden ejer', () async {
       final notifier = makeNotifier(HouseholdState(
         householdId: 'SK-OLD',
         adminUid: 'me',
@@ -416,13 +414,11 @@ void main() {
         isLoading: false,
       ));
 
-      await notifier.leaveHousehold();
+      final error = await notifier.leaveHousehold();
 
-      final update = verify(() => batch.update(oldRef, captureAny())).captured.single as Map;
-      expect(update.containsKey('admin'), false);
-      verify(() => batch.update(userRef, any())).called(1);
-      verify(() => batch.commit()).called(1);
-      expect(notifier.state.householdId, isNull);
+      expect(error, contains('eneste medlem'));
+      verifyNever(() => batch.commit());
+      expect(notifier.state.householdId, 'SK-OLD');
     });
 
     test('createJoinCode gemmer en kode der udløber om 7 dage', () async {

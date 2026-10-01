@@ -121,7 +121,13 @@ class AccountDeletionService {
         .where('fromHouseholdId', isEqualTo: householdId)
         .where('fromUid', isEqualTo: uid));
 
+    final joinCodes = _firestore
+        .collection('join_codes')
+        .where('householdId', isEqualTo: householdId);
+
     if (others.isNotEmpty) {
+      // Koder brugeren har lavet bærer brugerens ID.
+      await _deleteAll(joinCodes.where('createdBy', isEqualTo: uid));
       // Andre bruger stadig husstanden: meld ud og giv ejerskabet videre.
       // Opskrifter brugeren har lavet bliver i husstanden.
       await householdRef.update({
@@ -142,6 +148,7 @@ class AccountDeletionService {
     await _deleteAll(_firestore
         .collection('invitations')
         .where('fromHouseholdId', isEqualTo: householdId));
+    await _deleteAll(joinCodes);
     await _deleteStorageFolder('households/$householdId');
 
     if (isAdmin) {

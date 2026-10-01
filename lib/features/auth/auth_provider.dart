@@ -2,6 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Navne gemmes med højst 100 tegn i firestore.rules; vi holder dem kortere,
+/// så de kan vises på skærmen.
+const maxDisplayNameLength = 50;
+
+/// Firebase kræver mindst 6 tegn — samme grænse som ved oprettelse.
+const minPasswordLength = 6;
+
 class AuthState {
   final User? user;
   final bool isLoading;
@@ -86,6 +93,77 @@ class AuthNotifier extends StateNotifier<AuthState> {
         default:
           return 'Mailen kunne ikke sendes. Prøv igen.';
       }
+    }
+  }
+
+  /// Skifter brugerens navn både i login-kontoen og i profilen, som de andre
+  /// i husstanden ser. Returnerer en fejlbesked eller null.
+  Future<String?> updateDisplayName(String name) async {
+    final user = _auth.currentUser;
+    final clean = name.trim();
+    if (user == null) return 'Du er ikke logget ind.';
+    if (clean.isEmpty) return 'Indtast dit navn.';
+    if (clean.length > maxDisplayNameLength) {
+      return 'Navnet må højst være $maxDisplayNameLength tegn.';
+    }
+
+    try {
+      await user.updateDisplayName(clean);
+      await user.reload();
+      final firestore = _firestore ?? FirebaseFirestore.instance;
+      await firestore.collection('users').doc(user.uid).set({
+        'displayName': clean,
+      }, SetOptions(merge: true));
+      state = AuthState(user: _auth.currentUser);
+      return null;
+    } catch (e) {
+      return 'Navnet kunne ikke gemmes. Tjek din forbindelse, og prøv igen.';
+    }
+  }
+
+  /// Skifter adgangskode. Firebase kræver, at man for nylig har logget ind,
+  /// så vi beder om den nuværende adgangskode og logger ind igen med den først.
+  /// Returnerer en fejlbesked eller null.
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) return 'Du er ikke logget ind.';
+
+    try {
+      await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: currentPassword),
+      );
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+        case 'INVALID_LOGIN_CREDENTIALS':
+          return 'Den nuværende adgangskode er forkert.';
+        default:
+          return _passwordErrorFor(e.code);
+      }
+    }
+
+    try {
+      await user.updatePassword(newPassword);
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'weak-password') return 'Den nye adgangskode er for svag.';
+      return _passwordErrorFor(e.code);
+    }
+  }
+
+  String _passwordErrorFor(String code) {
+    switch (code) {
+      case 'too-many-requests':
+        return 'For mange forsøg. Vent lidt, og prøv igen.';
+      case 'network-request-failed':
+        return 'Ingen forbindelse. Tjek dit internet, og prøv igen.';
+      default:
+        return 'Adgangskoden kunne ikke skiftes. Prøv igen.';
     }
   }
 
