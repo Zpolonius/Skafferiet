@@ -16,7 +16,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const {
   doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query,
-  where, or, writeBatch, arrayUnion, arrayRemove, deleteField, serverTimestamp,
+  where, or, orderBy, limit, writeBatch, arrayUnion, arrayRemove, deleteField, serverTimestamp,
   Timestamp,
 } = require('firebase/firestore');
 
@@ -550,3 +550,83 @@ describe('fast genkøb', () => {
   });
 });
 
+
+describe('opslagstavle', () => {
+  // alice er admin i Familien A, bob er medlem, eve er udefra.
+  const IMG = 'https://firebasestorage.googleapis.com/v0/b/siet-8630a.appspot.com/o/' +
+    'households%2FHH_A%2Fboard%2Fabc.jpg?alt=media&token=t';
+  const base = (uid) => ({ authorId: uid, createdAt: 1759320000000, isPinned: false });
+  const note = (uid, id) => doc(db(uid), `households/HH_A/board_notes/${id}`);
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const s = ctx.firestore();
+      await setDoc(doc(s, 'households/HH_A/board_notes/bobs'), { type: 'text', text: 'hej', ...base('bob') });
+      await setDoc(doc(s, 'households/HH_A/board_notes/alices'), { type: 'text', text: 'hej', ...base('alice') });
+      await setDoc(doc(s, 'households/HH_A/board_notes/list'), {
+        type: 'checklist', title: 'L', items: ['a', 'b'], done: [], ...base('alice'),
+      });
+    });
+  });
+
+  test('medlemmer kan hente tavlen; eve og ikke-loggede ind kan ikke', async () => {
+    const q = (s) => query(collection(s, 'households/HH_A/board_notes'), orderBy('createdAt', 'desc'), limit(100));
+    await assertSucceeds(getDocs(q(db('bob'))));
+    await assertFails(getDocs(q(db('eve'))));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'households/HH_A/board_notes/bobs')));
+  });
+
+  test('gyldige sedler af alle tre typer kan oprettes', async () => {
+    await assertSucceeds(setDoc(note('bob', 'n1'), { type: 'text', text: 'a'.repeat(500), ...base('bob') }));
+    await assertSucceeds(setDoc(note('bob', 'n2'), { type: 'checklist', title: 'W', items: ['x'], done: [], ...base('bob') }));
+    await assertSucceeds(setDoc(note('bob', 'n3'), { type: 'photo', imageUrl: IMG, caption: '', ...base('bob') }));
+  });
+
+  test('man kan ikke skrive i en andens navn, og eve kan ikke oprette', async () => {
+    await assertFails(setDoc(note('bob', 'x1'), { type: 'text', text: 'x', ...base('alice') }));
+    await assertFails(setDoc(note('eve', 'x2'), { type: 'text', text: 'x', ...base('eve') }));
+  });
+
+  test('ugyldigt indhold afvises', async () => {
+    const bad = [
+      { type: 'text', text: '', ...base('bob') },
+      { type: 'text', text: 'a'.repeat(501), ...base('bob') },
+      { type: 'poll', text: 'x', ...base('bob') },
+      { type: 'text', text: 'x', admin: true, ...base('bob') },
+      { type: 'text', text: 'x', authorId: 'bob', createdAt: 'nu', isPinned: false },
+      { type: 'checklist', title: 'W', items: [], done: [], ...base('bob') },
+      { type: 'checklist', title: 'W', items: Array(21).fill('x'), done: [], ...base('bob') },
+    ];
+    for (const [i, d] of bad.entries()) await assertFails(setDoc(note('bob', `bad${i}`), d));
+  });
+
+  test('billeder skal ligge i husstandens egen tavle-mappe', async () => {
+    for (const url of ['https://evil.com/p.gif', IMG.replace('HH_A', 'HH_E'), IMG.replace('board', 'grocery')]) {
+      await assertFails(setDoc(note('bob', 'p'), { type: 'photo', imageUrl: url, caption: '', ...base('bob') }));
+    }
+  });
+
+  test('alle kan fastgøre og krydse af, men ikke ændre indholdet', async () => {
+    await assertSucceeds(updateDoc(note('bob', 'alices'), { isPinned: true }));
+    await assertSucceeds(updateDoc(note('bob', 'list'), { done: [1] }));
+    await assertFails(updateDoc(note('bob', 'alices'), { text: 'hacket' }));
+    await assertFails(updateDoc(note('bob', 'alices'), { authorId: 'bob' }));
+    await assertFails(updateDoc(note('bob', 'list'), { items: ['z', 'z'] }));
+    await assertFails(updateDoc(note('bob', 'bobs'), { done: [0] }));
+    await assertFails(updateDoc(note('bob', 'bobs'), { isPinned: 'ja' }));
+    await assertFails(updateDoc(note('eve', 'bobs'), { isPinned: true }));
+  });
+
+  test('kun forfatteren eller admin kan slette', async () => {
+    await assertFails(deleteDoc(note('bob', 'alices')));
+    await assertFails(deleteDoc(note('eve', 'bobs')));
+    await assertSucceeds(deleteDoc(note('bob', 'bobs')));
+    // alice er admin og må slette bobs seddel.
+    await setDoc(note('bob', 'bobs2'), { type: 'text', text: 'x', ...base('bob') });
+    await assertSucceeds(deleteDoc(note('alice', 'bobs2')));
+  });
+
+  test('en admin fra en anden husstand kan ikke slette', async () => {
+    await assertFails(deleteDoc(note('eve', 'alices')));
+  });
+});

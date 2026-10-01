@@ -30,7 +30,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - Providers are in `*_provider.dart` files co-located with their feature.
 
 **Navigation (GoRouter)**:
-- Configured in `lib/main.dart` with a `StatefulShellRoute` for 4 bottom tabs: Meal Plan (`/meal-plan`), Home (`/`), Grocery (`/grocery`), Recipes (`/recipes`).
+- Configured in `lib/main.dart` with a `StatefulShellRoute` for 5 bottom tabs, in branch order: Meal Plan (`/meal-plan`), Grocery (`/grocery`), Home (`/`), Recipes (`/recipes`), Board (`/board`). Home is the raised centre button. The bar is `shared/widgets/app_nav_bar.dart`; each `AppNavDestination.branchIndex` must match the branch order.
 - `/login` sits outside the shell. `/profile` hangs off Home.
 - Recipe sub-routes: `/recipes/create`, `/recipes/:id`.
 
@@ -43,6 +43,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - `GroceryItem` has a `source` field (`'manual'`, `'meal_plan'`, `'recipe'` or `'recurring'`) to distinguish origin; recurring ones also carry `recurringId`.
 - **Fast genkøb** (`lib/features/grocery/recurring/`): `households/{id}/recurring_items` holds items re-added on a fixed interval (every 1–4 weeks on the household's `shoppingWeekday`, or monthly on a fixed date). There is no backend — `RecurringAutoAdder` (wraps the shell in `main.dart`) adds due items when the app opens/resumes and at midnight, one day before the shopping date, in a Firestore transaction with a deterministic grocery doc ID (`rec_<id>_<date>`) so two devices can't duplicate. Skipped if the previous one is still unchecked. Date maths is pure and tested in `core/services/recurring_schedule.dart`; dates are stored as `yyyy-MM-dd` strings.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
+- The bulletin board (`/board` tab, `lib/features/board/`) stores notes in `households/{id}/board_notes`. `BoardNote` is a sealed class (`TextNote`, `PhotoNote`, `ChecklistNote`); the provider only knows the abstract `BoardRepository` (`core/services/board_repository.dart`), so tests use `FakeBoardRepository`. Limits live in `BoardNoteLimits` **and** `firestore.rules` — change both.
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
 **Theme**:
