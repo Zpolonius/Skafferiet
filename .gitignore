@@ -46,3 +46,6 @@ app.*.map.json
 lib/firebase_options.dart
 android/app/google-services.json
 .kotlin/
+
+# Firestore rules tests (rules_test/)
+rules_test/node_modules/

@@ -5,12 +5,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/grocery/grocery_screen.dart';
+import 'features/grocery/recurring/recurring_auto_adder.dart';
+import 'features/grocery/recurring/recurring_items_screen.dart';
 import 'features/meal_plan/meal_plan_screen.dart';
 import 'features/recipes/recipes_screen.dart';
 import 'features/recipes/recipe_detail_screen.dart';
 import 'features/recipes/create_recipe_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/household_provider.dart';
+import 'features/profile/delete_account_screen.dart';
+import 'features/legal/privacy_policy_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -91,6 +95,13 @@ class _MyAppState extends ConsumerState<MyApp> {
                 GoRoute(
                   path: '/grocery',
                   builder: (context, state) => const GroceryScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'recurring',
+                      builder: (context, state) =>
+                          const RecurringItemsScreen(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -136,6 +147,17 @@ class _MyAppState extends ConsumerState<MyApp> {
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
+          routes: [
+            GoRoute(
+              path: 'delete-account',
+              builder: (context, state) => const DeleteAccountScreen(),
+            ),
+          ],
+        ),
+        // Uden for login-kravet: skal kunne læses, før man opretter en konto.
+        GoRoute(
+          path: '/privacy',
+          builder: (context, state) => const PrivacyPolicyScreen(),
         ),
       ],
     );
@@ -145,6 +167,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     final authState = ref.read(authProvider);
     final isLoggingIn = state.matchedLocation == '/login';
     final isOnboarding = state.matchedLocation == '/onboarding';
+    if (state.matchedLocation == '/privacy') return null;
 
     if (!authState.isAuthenticated && !isLoggingIn) return '/login';
     if (!authState.isAuthenticated) return null;
@@ -226,8 +249,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Skallen vises kun for en logget ind bruger, så det er her de faste
+    // varer lægges på listen.
     return Scaffold(
-      body: navigationShell,
+      body: RecurringAutoAdder(child: navigationShell),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
@@ -105,6 +107,7 @@ Widget _buildProfileScreen({
   GroceryListNotifier Function()? groceryFactory,
   MealPlanNotifier Function()? mealPlanFactory,
   AuthState? authState,
+  GoRouter? router,
 }) {
   final mockUser = _MockUser();
   when(() => mockUser.displayName).thenReturn('Test Bruger');
@@ -122,7 +125,9 @@ Widget _buildProfileScreen({
       groceryListProvider.overrideWith(groceryFactory ?? () => _EmptyGroceryNotifier()),
       mealPlanProvider.overrideWith(mealPlanFactory ?? () => _EmptyMealPlanNotifier()),
     ],
-    child: const MaterialApp(home: ProfileScreen()),
+    child: router != null
+        ? MaterialApp.router(routerConfig: router)
+        : const MaterialApp(home: ProfileScreen()),
   );
 }
 
@@ -317,6 +322,157 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => notifier.renameHousehold('Nyt Husstandsnavn')).called(1);
+    });
+  });
+
+  group('Invitationskode', () {
+    HouseholdState inHousehold() => HouseholdState(
+          householdId: 'hh-1',
+          householdName: 'Familie Skafferi',
+          adminUid: 'test-uid',
+          members: ['test-uid'],
+          memberNames: {'test-uid': 'Test Bruger'},
+          isLoading: false,
+        );
+
+    Future<void> pumpProfile(WidgetTester tester, _MockHouseholdNotifier notifier) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_buildProfileScreen(
+        householdState: notifier.state,
+        householdNotifier: notifier,
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Del invitationskode viser den nye kode formateret', (tester) async {
+      final notifier = _MockHouseholdNotifier(inHousehold());
+      when(() => notifier.createJoinCode()).thenAnswer((_) async => 'ABCDEFGHJK');
+      await pumpProfile(tester, notifier);
+
+      await tester.tap(find.text('Del invitationskode'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ABCDE-FGHJK'), findsOneWidget);
+      expect(find.text('Koden virker i 7 dage.'), findsOneWidget);
+      verify(() => notifier.createJoinCode()).called(1);
+    });
+
+    testWidgets('Kopiér kode lægger koden i udklipsholderen', (tester) async {
+      final notifier = _MockHouseholdNotifier(inHousehold());
+      when(() => notifier.createJoinCode()).thenAnswer((_) async => 'ABCDEFGHJK');
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null));
+      await pumpProfile(tester, notifier);
+
+      await tester.tap(find.text('Del invitationskode'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kopiér kode'));
+      await tester.pumpAndSettle();
+
+      expect(copied, 'ABCDE-FGHJK');
+      expect(find.text('Kopieret'), findsOneWidget);
+    });
+
+    testWidgets('fejl ved oprettelse giver en forståelig besked', (tester) async {
+      final notifier = _MockHouseholdNotifier(inHousehold());
+      when(() => notifier.createJoinCode()).thenAnswer((_) async => null);
+      await pumpProfile(tester, notifier);
+
+      await tester.tap(find.text('Del invitationskode'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Koden kunne ikke laves'), findsOneWidget);
+    });
+
+    testWidgets('Deltag i en anden husstand advarer og sender koden videre', (tester) async {
+      final notifier = _MockHouseholdNotifier(inHousehold());
+      when(() => notifier.joinHousehold(any())).thenAnswer((_) async {});
+      await pumpProfile(tester, notifier);
+
+      await tester.tap(find.text('Deltag i en anden husstand'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Du forlader "Familie Skafferi"'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'abcde-fghjk');
+      await tester.tap(find.text('Deltag'));
+      await tester.pumpAndSettle();
+
+      verify(() => notifier.joinHousehold('abcde-fghjk')).called(1);
+    });
+
+    testWidgets('omdøb-feltet begrænser navnet til 60 tegn', (tester) async {
+      final notifier = _MockHouseholdNotifier(inHousehold());
+      await pumpProfile(tester, notifier);
+
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<TextField>(find.byType(TextField)).maxLength, 60);
+    });
+  });
+
+  group('Konto', () {
+    GoRouter testRouter() => GoRouter(
+          initialLocation: '/profile',
+          routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (_, __) => const ProfileScreen(),
+              routes: [
+                GoRoute(
+                  path: 'delete-account',
+                  builder: (_, __) => const Text('SLET-KONTO-SKÆRM'),
+                ),
+              ],
+            ),
+            GoRoute(path: '/privacy', builder: (_, __) => const Text('PRIVATLIV-SKÆRM')),
+          ],
+        );
+
+    Future<void> pumpWithRouter(WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final notifier = _MockHouseholdNotifier(
+        HouseholdState(householdId: 'hh-1', isLoading: false),
+      );
+      await tester.pumpWidget(_buildProfileScreen(
+        householdState: notifier.state,
+        householdNotifier: notifier,
+        router: testRouter(),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Slet konto åbner slet-konto-skærmen', (tester) async {
+      await pumpWithRouter(tester);
+
+      await tester.ensureVisible(find.text('Slet konto'));
+      await tester.tap(find.text('Slet konto'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SLET-KONTO-SKÆRM'), findsOneWidget);
+    });
+
+    testWidgets('Privatlivspolitik åbner politikken', (tester) async {
+      await pumpWithRouter(tester);
+
+      await tester.ensureVisible(find.text('Privatlivspolitik'));
+      await tester.tap(find.text('Privatlivspolitik'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PRIVATLIV-SKÆRM'), findsOneWidget);
     });
   });
 

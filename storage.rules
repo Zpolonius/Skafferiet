@@ -19,8 +19,9 @@ service firebase.storage {
     }
 
     // ── User profile avatars ──────────────────────────────────────────────
+    // `get` (not `read`) so nobody can list every user's files.
     match /users/{userId}/{filename} {
-      allow read:   if isSignedIn();
+      allow get:    if isSignedIn();
       allow write:  if isSignedIn() && request.auth.uid == userId && isValidImage();
       allow delete: if isSignedIn() && request.auth.uid == userId;
     }
@@ -33,9 +34,9 @@ service firebase.storage {
     }
 
     // ── Temporary path (used before a household is fully created) ──────────
-    // Kept minimal: authenticated write, no public read.
+    // Kept minimal: authenticated write, no listing.
     match /temp/{type}/{filename} {
-      allow read:  if isSignedIn();
+      allow get:   if isSignedIn();
       allow write: if isSignedIn() && isValidImage();
     }
   }

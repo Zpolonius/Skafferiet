@@ -1,4 +1,8 @@
 class GroceryItem {
+  static const sourceManual = 'manual';
+  static const sourceMealPlan = 'meal_plan';
+  static const sourceRecurring = 'recurring';
+
   final String id;
   final String name;
   final String category;
@@ -6,7 +10,9 @@ class GroceryItem {
   final String? unit;
   final String? imageUrl;
   final bool isChecked;
-  final String source; // 'manual' or 'meal_plan'
+  final String source; // 'manual', 'meal_plan', 'recipe' eller 'recurring'
+  /// Sat når varen er lagt på listen af en fast vare (`recurring_items`).
+  final String? recurringId;
   final DateTime createdAt;
   final int sortOrder;
 
@@ -19,6 +25,7 @@ class GroceryItem {
     this.imageUrl,
     this.isChecked = false,
     required this.source,
+    this.recurringId,
     required this.createdAt,
     int? sortOrder,
   }) : sortOrder = sortOrder ?? createdAt.millisecondsSinceEpoch;
@@ -32,6 +39,7 @@ class GroceryItem {
     String? imageUrl,
     bool? isChecked,
     String? source,
+    String? recurringId,
     DateTime? createdAt,
     int? sortOrder,
   }) {
@@ -44,6 +52,7 @@ class GroceryItem {
       imageUrl: imageUrl ?? this.imageUrl,
       isChecked: isChecked ?? this.isChecked,
       source: source ?? this.source,
+      recurringId: recurringId ?? this.recurringId,
       createdAt: createdAt ?? this.createdAt,
       sortOrder: sortOrder ?? this.sortOrder,
     );
@@ -58,6 +67,7 @@ class GroceryItem {
       'imageUrl': imageUrl,
       'isChecked': isChecked,
       'source': source,
+      if (recurringId != null) 'recurringId': recurringId,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'sortOrder': sortOrder,
     };
@@ -76,6 +86,7 @@ class GroceryItem {
       imageUrl: map['imageUrl'],
       isChecked: map['isChecked'] ?? false,
       source: map['source'] ?? 'manual',
+      recurringId: map['recurringId'] is String ? map['recurringId'] : null,
       createdAt: createdAt,
       sortOrder: map['sortOrder'] ?? createdAt.millisecondsSinceEpoch,
     );

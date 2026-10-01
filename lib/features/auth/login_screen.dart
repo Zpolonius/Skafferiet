@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import 'auth_provider.dart';
 
@@ -171,7 +172,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => _ResetPasswordDialog(
+                            initialEmail: _emailController.text.trim(),
+                          ),
+                        ),
                         child: const Text('Glemt adgangskode?'),
                       ),
                     ),
@@ -193,8 +199,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
 
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Wrap i stedet for Row: med stor tekst (iOS-tilgængelighed)
+                  // ryger knappen ned på næste linje i stedet for ud af skærmen.
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(_isLogin ? 'Har du ikke en konto?' : 'Har du allerede en konto?'),
                       TextButton(
@@ -206,12 +215,140 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.push('/privacy'),
+                      child: Text(
+                        _isLogin
+                            ? 'Privatlivspolitik'
+                            : 'Ved at oprette en konto accepterer du privatlivspolitikken',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Dialog til "Glemt adgangskode?". Sender en mail med et nulstillingslink.
+class _ResetPasswordDialog extends ConsumerStatefulWidget {
+  final String initialEmail;
+  const _ResetPasswordDialog({required this.initialEmail});
+
+  @override
+  ConsumerState<_ResetPasswordDialog> createState() => _ResetPasswordDialogState();
+}
+
+class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialEmail);
+  bool _sending = false;
+  bool _sent = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    final error = await ref
+        .read(authProvider.notifier)
+        .sendPasswordReset(_controller.text.trim());
+    if (!mounted) return;
+    setState(() {
+      _sending = false;
+      _error = error;
+      _sent = error == null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    if (_sent) {
+      return AlertDialog(
+        icon: Icon(Icons.mark_email_read_outlined, color: colors.primary),
+        title: const Text('Tjek din indbakke'),
+        content: Text(
+          'Hvis der findes en konto med ${_controller.text.trim()}, har vi sendt '
+          'et link, hvor du kan vælge en ny adgangskode. Kig også i spam-mappen.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    }
+
+    return AlertDialog(
+      title: const Text('Nulstil adgangskode'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Skriv din e-mail, så sender vi et link til at vælge en ny adgangskode.'),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _controller,
+              autofocus: widget.initialEmail.isEmpty,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'E-mail',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Indtast din e-mail';
+                if (!_LoginScreenState._emailRegex.hasMatch(v.trim())) {
+                  return 'Ugyldig e-mailadresse';
+                }
+                return null;
+              },
+              onFieldSubmitted: (_) => _sending ? null : _send(),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: colors.error)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _sending ? null : () => Navigator.pop(context),
+          child: const Text('Annuller'),
+        ),
+        FilledButton(
+          onPressed: _sending ? null : _send,
+          child: _sending
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Send link'),
+        ),
+      ],
     );
   }
 }

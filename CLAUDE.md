@@ -13,7 +13,10 @@ flutter analyze                                         # Static analysis
 dart format .                                           # Format code
 dart run build_runner build --delete-conflicting-outputs  # Regenerate Riverpod/codegen files
 flutterfire configure                                   # Reconfigure Firebase
+cd rules_test && npm install && npm test                # Test firestore.rules against the emulator (needs Java 11+)
 ```
+
+After any change to `firestore.rules`, run the rules tests in `rules_test/` and add a test for the new rule.
 
 After adding or modifying any `@riverpod`-annotated provider, run `build_runner` to regenerate `.g.dart` files.
 
@@ -32,8 +35,13 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - Recipe sub-routes: `/recipes/create`, `/recipes/:id`.
 
 **Firestore data model**:
-- All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
-- `GroceryItem` has a `source` field (`'manual'` or `'meal_plan'`) to distinguish origin.
+- All user data is scoped to a `householdId` — collections are `households` (with subcollections `grocery_list`, `meal_plans`, `recurring_items`), `recipes`, `invitations`, `users`, `join_codes`.
+- Joining a household requires proof the rules can check: the joiner writes `joinedWith: {type: 'code'|'invite', id}` in the same batch as adding themselves to `members`. Codes live in `join_codes/{code}` (10 chars, expire). See `HouseholdNotifier._switchHousehold`.
+- `users/{uid}.householdId` may only point at a household the user is a member of; only members can read a household.
+- Account deletion (`features/profile/account_deletion_service.dart`) runs the cleanup client-side in a fixed order; `rules_test/` mirrors the same queries. Call `HouseholdNotifier.pauseForAccountDeletion()` first, or deleting the profile triggers auto-creation of a new household.
+- The privacy policy text lives in `features/legal/privacy_policy_content.dart`; after editing it run `dart run tool/export_privacy_policy.dart` (a test compares it to `docs/PRIVACY_POLICY.md`). Publisher contact details are in `core/app_info.dart`.
+- `GroceryItem` has a `source` field (`'manual'`, `'meal_plan'`, `'recipe'` or `'recurring'`) to distinguish origin; recurring ones also carry `recurringId`.
+- **Fast genkøb** (`lib/features/grocery/recurring/`): `households/{id}/recurring_items` holds items re-added on a fixed interval (every 1–4 weeks on the household's `shoppingWeekday`, or monthly on a fixed date). There is no backend — `RecurringAutoAdder` (wraps the shell in `main.dart`) adds due items when the app opens/resumes and at midnight, one day before the shopping date, in a Firestore transaction with a deterministic grocery doc ID (`rec_<id>_<date>`) so two devices can't duplicate. Skipped if the previous one is still unchecked. Date maths is pure and tested in `core/services/recurring_schedule.dart`; dates are stored as `yyyy-MM-dd` strings.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
 - The bulletin board (`/board` tab, `lib/features/board/`) stores notes in `households/{id}/board_notes`. `BoardNote` is a sealed class (`TextNote`, `PhotoNote`, `ChecklistNote`); the provider only knows the abstract `BoardRepository` (`core/services/board_repository.dart`), so tests use `FakeBoardRepository`. Limits live in `BoardNoteLimits` **and** `firestore.rules` — change both.
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.

@@ -64,4 +64,51 @@ void main() {
       expect(state.isAuthenticated, true);
     });
   });
+
+  group('sendPasswordReset', () {
+    late MockFirebaseAuth mockAuth;
+
+    setUp(() {
+      mockAuth = MockFirebaseAuth();
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+      when(() => mockAuth.currentUser).thenReturn(null);
+      when(() => mockAuth.setLanguageCode(any())).thenAnswer((_) async {});
+    });
+
+    test('sender mailen på dansk og returnerer null', () async {
+      when(() => mockAuth.sendPasswordResetEmail(email: any(named: 'email')))
+          .thenAnswer((_) async {});
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(await notifier.sendPasswordReset(' mig@example.com '), isNull);
+      verify(() => mockAuth.setLanguageCode('da')).called(1);
+      verify(() => mockAuth.sendPasswordResetEmail(email: 'mig@example.com')).called(1);
+    });
+
+    test('afslører ikke om e-mailen har en konto', () async {
+      when(() => mockAuth.sendPasswordResetEmail(email: any(named: 'email')))
+          .thenThrow(FirebaseAuthException(code: 'user-not-found'));
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(await notifier.sendPasswordReset('findes.ikke@example.com'), isNull);
+    });
+
+    test('ugyldig e-mail giver en besked', () async {
+      when(() => mockAuth.sendPasswordResetEmail(email: any(named: 'email')))
+          .thenThrow(FirebaseAuthException(code: 'invalid-email'));
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(await notifier.sendPasswordReset('x'), 'Ugyldig e-mailadresse.');
+    });
+
+    test('sender stadig, hvis sproget ikke kan sættes', () async {
+      when(() => mockAuth.setLanguageCode(any())).thenThrow(Exception('ikke understøttet'));
+      when(() => mockAuth.sendPasswordResetEmail(email: any(named: 'email')))
+          .thenAnswer((_) async {});
+      final notifier = AuthNotifier(auth: mockAuth);
+
+      expect(await notifier.sendPasswordReset('mig@example.com'), isNull);
+      verify(() => mockAuth.sendPasswordResetEmail(email: 'mig@example.com')).called(1);
+    });
+  });
 }

@@ -28,18 +28,10 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- Kun stående: layoutet er ikke lavet til liggende skærm. -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
@@ -52,8 +44,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Skafferiet bruger dit billedbibliotek til at vælge billeder til dit profilbillede, opskrifter og varer.</string>
 
-	<!-- Push notifikationer -->
-	<key>NSUserNotificationUsageDescription</key>
-	<string>Skafferiet sender notifikationer om din madplan og indkøbsliste.</string>
+	<!-- Appen bruger kun standard-kryptering (HTTPS), så der skal ikke
+	     svares på eksportregler ved hver upload til App Store Connect. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

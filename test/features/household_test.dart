@@ -1,5 +1,7 @@
 // ignore_for_file: subtype_of_sealed_class
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +26,18 @@ class MockDocumentSnapshot extends Mock implements DocumentSnapshot<Map<String, 
 }
 
 class MockQuery extends Mock implements Query<Map<String, dynamic>> {}
+class MockWriteBatch extends Mock implements WriteBatch {}
+class FakeDocumentReference extends Fake implements DocumentReference<Map<String, dynamic>> {}
+
+/// Snapshot med valgfri data — null betyder at dokumentet ikke findes.
+class DataSnapshot extends Mock implements DocumentSnapshot<Map<String, dynamic>> {
+  DataSnapshot(this._data);
+  final Map<String, dynamic>? _data;
+  @override
+  bool get exists => _data != null;
+  @override
+  Map<String, dynamic>? data() => _data;
+}
 
 void main() {
   group('HouseholdNotifier Tests', () {
@@ -82,7 +96,7 @@ void main() {
       verify(() => mockAuth.authStateChanges()).called(1);
     });
 
-    test('code generation uses 6 digits', () async {
+    test('household ID is SK- plus a secure random code', () async {
       final container = ProviderContainer(
         overrides: [
           householdProvider.overrideWith((ref) => HouseholdNotifier(
@@ -102,7 +116,7 @@ void main() {
       
       final captured = verify(() => mockHouseholdsCollection.doc(captureAny())).captured;
       final code = captured.first as String;
-      expect(code.length, 9); // SK-XXXXXX = 3 + 6 = 9
+      expect(code, matches(RegExp(r'^SK-[A-HJ-NP-Z2-9]{10}$')));
     });
   });
 
@@ -201,6 +215,333 @@ void main() {
       await notifier.renameHousehold('Nyt Navn');
 
       verifyNever(() => mockHouseholdsCollection.doc(any()));
+    });
+  });
+
+  group('invitationskoder', () {
+    test('generateSecureCode matcher formatet i firestore.rules', () {
+      for (var i = 0; i < 200; i++) {
+        expect(generateSecureCode(joinCodeLength), matches(RegExp(r'^[A-HJ-NP-Z2-9]{10}$')));
+      }
+    });
+
+    test('normalizeJoinCode tåler små bogstaver, bindestreg og mellemrum', () {
+      expect(normalizeJoinCode(' abcde-fghjk '), 'ABCDEFGHJK');
+    });
+
+    test('formatJoinCode deler koden i to', () {
+      expect(formatJoinCode('ABCDEFGHJK'), 'ABCDE-FGHJK');
+      expect(formatJoinCode('KORT'), 'KORT');
+    });
+  });
+
+  group('skift og forlad husstand', () {
+    late MockFirestore mockFirestore;
+    late MockFirebaseAuth mockAuth;
+    late MockUser mockUser;
+    late MockCollectionReference users;
+    late MockCollectionReference households;
+    late MockCollectionReference invitations;
+    late MockCollectionReference joinCodes;
+    late MockWriteBatch batch;
+    final docs = <String, MockDocumentReference>{};
+
+    MockDocumentReference docRef(MockCollectionReference col, String name, String id) {
+      return docs.putIfAbsent('$name/$id', () {
+        final ref = MockDocumentReference();
+        when(() => col.doc(id)).thenReturn(ref);
+        when(() => ref.id).thenReturn(id);
+        return ref;
+      });
+    }
+
+    setUpAll(() {
+      registerFallbackValue(FakeDocumentReference());
+      registerFallbackValue(SetOptions(merge: true));
+    });
+
+    setUp(() {
+      docs.clear();
+      mockFirestore = MockFirestore();
+      mockAuth = MockFirebaseAuth();
+      mockUser = MockUser();
+      users = MockCollectionReference();
+      households = MockCollectionReference();
+      invitations = MockCollectionReference();
+      joinCodes = MockCollectionReference();
+      batch = MockWriteBatch();
+
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.uid).thenReturn('me');
+      when(() => mockUser.email).thenReturn('me@example.com');
+
+      when(() => mockFirestore.collection('users')).thenReturn(users);
+      when(() => mockFirestore.collection('households')).thenReturn(households);
+      when(() => mockFirestore.collection('invitations')).thenReturn(invitations);
+      when(() => mockFirestore.collection('join_codes')).thenReturn(joinCodes);
+      when(() => mockFirestore.batch()).thenReturn(batch);
+      when(() => batch.commit()).thenAnswer((_) async {});
+    });
+
+    HouseholdNotifier makeNotifier(HouseholdState initial) {
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+      // ignore: invalid_use_of_protected_member
+      notifier.state = initial;
+      return notifier;
+    }
+
+    final inOldHousehold = HouseholdState(
+      householdId: 'SK-OLD',
+      adminUid: 'me',
+      members: const ['me', 'partner'],
+      isLoading: false,
+    );
+
+    test('ugyldig kode giver fejl og skriver intet', () async {
+      final codeRef = docRef(joinCodes, 'join_codes', 'QQQQQQQQQQ');
+      when(() => codeRef.get()).thenAnswer((_) async => DataSnapshot(null));
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.joinHousehold('qqqqq-qqqqq');
+
+      expect(notifier.state.error, 'Koden er ugyldig eller udløbet');
+      expect(notifier.state.isLoading, false);
+      verifyNever(() => batch.commit());
+    });
+
+    test('for kort kode slås ikke engang op', () async {
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.joinHousehold('SK-123456');
+
+      expect(notifier.state.error, 'Koden er ugyldig eller udløbet');
+      verifyNever(() => joinCodes.doc(any()));
+    });
+
+    test('udløbet kode afvises', () async {
+      final codeRef = docRef(joinCodes, 'join_codes', 'ABCDEFGHJK');
+      when(() => codeRef.get()).thenAnswer((_) async => DataSnapshot({
+            'householdId': 'SK-NEW',
+            'expiresAt': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 1))),
+          }));
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.joinHousehold('ABCDE-FGHJK');
+
+      expect(notifier.state.error, 'Koden er ugyldig eller udløbet');
+      verifyNever(() => batch.commit());
+    });
+
+    test('gyldig kode: forlader gammel husstand, giver ejerskab videre og melder sig ind i ét batch', () async {
+      final codeRef = docRef(joinCodes, 'join_codes', 'ABCDEFGHJK');
+      when(() => codeRef.get()).thenAnswer((_) async => DataSnapshot({
+            'householdId': 'SK-NEW',
+            'expiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(days: 1))),
+          }));
+      final oldRef = docRef(households, 'households', 'SK-OLD');
+      final newRef = docRef(households, 'households', 'SK-NEW');
+      final userRef = docRef(users, 'users', 'me');
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.joinHousehold('abcde-fghjk');
+
+      final oldUpdate = verify(() => batch.update(oldRef, captureAny())).captured.single as Map;
+      expect(oldUpdate['members'], isA<FieldValue>());
+      expect(oldUpdate['admin'], 'partner');
+
+      final newUpdate = verify(() => batch.update(newRef, captureAny())).captured.single as Map;
+      expect(newUpdate['members'], isA<FieldValue>());
+      expect(newUpdate['joinedWith'], {'type': 'code', 'id': 'ABCDEFGHJK'});
+
+      verify(() => batch.set(userRef, {'householdId': 'SK-NEW'}, any())).called(1);
+      verify(() => batch.commit()).called(1);
+      expect(notifier.state.error, isNull);
+    });
+
+    test('accept af invitation sker i samme batch som indmeldelsen', () async {
+      final inviteRef = docRef(invitations, 'invitations', 'inv1');
+      when(() => inviteRef.get()).thenAnswer((_) async => DataSnapshot({
+            'fromHouseholdId': 'SK-NEW',
+            'toUserEmail': 'me@example.com',
+            'status': 'pending',
+          }));
+      final newRef = docRef(households, 'households', 'SK-NEW');
+      docRef(households, 'households', 'SK-OLD');
+      docRef(users, 'users', 'me');
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.acceptInvitation('inv1');
+
+      final newUpdate = verify(() => batch.update(newRef, captureAny())).captured.single as Map;
+      expect(newUpdate['joinedWith'], {'type': 'invite', 'id': 'inv1'});
+      verify(() => batch.update(inviteRef, {'status': 'accepted'})).called(1);
+      verify(() => batch.commit()).called(1);
+      verifyNever(() => inviteRef.update(any()));
+    });
+
+    test('invitation til en anden e-mail afvises', () async {
+      final inviteRef = docRef(invitations, 'invitations', 'inv1');
+      when(() => inviteRef.get()).thenAnswer((_) async => DataSnapshot({
+            'fromHouseholdId': 'SK-NEW',
+            'toUserEmail': 'someone-else@example.com',
+            'status': 'pending',
+          }));
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.acceptInvitation('inv1');
+
+      expect(notifier.state.error, 'Kunne ikke acceptere invitation');
+      verifyNever(() => batch.commit());
+    });
+
+    test('slettet invitation stopper loading og viser fejl', () async {
+      final inviteRef = docRef(invitations, 'invitations', 'gone');
+      when(() => inviteRef.get()).thenAnswer((_) async => DataSnapshot(null));
+      final notifier = makeNotifier(inOldHousehold);
+
+      await notifier.acceptInvitation('gone');
+
+      expect(notifier.state.isLoading, false);
+      expect(notifier.state.error, 'Invitationen findes ikke længere');
+    });
+
+    test('forlad husstand som eneste medlem: intet ejerskab at give videre', () async {
+      final oldRef = docRef(households, 'households', 'SK-OLD');
+      final userRef = docRef(users, 'users', 'me');
+      final notifier = makeNotifier(HouseholdState(
+        householdId: 'SK-OLD',
+        adminUid: 'me',
+        members: const ['me'],
+        isLoading: false,
+      ));
+
+      await notifier.leaveHousehold();
+
+      final update = verify(() => batch.update(oldRef, captureAny())).captured.single as Map;
+      expect(update.containsKey('admin'), false);
+      verify(() => batch.update(userRef, any())).called(1);
+      verify(() => batch.commit()).called(1);
+      expect(notifier.state.householdId, isNull);
+    });
+
+    test('createJoinCode gemmer en kode der udløber om 7 dage', () async {
+      final codeRef = MockDocumentReference();
+      when(() => joinCodes.doc(any())).thenReturn(codeRef);
+      when(() => codeRef.set(any())).thenAnswer((_) async {});
+      final notifier = makeNotifier(inOldHousehold);
+
+      final code = await notifier.createJoinCode();
+
+      expect(code, matches(RegExp(r'^[A-HJ-NP-Z2-9]{10}$')));
+      verify(() => joinCodes.doc(code)).called(1);
+      final data = verify(() => codeRef.set(captureAny())).captured.single as Map;
+      expect(data['householdId'], 'SK-OLD');
+      expect(data['createdBy'], 'me');
+      final expiresAt = (data['expiresAt'] as Timestamp).toDate();
+      expect(expiresAt.difference(DateTime.now()).inHours, closeTo(7 * 24, 1));
+    });
+
+    test('createJoinCode returnerer null og viser fejl hvis skrivningen fejler', () async {
+      final codeRef = MockDocumentReference();
+      when(() => joinCodes.doc(any())).thenReturn(codeRef);
+      when(() => codeRef.set(any())).thenThrow(Exception('offline'));
+      final notifier = makeNotifier(inOldHousehold);
+
+      expect(await notifier.createJoinCode(), isNull);
+      expect(notifier.state.error, 'Kunne ikke lave en invitationskode');
+    });
+  });
+
+  group('log ud', () {
+    test('lukker den forrige brugers Firestore-lyttere', () async {
+      final mockFirestore = MockFirestore();
+      final mockAuth = MockFirebaseAuth();
+      final mockUser = MockUser();
+      final users = MockCollectionReference();
+      final households = MockCollectionReference();
+      final invitations = MockCollectionReference();
+      final userRef = MockDocumentReference();
+      final householdRef = MockDocumentReference();
+      final query = MockQuery();
+
+      final authEvents = StreamController<User?>();
+      var userStreamCancelled = false;
+      var householdStreamCancelled = false;
+      var invitationStreamCancelled = false;
+      final userStream = StreamController<DocumentSnapshot<Map<String, dynamic>>>(
+          onCancel: () => userStreamCancelled = true);
+      final householdStream = StreamController<DocumentSnapshot<Map<String, dynamic>>>(
+          onCancel: () => householdStreamCancelled = true);
+      final invitationStream = StreamController<QuerySnapshot<Map<String, dynamic>>>(
+          onCancel: () => invitationStreamCancelled = true);
+
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => authEvents.stream);
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.uid).thenReturn('me');
+      when(() => mockUser.email).thenReturn('me@example.com');
+      when(() => mockFirestore.collection('users')).thenReturn(users);
+      when(() => mockFirestore.collection('households')).thenReturn(households);
+      when(() => mockFirestore.collection('invitations')).thenReturn(invitations);
+      when(() => users.doc('me')).thenReturn(userRef);
+      when(() => userRef.snapshots()).thenAnswer((_) => userStream.stream);
+      when(() => households.doc('SK-A')).thenReturn(householdRef);
+      when(() => householdRef.snapshots()).thenAnswer((_) => householdStream.stream);
+      when(() => invitations.where('toUserEmail', isEqualTo: any(named: 'isEqualTo'))).thenReturn(query);
+      when(() => query.where('status', isEqualTo: any(named: 'isEqualTo'))).thenReturn(query);
+      when(() => query.snapshots()).thenAnswer((_) => invitationStream.stream);
+
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+      authEvents.add(mockUser);
+      await Future<void>.delayed(Duration.zero);
+      userStream.add(DataSnapshot({'householdId': 'SK-A'}));
+      await Future<void>.delayed(Duration.zero);
+      verify(() => householdRef.snapshots()).called(1);
+
+      authEvents.add(null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(userStreamCancelled, true);
+      expect(householdStreamCancelled, true);
+      expect(invitationStreamCancelled, true);
+      expect(notifier.state.householdId, isNull);
+
+      notifier.dispose();
+      await authEvents.close();
+    });
+
+    test('profilændring i samme husstand starter ikke en ny lytter', () async {
+      final mockFirestore = MockFirestore();
+      final mockAuth = MockFirebaseAuth();
+      final mockUser = MockUser();
+      final users = MockCollectionReference();
+      final households = MockCollectionReference();
+      final userRef = MockDocumentReference();
+      final householdRef = MockDocumentReference();
+      final userStream = StreamController<DocumentSnapshot<Map<String, dynamic>>>();
+
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => Stream.value(mockUser));
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.uid).thenReturn('me');
+      when(() => mockUser.email).thenReturn(null);
+      when(() => mockFirestore.collection('users')).thenReturn(users);
+      when(() => mockFirestore.collection('households')).thenReturn(households);
+      when(() => users.doc('me')).thenReturn(userRef);
+      when(() => userRef.snapshots()).thenAnswer((_) => userStream.stream);
+      when(() => households.doc('SK-A')).thenReturn(householdRef);
+      when(() => householdRef.snapshots()).thenAnswer((_) => const Stream.empty());
+
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+      await Future<void>.delayed(Duration.zero);
+      userStream.add(DataSnapshot({'householdId': 'SK-A'}));
+      await Future<void>.delayed(Duration.zero);
+      userStream.add(DataSnapshot({'householdId': 'SK-A', 'photoURL': 'https://x/y.jpg'}));
+      await Future<void>.delayed(Duration.zero);
+
+      verify(() => householdRef.snapshots()).called(1);
+
+      notifier.dispose();
+      await userStream.close();
     });
   });
 }

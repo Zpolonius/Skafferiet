@@ -2,23 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Tested in rules_test/ — run `cd rules_test && npm test` after any change.
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Looks up the household document to check membership.
-    function isMember(householdId) {
-      return isSignedIn() &&
-             exists(/databases/$(database)/documents/households/$(householdId)) &&
-             request.auth.uid in
-               get(/databases/$(database)/documents/households/$(householdId)).data.members;
+    function householdPath(householdId) {
+      return /databases/$(database)/documents/households/$(householdId);
     }
 
-    function isAdmin(householdId) {
+    // Membership as stored before this request.
+    function isMember(householdId) {
       return isSignedIn() &&
-             exists(/databases/$(database)/documents/households/$(householdId)) &&
-             get(/databases/$(database)/documents/households/$(householdId)).data.admin
-               == request.auth.uid;
+             householdId is string &&
+             exists(householdPath(householdId)) &&
+             request.auth.uid in get(householdPath(householdId)).data.members;
+    }
+
+    // The household's admin (used by the bulletin board's delete rule).
+    function isAdmin(householdId) {
+      return isMember(householdId) &&
+             get(householdPath(householdId)).data.get('admin', null) == request.auth.uid;
+    }
+
+    // Membership once this write (or the whole batch it is part of) is applied,
+    // so leaving one household and joining another can be a single batch.
+    function isMemberAfter(householdId) {
+      return isSignedIn() &&
+             householdId is string &&
+             existsAfter(householdPath(householdId)) &&
+             request.auth.uid in getAfter(householdPath(householdId)).data.members;
     }
 
     // Helper to get the current user's household ID from their user profile.
@@ -26,44 +40,217 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.householdId;
     }
 
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
     // ── User profiles ─────────────────────────────────────────────────────────
-    // Any signed-in user can read profiles (needed for member name resolution).
-    // Only the owner can write their own document.
+    // A profile is readable by its owner and by members of the owner's
+    // household (needed for member names and photos). Listing is forbidden so
+    // nobody can harvest every user's e-mail and household ID.
     match /users/{uid} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == uid;
+      function isOwner() {
+        return isSignedIn() && request.auth.uid == uid;
+      }
+
+      function userKeys() {
+        return ['displayName', 'email', 'householdId', 'hasCompletedOnboarding', 'photoURL'];
+      }
+
+      // householdId may only point at a household the user is a member of.
+      // Otherwise anyone could point it at a stranger's household and read
+      // that household's recipes.
+      function validHouseholdRef() {
+        return request.resource.data.get('householdId', null) == null ||
+               isMemberAfter(request.resource.data.householdId);
+      }
+
+      function validProfile() {
+        return request.resource.data.get('displayName', '') is string &&
+               request.resource.data.get('displayName', '').size() <= 100;
+      }
+
+      allow get: if isOwner() ||
+                    (isSignedIn() &&
+                     resource.data.get('householdId', null) != null &&
+                     isMember(resource.data.householdId));
+      allow list: if false;
+
+      allow create: if isOwner() &&
+                       request.resource.data.keys().hasOnly(userKeys()) &&
+                       validProfile() &&
+                       validHouseholdRef();
+
+      // An unchanged householdId is not re-checked, so someone who was removed
+      // from a household can still update their name or photo.
+      allow update: if isOwner() &&
+                       changedKeys().hasOnly(userKeys()) &&
+                       validProfile() &&
+                       (!changedKeys().hasAny(['householdId']) || validHouseholdRef());
+
+      allow delete: if isOwner();
     }
 
     // ── Households ────────────────────────────────────────────────────────────
     match /households/{householdId} {
-      // Direct lookup allowed for signed-in users (to load own household or verify code when joining).
-      // Listing/querying across all households is strictly forbidden.
-      allow get: if isSignedIn();
+      function callerIsMember() {
+        return isSignedIn() && request.auth.uid in resource.data.members;
+      }
+
+      function callerIsAdmin() {
+        return isSignedIn() && resource.data.get('admin', null) == request.auth.uid;
+      }
+
+      // Optional shopping day (fast genkøb): missing, null, or 1 (Monday) … 7 (Sunday).
+      function validShoppingWeekday(d) {
+        return d.get('shoppingWeekday', null) == null ||
+               (d.shoppingWeekday is int &&
+                d.shoppingWeekday >= 1 && d.shoppingWeekday <= 7);
+      }
+
+      function validHousehold(d) {
+        return d.name is string && d.name.size() > 0 && d.name.size() <= 100 &&
+               d.members is list && d.members.size() <= 20 &&
+               d.get('adultsCount', 0) is int &&
+               d.get('adultsCount', 0) >= 0 && d.get('adultsCount', 0) <= 50 &&
+               d.get('childrenCount', 0) is int &&
+               d.get('childrenCount', 0) >= 0 && d.get('childrenCount', 0) <= 50 &&
+               d.get('preferences', []) is list && d.get('preferences', []).size() <= 20 &&
+               validShoppingWeekday(d);
+      }
+
+      // The admin may rename, remove members and hand over admin, but never
+      // add other people (they join themselves with a code or invitation),
+      // and the admin must stay a member unless the household is now empty.
+      function adminUpdate() {
+        return callerIsAdmin() &&
+               request.resource.data.members.toSet()
+                 .difference(resource.data.members.toSet()).size() == 0 &&
+               (request.resource.data.members.size() == 0 ||
+                request.resource.data.get('admin', null) in request.resource.data.members);
+      }
+
+      // Any member may change the shared settings (incl. the shopping day).
+      function memberSettingsUpdate() {
+        return callerIsMember() &&
+               changedKeys().hasOnly(['name', 'adultsCount', 'childrenCount', 'preferences',
+                                      'shoppingWeekday']);
+      }
+
+      // Any member may remove themselves — and only themselves. The admin
+      // must hand over admin first (adminUpdate) unless they are the last one.
+      function leaveUpdate() {
+        return callerIsMember() &&
+               (!callerIsAdmin() || resource.data.members.size() == 1) &&
+               changedKeys().hasOnly(['members']) &&
+               request.resource.data.members.size() == resource.data.members.size() - 1 &&
+               request.resource.data.members.toSet() ==
+                 resource.data.members.toSet().difference([request.auth.uid].toSet());
+      }
+
+      function validJoinCode(proof) {
+        return proof.type == 'code' &&
+               proof.id is string &&
+               exists(/databases/$(database)/documents/join_codes/$(proof.id)) &&
+               get(/databases/$(database)/documents/join_codes/$(proof.id)).data.householdId == householdId &&
+               get(/databases/$(database)/documents/join_codes/$(proof.id)).data.expiresAt > request.time;
+      }
+
+      // The invitation must be addressed to the caller and still be pending.
+      // Accepting it in the same batch is fine: get() sees the state before.
+      function validInvite(proof) {
+        return proof.type == 'invite' &&
+               proof.id is string &&
+               request.auth.token.email != null &&
+               exists(/databases/$(database)/documents/invitations/$(proof.id)) &&
+               get(/databases/$(database)/documents/invitations/$(proof.id)).data.fromHouseholdId == householdId &&
+               get(/databases/$(database)/documents/invitations/$(proof.id)).data.status == 'pending' &&
+               get(/databases/$(database)/documents/invitations/$(proof.id)).data.toUserEmail ==
+                 request.auth.token.email.lower();
+      }
+
+      // A non-member may add exactly themselves, and must prove they were
+      // let in: `joinedWith` names a valid join code or invitation.
+      function joinUpdate() {
+        return isSignedIn() &&
+               !(request.auth.uid in resource.data.members) &&
+               changedKeys().hasOnly(['members', 'joinedWith']) &&
+               request.resource.data.members.size() == resource.data.members.size() + 1 &&
+               request.resource.data.members.toSet() ==
+                 resource.data.members.toSet().union([request.auth.uid].toSet()) &&
+               request.resource.data.joinedWith is map &&
+               (validJoinCode(request.resource.data.joinedWith) ||
+                validInvite(request.resource.data.joinedWith));
+      }
+
+      // Only members can read a household; the ID alone is not enough.
+      allow get: if callerIsMember();
       allow list: if false;
 
-      // Creator must include themselves as the first member and as admin.
+      // The creator is the only member and the admin.
       allow create: if isSignedIn() &&
-                       request.auth.uid in request.resource.data.members &&
-                       request.resource.data.admin == request.auth.uid;
+                       request.resource.data.members == [request.auth.uid] &&
+                       request.resource.data.admin == request.auth.uid &&
+                       request.resource.data.keys().hasOnly(
+                         ['name', 'members', 'admin', 'adultsCount', 'childrenCount',
+                          'preferences', 'shoppingWeekday', 'createdAt']) &&
+                       validHousehold(request.resource.data);
 
-      // Existing members can update freely (rename, leave, etc.).
-      // Non-members may only add themselves (join via invite code):
-      //   – admin and name must be unchanged
-      //   – new members array is exactly old array + their own UID
-      allow update: if isMember(householdId) ||
-                       (isSignedIn() &&
-                        request.resource.data.admin == resource.data.admin &&
-                        request.resource.data.name  == resource.data.name  &&
-                        request.resource.data.members.hasAll(resource.data.members) &&
-                        request.resource.data.members.size() == resource.data.members.size() + 1 &&
-                        request.auth.uid in request.resource.data.members);
+      allow update: if validHousehold(request.resource.data) &&
+                       (adminUpdate() || memberSettingsUpdate() || leaveUpdate() || joinUpdate());
 
-      allow delete: if isAdmin(householdId);
+      allow delete: if callerIsAdmin();
 
       // ── Grocery list ───────────────────────────────────────────────────────
       // Strictly isolated: only members of this household can read/write.
       match /grocery_list/{itemId} {
         allow read, write: if isMember(householdId);
+      }
+
+      // ── Recurring items (fast genkøb) ─────────────────────────────────────
+      // Members only. Every field is validated so a bad client can't store
+      // huge strings or dates the app can't read.
+      match /recurring_items/{itemId} {
+        function optString(d, key, max) {
+          return d.get(key, null) == null ||
+                 (d.get(key, null) is string && d.get(key, null).size() <= max);
+        }
+
+        function validRecurringItem(d) {
+          return d.keys().hasOnly(['name', 'quantity', 'unit', 'category',
+                                   'imageUrl', 'frequency', 'intervalWeeks',
+                                   'dayOfMonth', 'nextDate', 'lastGroceryItemId',
+                                   'createdBy', 'createdAt']) &&
+                 d.name is string && d.name.size() >= 1 && d.name.size() <= 80 &&
+                 d.quantity is string && d.quantity.size() >= 1 && d.quantity.size() <= 10 &&
+                 optString(d, 'unit', 20) &&
+                 d.category is string && d.category.size() >= 1 && d.category.size() <= 40 &&
+                 optString(d, 'imageUrl', 2048) &&
+                 optString(d, 'lastGroceryItemId', 200) &&
+                 (
+                   (d.frequency == 'weekly' &&
+                    d.intervalWeeks is int && d.intervalWeeks >= 1 && d.intervalWeeks <= 4 &&
+                    d.get('dayOfMonth', null) == null) ||
+                   (d.frequency == 'monthly' &&
+                    d.dayOfMonth is int && d.dayOfMonth >= 1 && d.dayOfMonth <= 31 &&
+                    d.get('intervalWeeks', null) == null)
+                 ) &&
+                 d.nextDate is string && d.nextDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+                 d.createdBy is string &&
+                 d.createdAt is int;
+        }
+
+        allow read, delete: if isMember(householdId);
+
+        allow create: if isMember(householdId) &&
+                         validRecurringItem(request.resource.data) &&
+                         request.resource.data.createdBy == request.auth.uid;
+
+        // createdBy/createdAt are fixed once the item exists.
+        allow update: if isMember(householdId) &&
+                         validRecurringItem(request.resource.data) &&
+                         request.resource.data.createdBy == resource.data.createdBy &&
+                         request.resource.data.createdAt == resource.data.createdAt;
       }
 
       // ── Meal plans ─────────────────────────────────────────────────────────
@@ -117,9 +304,33 @@ service cloud.firestore {
       }
     }
 
+    // ── Join codes ────────────────────────────────────────────────────────────
+    // Short-lived codes a member shares so someone can join without an
+    // e-mail invitation. 10 characters from a 32-letter alphabet (~10^15
+    // combinations) so they cannot be guessed, and they expire.
+    match /join_codes/{code} {
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       code.matches('^[A-HJ-NP-Z2-9]{10}$') &&
+                       request.resource.data.keys().hasOnly(
+                         ['householdId', 'createdBy', 'createdAt', 'expiresAt']) &&
+                       request.resource.data.createdBy == request.auth.uid &&
+                       isMember(request.resource.data.householdId) &&
+                       request.resource.data.expiresAt is timestamp &&
+                       request.resource.data.expiresAt > request.time &&
+                       // The app asks for 7 days; one extra day absorbs clock skew.
+                       request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
+
+      allow update: if false;
+      allow delete: if isMember(resource.data.householdId);
+    }
+
     // ── Recipes ───────────────────────────────────────────────────────────────
-    // Global recipes (householdId == null) are readable by all signed-in users.
-    // Household-specific recipes are strictly restricted to members of that household.
+    // Global recipes (householdId == null) are readable by all signed-in users
+    // but can no longer be created from the app. Household recipes are
+    // restricted to members of that household.
     match /recipes/{recipeId} {
       // Optional number field: missing, null, or a number within [0, max].
       function optNumber(d, key, max) {
@@ -142,61 +353,82 @@ service cloud.firestore {
                 d.get('nutritionFromIngredients', null) is bool);
       }
 
+      function isGlobal() {
+        return resource.data.get('householdId', null) == null;
+      }
+
+      // Written against the user's own householdId so the app's
+      // "householdId == X OR householdId == null" query can be proven safe.
       allow read: if isSignedIn() && (
         !('householdId' in resource.data) ||
         resource.data.householdId == null ||
         (
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          resource.data.householdId == currentUserHouseholdId()
+          resource.data.householdId == currentUserHouseholdId() &&
+          isMember(currentUserHouseholdId())
         )
       );
 
       allow create: if isSignedIn() &&
                        validNutrition(request.resource.data) &&
                        request.resource.data.createdBy == request.auth.uid &&
+                       isMember(request.resource.data.get('householdId', null));
+
+      // Owner and household never change after creation.
+      allow update: if isSignedIn() &&
+                       validNutrition(request.resource.data) &&
+                       !changedKeys().hasAny(['householdId', 'createdBy']) &&
                        (
-                         request.resource.data.householdId == null ||
-                         (
-                           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                           request.resource.data.householdId == currentUserHouseholdId()
-                         )
+                         (!isGlobal() && isMember(resource.data.householdId)) ||
+                         (isGlobal() && resource.data.get('createdBy', null) == request.auth.uid)
                        );
 
-      allow update: if isSignedIn() && validNutrition(request.resource.data) && (
-        resource.data.createdBy == request.auth.uid ||
-        (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          resource.data.householdId == currentUserHouseholdId()
-        )
-      );
-
-      // Only the original creator may delete a recipe.
-      allow delete: if isSignedIn() &&
-                       resource.data.createdBy == request.auth.uid;
+      // The creator may delete while still a member. The household admin may
+      // also delete — needed to clean up when the last member deletes their
+      // account and the recipes were made by people who have since left.
+      allow delete: if isSignedIn() && (
+                       (resource.data.get('createdBy', null) == request.auth.uid &&
+                        (isGlobal() || isMember(resource.data.householdId))) ||
+                       (!isGlobal() &&
+                        exists(householdPath(resource.data.householdId)) &&
+                        get(householdPath(resource.data.householdId)).data.get('admin', null) == request.auth.uid)
+                     );
     }
 
     // ── Invitations ───────────────────────────────────────────────────────────
     match /invitations/{inviteId} {
+      function isRecipient() {
+        return isSignedIn() && request.auth.token.email != null && (
+          resource.data.toUserEmail == request.auth.token.email ||
+          resource.data.toUserEmail == request.auth.token.email.lower()
+        );
+      }
+
       // Recipient or any member of the sending household can read.
-      allow read: if isSignedIn() && (
-        resource.data.toUserEmail == request.auth.token.email ||
-        (request.auth.token.email != null && resource.data.toUserEmail == request.auth.token.email.lower()) ||
-        isMember(resource.data.fromHouseholdId)
-      );
+      allow read: if isRecipient() || isMember(resource.data.fromHouseholdId);
 
       // Household member creates the invitation; must start as 'pending'.
       allow create: if isMember(request.resource.data.fromHouseholdId) &&
-                       request.resource.data.status == 'pending';
+                       request.resource.data.keys().hasOnly(
+                         ['fromHouseholdId', 'fromHouseholdName', 'fromUserName', 'fromUid',
+                          'toUserEmail', 'status', 'createdAt']) &&
+                       // Lets the sender's invitations be found and deleted with their account.
+                       request.resource.data.get('fromUid', request.auth.uid) == request.auth.uid &&
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.toUserEmail is string &&
+                       request.resource.data.toUserEmail.size() <= 254 &&
+                       request.resource.data.toUserEmail == request.resource.data.toUserEmail.lower();
 
-      // Only the recipient may change the status (to accepted or declined).
-      // All other fields must remain unchanged.
-      allow update: if isSignedIn() && (
-                       resource.data.toUserEmail == request.auth.token.email ||
-                       (request.auth.token.email != null && resource.data.toUserEmail == request.auth.token.email.lower())
-                     ) &&
+      // Only the recipient may answer a pending invitation, and only the
+      // status may change. An answered invitation is final.
+      allow update: if isRecipient() &&
+                       resource.data.status == 'pending' &&
+                       changedKeys().hasOnly(['status']) &&
                        request.resource.data.status in ['accepted', 'declined'];
 
-      allow delete: if false;
+      // The recipient may delete invitations sent to them, and members may
+      // delete their household's invitations — both needed for account deletion.
+      allow delete: if isRecipient() || isMember(resource.data.fromHouseholdId);
     }
   }
 }
