@@ -68,6 +68,11 @@ class ProfileScreen extends ConsumerWidget {
                         onTap: () => context.go('/recipes'),
                       ),
                       SettingsTile(
+                        icon: Icons.event_repeat,
+                        title: 'Faste varer & indkøbsdag',
+                        onTap: hasHousehold ? () => context.go('/grocery/recurring') : null,
+                      ),
+                      SettingsTile(
                         icon: Icons.people_outlined,
                         title: 'Husstand & deling',
                         onTap: hasHousehold ? () => context.push('/profile/household') : null,

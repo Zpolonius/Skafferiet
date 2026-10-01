@@ -130,6 +130,7 @@ class AccountDeletionService {
     // Eneste medlem: slet hele husstanden.
     await _deleteAll(householdRef.collection('grocery_list'));
     await _deleteAll(householdRef.collection('meal_plans'));
+    await _deleteAll(householdRef.collection('recurring_items'));
     await _deleteAll(
       _firestore.collection('recipes').where('householdId', isEqualTo: householdId),
       // Uden ejerrettigheder (ældre husstande) må man kun slette sine egne.

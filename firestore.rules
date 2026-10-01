@@ -95,6 +95,13 @@ service cloud.firestore {
         return isSignedIn() && resource.data.get('admin', null) == request.auth.uid;
       }
 
+      // Optional shopping day (fast genkøb): missing, null, or 1 (Monday) … 7 (Sunday).
+      function validShoppingWeekday(d) {
+        return d.get('shoppingWeekday', null) == null ||
+               (d.shoppingWeekday is int &&
+                d.shoppingWeekday >= 1 && d.shoppingWeekday <= 7);
+      }
+
       function validHousehold(d) {
         return d.name is string && d.name.size() > 0 && d.name.size() <= 100 &&
                d.members is list && d.members.size() <= 20 &&
@@ -102,7 +109,8 @@ service cloud.firestore {
                d.get('adultsCount', 0) >= 0 && d.get('adultsCount', 0) <= 50 &&
                d.get('childrenCount', 0) is int &&
                d.get('childrenCount', 0) >= 0 && d.get('childrenCount', 0) <= 50 &&
-               d.get('preferences', []) is list && d.get('preferences', []).size() <= 20;
+               d.get('preferences', []) is list && d.get('preferences', []).size() <= 20 &&
+               validShoppingWeekday(d);
       }
 
       // The admin may rename, remove members and hand over admin, but never
@@ -116,10 +124,11 @@ service cloud.firestore {
                 request.resource.data.get('admin', null) in request.resource.data.members);
       }
 
-      // Any member may change the shared settings.
+      // Any member may change the shared settings (incl. the shopping day).
       function memberSettingsUpdate() {
         return callerIsMember() &&
-               changedKeys().hasOnly(['name', 'adultsCount', 'childrenCount', 'preferences']);
+               changedKeys().hasOnly(['name', 'adultsCount', 'childrenCount', 'preferences',
+                                      'shoppingWeekday']);
       }
 
       // Any member may remove themselves — and only themselves. The admin
@@ -178,7 +187,7 @@ service cloud.firestore {
                        request.resource.data.admin == request.auth.uid &&
                        request.resource.data.keys().hasOnly(
                          ['name', 'members', 'admin', 'adultsCount', 'childrenCount',
-                          'preferences', 'createdAt']) &&
+                          'preferences', 'shoppingWeekday', 'createdAt']) &&
                        validHousehold(request.resource.data);
 
       allow update: if validHousehold(request.resource.data) &&
@@ -190,6 +199,52 @@ service cloud.firestore {
       // Strictly isolated: only members of this household can read/write.
       match /grocery_list/{itemId} {
         allow read, write: if isMember(householdId);
+      }
+
+      // ── Recurring items (fast genkøb) ─────────────────────────────────────
+      // Members only. Every field is validated so a bad client can't store
+      // huge strings or dates the app can't read.
+      match /recurring_items/{itemId} {
+        function optString(d, key, max) {
+          return d.get(key, null) == null ||
+                 (d.get(key, null) is string && d.get(key, null).size() <= max);
+        }
+
+        function validRecurringItem(d) {
+          return d.keys().hasOnly(['name', 'quantity', 'unit', 'category',
+                                   'imageUrl', 'frequency', 'intervalWeeks',
+                                   'dayOfMonth', 'nextDate', 'lastGroceryItemId',
+                                   'createdBy', 'createdAt']) &&
+                 d.name is string && d.name.size() >= 1 && d.name.size() <= 80 &&
+                 d.quantity is string && d.quantity.size() >= 1 && d.quantity.size() <= 10 &&
+                 optString(d, 'unit', 20) &&
+                 d.category is string && d.category.size() >= 1 && d.category.size() <= 40 &&
+                 optString(d, 'imageUrl', 2048) &&
+                 optString(d, 'lastGroceryItemId', 200) &&
+                 (
+                   (d.frequency == 'weekly' &&
+                    d.intervalWeeks is int && d.intervalWeeks >= 1 && d.intervalWeeks <= 4 &&
+                    d.get('dayOfMonth', null) == null) ||
+                   (d.frequency == 'monthly' &&
+                    d.dayOfMonth is int && d.dayOfMonth >= 1 && d.dayOfMonth <= 31 &&
+                    d.get('intervalWeeks', null) == null)
+                 ) &&
+                 d.nextDate is string && d.nextDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+                 d.createdBy is string &&
+                 d.createdAt is int;
+        }
+
+        allow read, delete: if isMember(householdId);
+
+        allow create: if isMember(householdId) &&
+                         validRecurringItem(request.resource.data) &&
+                         request.resource.data.createdBy == request.auth.uid;
+
+        // createdBy/createdAt are fixed once the item exists.
+        allow update: if isMember(householdId) &&
+                         validRecurringItem(request.resource.data) &&
+                         request.resource.data.createdBy == resource.data.createdBy &&
+                         request.resource.data.createdAt == resource.data.createdAt;
       }
 
       // ── Meal plans ─────────────────────────────────────────────────────────
