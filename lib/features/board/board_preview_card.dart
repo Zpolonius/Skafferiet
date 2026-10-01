@@ -26,6 +26,7 @@ class BoardPreviewCard extends ConsumerWidget {
     return Semantics(
       button: true,
       label: 'Opslagstavlen. $subtitle',
+      onTap: () => context.go('/board'),
       excludeSemantics: true,
       child: Material(
         color: cs.surfaceContainerLowest,
@@ -33,7 +34,7 @@ class BoardPreviewCard extends ConsumerWidget {
         elevation: 0,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () => context.push('/board'),
+          onTap: () => context.go('/board'),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

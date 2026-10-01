@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import '../../core/models/board_note.dart';
 import '../../shared/widgets/empty_state_widget.dart';
+import '../../shared/widgets/profile_avatar.dart';
 import '../auth/auth_provider.dart';
 import '../profile/household_provider.dart';
 import 'add_board_note_sheet.dart';
@@ -16,19 +17,10 @@ class BoardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
     final notesAsync = ref.watch(boardProvider);
     final hasNotes = notesAsync.valueOrNull?.isNotEmpty ?? false;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: cs.surfaceContainerLowest,
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          'Opslagstavle',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(color: cs.primary),
-        ),
-      ),
       floatingActionButton: hasNotes
           ? FloatingActionButton.extended(
               onPressed: () => _openAddSheet(context),
@@ -36,30 +28,42 @@ class BoardScreen extends ConsumerWidget {
               label: const Text('Ny seddel'),
             )
           : null,
-      body: notesAsync.when(
-        data: (notes) => notes.isEmpty
-            ? EmptyStateWidget(
-                icon: Icons.push_pin_outlined,
-                title: 'Tavlen er tom',
-                message: 'Sæt en seddel op til resten af husstanden – '
-                    'en besked, et billede eller en lille tjekliste.',
-                actionLabel: 'Sæt en seddel op',
-                onAction: () => _openAddSheet(context),
-              )
-            : _BoardGrid(notes: notes),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Kunne ikke hente opslagstavlen'),
-              const Gap(8),
-              TextButton(
-                onPressed: () => ref.invalidate(boardProvider),
-                child: const Text('Prøv igen'),
-              ),
-            ],
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const _BoardHeader(),
+            Expanded(child: _buildContent(context, ref, notesAsync)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+      BuildContext context, WidgetRef ref, AsyncValue<List<BoardNote>> notesAsync) {
+    return notesAsync.when(
+      data: (notes) => notes.isEmpty
+          ? EmptyStateWidget(
+              icon: Icons.push_pin_outlined,
+              title: 'Tavlen er tom',
+              message: 'Sæt en seddel op til resten af husstanden – '
+                  'en besked, et billede eller en lille tjekliste.',
+              actionLabel: 'Sæt en seddel op',
+              onAction: () => _openAddSheet(context),
+            )
+          : _BoardGrid(notes: notes),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Kunne ikke hente opslagstavlen'),
+            const Gap(8),
+            TextButton(
+              onPressed: () => ref.invalidate(boardProvider),
+              child: const Text('Prøv igen'),
+            ),
+          ],
         ),
       ),
     );
@@ -70,6 +74,35 @@ class BoardScreen extends ConsumerWidget {
     if (added == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sedlen er sat op')));
     }
+  }
+}
+
+/// Fanens topbjælke – samme opbygning som de øvrige faner.
+class _BoardHeader extends StatelessWidget {
+  const _BoardHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Row(
+        children: [
+          Image.asset('assets/images/logo.png', height: 32),
+          const Gap(12),
+          Expanded(
+            child: Text(
+              'Opslagstavle',
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: cs.primaryContainer,
+                  ),
+            ),
+          ),
+          const ProfileAvatar(),
+        ],
+      ),
+    );
   }
 }
 
@@ -117,7 +150,7 @@ class _BoardGrid extends ConsumerWidget {
 
         return SingleChildScrollView(
           // Plads i bunden, så FAB'en ikke dækker den sidste seddel.
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

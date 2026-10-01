@@ -27,7 +27,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - Providers are in `*_provider.dart` files co-located with their feature.
 
 **Navigation (GoRouter)**:
-- Configured in `lib/main.dart` with a `StatefulShellRoute` for 4 bottom tabs: Meal Plan (`/meal-plan`), Home (`/`), Grocery (`/grocery`), Recipes (`/recipes`).
+- Configured in `lib/main.dart` with a `StatefulShellRoute` for 5 bottom tabs, in branch order: Meal Plan (`/meal-plan`), Grocery (`/grocery`), Home (`/`), Recipes (`/recipes`), Board (`/board`). Home is the raised centre button. The bar is `shared/widgets/app_nav_bar.dart`; each `AppNavDestination.branchIndex` must match the branch order.
 - `/login` sits outside the shell. `/profile` hangs off Home.
 - Recipe sub-routes: `/recipes/create`, `/recipes/:id`.
 
@@ -35,7 +35,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
 - `GroceryItem` has a `source` field (`'manual'` or `'meal_plan'`) to distinguish origin.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
-- The bulletin board (`/board`, `lib/features/board/`) stores notes in `households/{id}/board_notes`. `BoardNote` is a sealed class (`TextNote`, `PhotoNote`, `ChecklistNote`); the provider only knows the abstract `BoardRepository` (`core/services/board_repository.dart`), so tests use `FakeBoardRepository`. Limits live in `BoardNoteLimits` **and** `firestore.rules` — change both.
+- The bulletin board (`/board` tab, `lib/features/board/`) stores notes in `households/{id}/board_notes`. `BoardNote` is a sealed class (`TextNote`, `PhotoNote`, `ChecklistNote`); the provider only knows the abstract `BoardRepository` (`core/services/board_repository.dart`), so tests use `FakeBoardRepository`. Limits live in `BoardNoteLimits` **and** `firestore.rules` — change both.
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
 
 **Theme**:

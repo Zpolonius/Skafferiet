@@ -233,6 +233,7 @@ class _ChecklistRow extends StatelessWidget {
     return Semantics(
       checked: isDone,
       label: text,
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,

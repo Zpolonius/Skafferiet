@@ -127,6 +127,16 @@ void main() {
     ]);
     await pumpBoard(tester, repo);
     expect(find.text('1 af 2 klaret'), findsOneWidget);
+    // Skærmlæsere skal kunne krydse af – ikke kun læse punktet op.
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Pølser')),
+      matchesSemantics(
+        label: 'Pølser',
+        hasCheckedState: true,
+        isChecked: false,
+        hasTapAction: true,
+      ),
+    );
     await tester.tap(find.text('Pølser'));
     await tester.pumpAndSettle();
     expect(repo.done.single.noteId, 'c');

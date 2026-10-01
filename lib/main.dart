@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
@@ -18,6 +17,7 @@ import 'features/onboarding/onboarding_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/board/board_screen.dart';
 import 'shared/widgets/offline_banner.dart';
+import 'shared/widgets/app_nav_bar.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -90,16 +90,16 @@ class _MyAppState extends ConsumerState<MyApp> {
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/',
-                  builder: (context, state) => const HomeScreen(),
+                  path: '/grocery',
+                  builder: (context, state) => const GroceryScreen(),
                 ),
               ],
             ),
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/grocery',
-                  builder: (context, state) => const GroceryScreen(),
+                  path: '/',
+                  builder: (context, state) => const HomeScreen(),
                 ),
               ],
             ),
@@ -124,15 +124,19 @@ class _MyAppState extends ConsumerState<MyApp> {
                 ),
               ],
             ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/board',
+                  builder: (context, state) => const BoardScreen(),
+                ),
+              ],
+            ),
           ],
         ),
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
-        ),
-        GoRoute(
-          path: '/board',
-          builder: (context, state) => const BoardScreen(),
         ),
       ],
     );
@@ -190,6 +194,38 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  // Indeks svarer til rækkefølgen af grenene i StatefulShellRoute ovenfor.
+  static const _mealPlan = AppNavDestination(
+    icon: Icons.calendar_today_outlined,
+    activeIcon: Icons.calendar_today,
+    label: 'Madplan',
+    branchIndex: 0,
+  );
+  static const _grocery = AppNavDestination(
+    icon: Icons.shopping_basket_outlined,
+    activeIcon: Icons.shopping_basket,
+    label: 'Indkøb',
+    branchIndex: 1,
+  );
+  static const _home = AppNavDestination(
+    icon: Icons.home_outlined,
+    activeIcon: Icons.home_rounded,
+    label: 'Hjem',
+    branchIndex: 2,
+  );
+  static const _recipes = AppNavDestination(
+    icon: Icons.restaurant_menu_outlined,
+    activeIcon: Icons.restaurant_menu,
+    label: 'Opskrifter',
+    branchIndex: 3,
+  );
+  static const _board = AppNavDestination(
+    icon: Icons.push_pin_outlined,
+    activeIcon: Icons.push_pin,
+    label: 'Opslagstavle',
+    branchIndex: 4,
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -198,103 +234,18 @@ class ScaffoldWithNavBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const OfflineBanner(),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _NavBarItem(
-                      icon: Icons.calendar_today_outlined,
-                      label: 'Madplan',
-                      isActive: navigationShell.currentIndex == 0,
-                      onTap: () => navigationShell.goBranch(0),
-                    ),
-                    _NavBarItem(
-                      icon: Icons.home_outlined,
-                      label: 'Hjem',
-                      isActive: navigationShell.currentIndex == 1,
-                      onTap: () => navigationShell.goBranch(1),
-                    ),
-                    _NavBarItem(
-                      icon: Icons.shopping_basket_outlined,
-                      label: 'Indkøb',
-                      isActive: navigationShell.currentIndex == 2,
-                      onTap: () => navigationShell.goBranch(2),
-                    ),
-                    _NavBarItem(
-                      icon: Icons.restaurant_menu_outlined,
-                      label: 'Opskrifter',
-                      isActive: navigationShell.currentIndex == 3,
-                      onTap: () => navigationShell.goBranch(3),
-                    ),
-                  ],
-                ),
-              ),
+          AppNavBar(
+            leading: const [_mealPlan, _grocery],
+            center: _home,
+            trailing: const [_recipes, _board],
+            currentIndex: navigationShell.currentIndex,
+            onSelect: (index) => navigationShell.goBranch(
+              index,
+              // Tryk på den aktive fane går tilbage til fanens start.
+              initialLocation: index == navigationShell.currentIndex,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? const Color(0xFF0F5238) : Colors.grey[400];
-    final bgColor = isActive ? const Color(0xFFE7F3ED) : Colors.transparent;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

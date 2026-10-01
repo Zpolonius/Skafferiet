@@ -101,5 +101,13 @@ void main() {
 
     expect(find.text('Opslagstavlen'), findsOneWidget);
     expect(find.text('Ingen sedler endnu – sæt den første op'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel(RegExp('^Opslagstavlen'))),
+      matchesSemantics(
+        label: 'Opslagstavlen. Ingen sedler endnu – sæt den første op',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
   });
 }
