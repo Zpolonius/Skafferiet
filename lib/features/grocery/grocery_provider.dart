@@ -6,7 +6,7 @@ import '../profile/household_provider.dart';
 class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
   final FirebaseFirestore _firestore;
 
-  GroceryListNotifier({FirebaseFirestore? firestore}) 
+  GroceryListNotifier({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
@@ -22,12 +22,12 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .collection('grocery_list')
         .snapshots()
         .map((snapshot) {
-          final items = snapshot.docs
-              .map((doc) => GroceryItem.fromMap(doc.data(), doc.id))
-              .toList();
-          items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-          return items;
-        });
+      final items = snapshot.docs
+          .map((doc) => GroceryItem.fromMap(doc.data(), doc.id))
+          .toList();
+      items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      return items;
+    });
   }
 
   Future<void> toggleItem(String id) async {
@@ -39,7 +39,7 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .doc(householdId)
         .collection('grocery_list')
         .doc(id);
-    
+
     final doc = await itemDoc.get();
     if (doc.exists) {
       final current = doc.data()?['isChecked'] ?? false;
@@ -101,11 +101,11 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .collection('grocery_list')
         .doc(id)
         .update({
-          'name': name,
-          'quantity': quantity,
-          'unit': unit,
-          'category': category,
-        });
+      'name': name,
+      'quantity': quantity,
+      'unit': unit,
+      'category': category,
+    });
   }
 
   Future<void> clearCheckedItems() async {
@@ -114,7 +114,7 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
 
     final batch = _firestore.batch();
     final checkedItems = state.value!.where((item) => item.isChecked);
-    
+
     if (checkedItems.isEmpty) return;
 
     for (final item in checkedItems) {
@@ -150,7 +150,7 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
     if (householdId == null || state.value == null) return;
 
     final batch = _firestore.batch();
-    
+
     for (final item in state.value!) {
       final docRef = _firestore
           .collection('households')
@@ -164,7 +164,7 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
   }
 }
 
-final groceryListProvider = StreamNotifierProvider<GroceryListNotifier, List<GroceryItem>>(() {
+final groceryListProvider =
+    StreamNotifierProvider<GroceryListNotifier, List<GroceryItem>>(() {
   return GroceryListNotifier();
 });
-

@@ -114,6 +114,13 @@ class ProfileScreen extends ConsumerWidget {
                           onTap: () => context.go('/recipes'),
                         ),
                         _ProfileTile(
+                          icon: Icons.event_repeat,
+                          title: 'Faste varer & indkøbsdag',
+                          onTap: household.householdId != null
+                              ? () => context.go('/grocery/recurring')
+                              : null,
+                        ),
+                        _ProfileTile(
                           icon: Icons.people_outlined,
                           title: 'Delte lister',
                           onTap: household.householdId != null
