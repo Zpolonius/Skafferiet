@@ -6,6 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/grocery/grocery_screen.dart';
+import 'features/grocery/recurring/recurring_auto_adder.dart';
+import 'features/grocery/recurring/recurring_items_screen.dart';
 import 'features/meal_plan/meal_plan_screen.dart';
 import 'features/recipes/recipes_screen.dart';
 import 'features/recipes/recipe_detail_screen.dart';
@@ -108,6 +110,13 @@ class _MyAppState extends ConsumerState<MyApp> {
                 GoRoute(
                   path: '/grocery',
                   builder: (context, state) => const GroceryScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'recurring',
+                      builder: (context, state) =>
+                          const RecurringItemsScreen(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -235,8 +244,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Skallen vises kun for en logget ind bruger, så det er her de faste
+    // varer lægges på listen.
     return Scaffold(
-      body: navigationShell,
+      body: RecurringAutoAdder(child: navigationShell),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -417,6 +417,7 @@ describe('slet konto', () => {
       const s = ctx.firestore();
       await setDoc(doc(s, 'households/HH_E/grocery_list/e1'), { name: 'Æg' });
       await setDoc(doc(s, 'households/HH_E/meal_plans/2026-09-28'), { days: {} });
+      await setDoc(doc(s, 'households/HH_E/recurring_items/m1'), { name: 'Mælk' });
       await setDoc(doc(s, 'recipes/eveR'), { title: 'Eves ret', householdId: 'HH_E', createdBy: 'eve' });
       // Lavet af et tidligere medlem, der har forladt husstanden.
       await setDoc(doc(s, 'recipes/zedR'), { title: 'Zeds ret', householdId: 'HH_E', createdBy: 'zed' });
@@ -438,6 +439,7 @@ describe('slet konto', () => {
       where('fromHouseholdId', '==', 'HH_E'), where('fromUid', '==', 'eve'))));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/grocery_list')));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/meal_plans')));
+    await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/recurring_items')));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'recipes'),
       where('householdId', '==', 'HH_E'))));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
@@ -620,3 +622,46 @@ describe('husstand & deling', () => {
     }));
   });
 });
+// ── Fast genkøb (fra main, #13) mod de strammere husstandsregler ──────────────
+// Spejler RecurringItemsRepository.setShoppingWeekday og create.
+
+describe('fast genkøb', () => {
+  const item = (uid) => ({
+    name: 'Mælk', quantity: '2', unit: 'l', category: 'Mejeri',
+    frequency: 'weekly', intervalWeeks: 1, nextDate: '2026-10-05',
+    createdBy: uid, createdAt: Date.now(),
+  });
+
+  test('et medlem sætter indkøbsdag og flytter varernes datoer i ét batch', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'households/HH_A/recurring_items/r1'), item('alice'));
+    });
+    const s = db('bob');
+    const batch = writeBatch(s);
+    batch.update(doc(s, 'households/HH_A'), { shoppingWeekday: 4 });
+    batch.update(doc(s, 'households/HH_A/recurring_items/r1'), { nextDate: '2026-10-08' });
+    await assertSucceeds(batch.commit());
+  });
+
+  test('ugyldig indkøbsdag afvises', async () => {
+    await assertFails(updateDoc(doc(db('bob'), 'households/HH_A'), { shoppingWeekday: 8 }));
+    await assertFails(updateDoc(doc(db('bob'), 'households/HH_A'), { shoppingWeekday: 'mandag' }));
+  });
+
+  test('eve kan ikke sætte Familien A\'s indkøbsdag', async () => {
+    await assertFails(updateDoc(doc(db('eve'), 'households/HH_A'), { shoppingWeekday: 2 }));
+  });
+
+  test('medlemmer opretter genkøbs-varer; eve kan hverken læse eller oprette', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'households/HH_A/recurring_items/r2'), item('bob')));
+    await assertFails(getDocs(collection(db('eve'), 'households/HH_A/recurring_items')));
+    await assertFails(setDoc(doc(db('eve'), 'households/HH_A/recurring_items/r3'), item('eve')));
+  });
+
+  test('en ny husstand må oprettes med en indkøbsdag', async () => {
+    await assertSucceeds(setDoc(doc(db('carol'), 'households/SK-CAROL'), {
+      name: 'Carols', members: ['carol'], admin: 'carol', shoppingWeekday: 5,
+    }));
+  });
+});
+

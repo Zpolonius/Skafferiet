@@ -400,6 +400,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Mine opskrifter'), findsOneWidget);
+      expect(find.text('Faste varer & indkøbsdag'), findsOneWidget);
       expect(find.text('Husstand & deling'), findsOneWidget);
       expect(find.text('Præferencer & Diæt'), findsOneWidget);
       expect(find.text('Hjælp & Support'), findsOneWidget);
