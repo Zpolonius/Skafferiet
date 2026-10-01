@@ -55,6 +55,10 @@ flowchart LR
 - [x] **Signing config**:
   - Release-builds læser nøgleoplysninger fra git-ignored `android/key.properties`, med fallback til debug-nøgler og en tydelig advarsel i byggeloggen.
   - Vejledning i [docs/SIGNING.md](docs/SIGNING.md). **Udestående:** selve upload-keystoren skal genereres — se den kritiske sektion i [PLAY_STORE_CHECKLIST.md](PLAY_STORE_CHECKLIST.md).
+- [x] **Sikkerhedsregler strammet** (forud for App Store):
+  - Lukket huller hvor brugere kunne liste alle brugere, melde sig ind i fremmede husstande og læse deres data. Indmeldelse kræver nu invitationskode eller invitation.
+  - 49 regel-tests mod Firebase-emulatoren i `rules_test/`. Se [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md).
+- [ ] **App Store-klargøring** — se [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md) (slet konto, privatlivspolitik, profil-menuen, iOS-projekt).
 - [ ] **Branded Splash Screen**:
   - Rolig opstartsskærm med "Kitchen Harmony" logo og baggrundsfarve.
 - [x] **Profilbillede & Personliggørelse**:

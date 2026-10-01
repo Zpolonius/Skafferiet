@@ -13,7 +13,10 @@ flutter analyze                                         # Static analysis
 dart format .                                           # Format code
 dart run build_runner build --delete-conflicting-outputs  # Regenerate Riverpod/codegen files
 flutterfire configure                                   # Reconfigure Firebase
+cd rules_test && npm install && npm test                # Test firestore.rules against the emulator (needs Java 11+)
 ```
+
+After any change to `firestore.rules`, run the rules tests in `rules_test/` and add a test for the new rule.
 
 After adding or modifying any `@riverpod`-annotated provider, run `build_runner` to regenerate `.g.dart` files.
 
@@ -32,7 +35,9 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 - Recipe sub-routes: `/recipes/create`, `/recipes/:id`.
 
 **Firestore data model**:
-- All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`.
+- All user data is scoped to a `householdId` — collections are `households`, `recipes`, `grocery_list`, `meal_plans`, `invitations`, `users`, `join_codes`.
+- Joining a household requires proof the rules can check: the joiner writes `joinedWith: {type: 'code'|'invite', id}` in the same batch as adding themselves to `members`. Codes live in `join_codes/{code}` (10 chars, expire). See `HouseholdNotifier._switchHousehold`.
+- `users/{uid}.householdId` may only point at a household the user is a member of; only members can read a household.
 - `GroceryItem` has a `source` field (`'manual'` or `'meal_plan'`) to distinguish origin.
 - `MealSlot` holds either a linked `Recipe` reference or a `directEntry` string.
 - `Recipe.calories` is **per serving** (the meal plan sums it per day). Optional `servings`, `protein`/`carbs`/`fat` (g per serving) and `nutritionFromIngredients`. Each `Ingredient` may carry `nutrition` per 100 g/ml; `core/services/nutrition_calculator.dart` sums it for units convertible to g/ml (`core/models/recipe_units.dart`). Limits are enforced in `firestore.rules`.
