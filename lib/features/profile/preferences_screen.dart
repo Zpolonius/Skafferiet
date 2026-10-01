@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../shared/widgets/settings_list.dart';
 import '../onboarding/household_setup_widgets.dart';
 import 'household_provider.dart';
 
@@ -38,7 +39,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
+    final colors = Theme.of(context).colorScheme;
     // Behold rækkefølgen fra listen, så den gemte værdi er stabil.
     final ordered = [
       for (final p in availablePreferences)
@@ -53,15 +54,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
         );
     if (!mounted) return;
     setState(() => _saving = false);
-    if (error != null) {
-      messenger.showSnackBar(SnackBar(content: Text(error), backgroundColor: errorColor));
-      return;
-    }
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Præferencerne er gemt.'),
-      behavior: SnackBarBehavior.floating,
-    ));
-    Navigator.of(context).maybePop();
+    showResultSnackBar(messenger, colors, error: error, success: 'Præferencerne er gemt.');
+    if (error == null) Navigator.of(context).maybePop();
   }
 
   @override

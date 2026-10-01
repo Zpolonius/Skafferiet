@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skafferiet/features/auth/auth_error_messages.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -188,5 +189,34 @@ void main() {
         'Den nye adgangskode er for svag.',
       );
     });
+  });
+
+  group('fejlbeskeder', () {
+    test('samme fejl giver samme besked overalt — med mulighed for en egen formulering', () {
+      expect(authErrorMessage('too-many-requests', fallback: 'x'),
+          'For mange forsøg. Vent lidt, og prøv igen.');
+      expect(authErrorMessage('ukendt-kode', fallback: 'Prøv igen.'), 'Prøv igen.');
+      expect(
+        authErrorMessage('weak-password', fallback: 'x', overrides: {'weak-password': 'Egen'}),
+        'Egen',
+      );
+    });
+
+    for (final code in ['user-not-found', 'wrong-password', 'invalid-credential']) {
+      test('login afslører ikke, om e-mailen har en konto ($code)', () async {
+        final mockAuth = MockFirebaseAuth();
+        when(() => mockAuth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+        when(() => mockAuth.currentUser).thenReturn(null);
+        when(() => mockAuth.signInWithEmailAndPassword(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            )).thenThrow(FirebaseAuthException(code: code));
+        final notifier = AuthNotifier(auth: mockAuth);
+
+        await notifier.login('x@example.com', 'forkert');
+
+        expect(notifier.state.error, 'Forkert e-mail eller adgangskode.');
+      });
+    }
   });
 }

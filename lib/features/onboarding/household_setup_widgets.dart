@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/app_colors.dart';
 
 // Vælgere til husstandens størrelse og madstil. Bruges både i onboardingen og
 // på siden "Præferencer & Diæt", så de to altid ser ens ud.
@@ -29,6 +27,8 @@ class PreferenceChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     return Wrap(
       spacing: 10,
       runSpacing: 12,
@@ -45,11 +45,11 @@ class PreferenceChips extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primaryContainer.withValues(alpha: 0.12)
-                    : AppColors.surfaceContainerLowest,
+                    ? colors.primaryContainer.withValues(alpha: 0.12)
+                    : colors.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.outlineVariant,
+                  color: isSelected ? colors.primary : colors.outlineVariant,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -65,16 +65,15 @@ class PreferenceChips extends StatelessWidget {
                   Flexible(
                     child: Text(
                       pref.label,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? AppColors.primary : AppColors.onSurface,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? colors.primary : colors.onSurface,
                       ),
                     ),
                   ),
                   if (isSelected) ...[
                     const Gap(8),
-                    const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary),
+                    Icon(Icons.check_circle_rounded, size: 16, color: colors.primary),
                   ],
                 ],
               ),
@@ -105,12 +104,14 @@ class CounterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
@@ -118,20 +119,8 @@ class CounterCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.outline,
-                      ),
-                ),
+                Text(title, style: text.titleMedium),
+                Text(subtitle, style: text.labelSmall?.copyWith(color: colors.outline)),
               ],
             ),
           ),
@@ -145,11 +134,7 @@ class CounterCard extends StatelessWidget {
             child: Text(
               '$count',
               textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
+              style: text.titleLarge,
             ),
           ),
           _CircleBtn(
@@ -172,6 +157,7 @@ class _CircleBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final isEnabled = onTap != null;
     return Semantics(
       button: true,
@@ -186,14 +172,14 @@ class _CircleBtn extends StatelessWidget {
           height: 44,
           decoration: BoxDecoration(
             color: isEnabled
-                ? AppColors.primaryContainer.withValues(alpha: 0.1)
-                : AppColors.surfaceContainerHigh,
+                ? colors.primaryContainer.withValues(alpha: 0.1)
+                : colors.surfaceContainerHigh,
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
             size: 20,
-            color: isEnabled ? AppColors.primary : AppColors.outline,
+            color: isEnabled ? colors.primary : colors.outline,
           ),
         ),
       ),

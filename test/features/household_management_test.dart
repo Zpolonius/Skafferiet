@@ -8,6 +8,7 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart' as auth_mocks;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
+import 'package:skafferiet/features/profile/invitation_service.dart';
 
 // Testene kører mod en falsk Firestore i hukommelsen og kontrollerer, hvad
 // der faktisk ender i databasen. Sikkerhedsreglerne for de samme skrivninger
@@ -128,39 +129,48 @@ void main() {
     });
   });
 
-  group('invitationer', () {
-    test('gemmes med lille e-mail og afsender', () async {
+  group('invitationer (InvitationService)', () {
+    late InvitationService invitations;
+
+    setUp(() async {
       notifier = await start();
+      invitations = InvitationService(
+        firestore: db,
+        auth: auth_mocks.MockFirebaseAuth(
+          signedIn: true,
+          mockUser: auth_mocks.MockUser(uid: 'me', email: 'me@example.com', displayName: 'Mig'),
+        ),
+      );
+    });
 
-      expect(await notifier.sendInvitation(' Ven@Example.COM '), isNull);
+    Future<String?> send(String email) =>
+        invitations.send(householdId: 'HH', householdName: 'Familien', email: email);
 
-      final invites = await db.collection('invitations').get();
-      final data = invites.docs.single.data();
+    test('gemmes med lille e-mail og afsender', () async {
+      expect(await send(' Ven@Example.COM '), isNull);
+
+      final data = (await db.collection('invitations').get()).docs.single.data();
       expect(data['toUserEmail'], 'ven@example.com');
       expect(data['fromHouseholdId'], 'HH');
+      expect(data['fromHouseholdName'], 'Familien');
       expect(data['fromUid'], 'me');
       expect(data['status'], 'pending');
     });
 
     test('samme e-mail kan ikke inviteres to gange', () async {
-      notifier = await start();
-      await notifier.sendInvitation('ven@example.com');
+      await send('ven@example.com');
 
-      expect(await notifier.sendInvitation('VEN@example.com'),
-          'ven@example.com er allerede inviteret.');
+      expect(await send('VEN@example.com'), 'ven@example.com er allerede inviteret.');
       expect((await db.collection('invitations').get()).docs, hasLength(1));
     });
 
     test('man kan ikke invitere sig selv', () async {
-      notifier = await start();
-
-      expect(await notifier.sendInvitation('ME@example.com'), 'Du kan ikke invitere dig selv.');
+      expect(await send('ME@example.com'), 'Du kan ikke invitere dig selv.');
       expect((await db.collection('invitations').get()).docs, isEmpty);
     });
 
     test('ventende invitationer kan ses og annulleres', () async {
-      notifier = await start();
-      await notifier.sendInvitation('a@example.com');
+      await send('a@example.com');
       await db.collection('invitations').add({
         'fromHouseholdId': 'HH',
         'toUserEmail': 'svaret@example.com',
@@ -172,11 +182,11 @@ void main() {
         'status': 'pending',
       });
 
-      final pending = await notifier.watchSentInvitations('HH').first;
+      final pending = await invitations.watchPending('HH').first;
       expect(pending.map((i) => i.email), ['a@example.com']);
 
-      expect(await notifier.cancelInvitation(pending.single.id), isNull);
-      expect(await notifier.watchSentInvitations('HH').first, isEmpty);
+      expect(await invitations.cancel(pending.single.id), isNull);
+      expect(await invitations.watchPending('HH').first, isEmpty);
     });
   });
 

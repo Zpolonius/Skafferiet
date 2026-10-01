@@ -7,6 +7,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
 import 'package:skafferiet/features/profile/household_screen.dart';
+import 'package:skafferiet/features/profile/invitation_service.dart';
+import 'package:skafferiet/features/profile/invite_member_card.dart';
 import 'package:skafferiet/features/profile/profile_screen.dart';
 import 'package:skafferiet/features/recipes/recipes_provider.dart';
 import 'package:skafferiet/features/grocery/grocery_provider.dart';
@@ -22,11 +24,17 @@ class _MockAuthNotifier extends StateNotifier<AuthState> with Mock implements Au
   _MockAuthNotifier(super.state);
 }
 
+class _MockInvitationService extends Mock implements InvitationService {}
+
 class _MockHouseholdNotifier extends StateNotifier<HouseholdState>
     with Mock
     implements HouseholdNotifier {
   _MockHouseholdNotifier(super.state);
 }
+
+/// Tekstfeltet i den åbne dialog (siden har også sit eget e-mailfelt).
+Finder _dialogField() =>
+    find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField));
 
 HouseholdState _household({
   String admin = 'me',
@@ -45,6 +53,17 @@ HouseholdState _household({
 
 void main() {
   late _MockHouseholdNotifier notifier;
+  late _MockInvitationService invitations;
+
+  setUp(() => invitations = _MockInvitationService());
+
+  void stubSend(String? result) {
+    when(() => invitations.send(
+          householdId: any(named: 'householdId'),
+          householdName: any(named: 'householdName'),
+          email: any(named: 'email'),
+        )).thenAnswer((_) async => result);
+  }
 
   Future<void> pump(
     WidgetTester tester,
@@ -63,6 +82,7 @@ void main() {
         authProvider.overrideWith((ref) => _MockAuthNotifier(AuthState(user: user))),
         householdProvider.overrideWith((ref) => notifier),
         sentInvitationsProvider.overrideWith((ref) => Stream.value(sent)),
+        invitationServiceProvider.overrideWithValue(invitations),
       ],
       child: const MaterialApp(home: HouseholdScreen()),
     ));
@@ -171,74 +191,84 @@ void main() {
   });
 
   group('invitationer', () {
+    Finder emailField() =>
+        find.descendant(of: find.byType(InviteMemberCard), matching: find.byType(TextFormField));
+
     testWidgets('e-mail valideres, før der sendes', (tester) async {
       await pump(tester, _household());
 
-      await tester.tap(find.text('Inviter med e-mail'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), 'ikke-en-mail');
-      await tester.tap(find.widgetWithText(FilledButton, 'Inviter'));
+      await tester.enterText(emailField(), 'ikke-en-mail');
+      await tester.tap(find.text('Send invitation'));
       await tester.pumpAndSettle();
 
       expect(find.text('Ugyldig e-mail'), findsOneWidget);
-      verifyNever(() => notifier.sendInvitation(any()));
+      verifyNever(() => invitations.send(
+            householdId: any(named: 'householdId'),
+            householdName: any(named: 'householdName'),
+            email: any(named: 'email'),
+          ));
     });
 
-    testWidgets('"Invitation sendt" vises først, når den er gemt', (tester) async {
+    testWidgets('"inviteret" vises først, når invitationen er gemt', (tester) async {
       await pump(tester, _household());
-      when(() => notifier.sendInvitation(any())).thenAnswer((_) async => null);
-
-      await tester.tap(find.text('Inviter med e-mail'));
-      await tester.pumpAndSettle();
-      // Dialogen siger ærligt, at der ikke sendes en mail.
+      stubSend(null);
+      // Kortet siger ærligt, at der ikke sendes en mail.
       expect(find.textContaining('Der sendes ikke en mail'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextFormField), ' Ven@Example.com ');
-      await tester.tap(find.widgetWithText(FilledButton, 'Inviter'));
+      await tester.enterText(emailField(), ' Ven@Example.com ');
+      await tester.tap(find.text('Send invitation'));
       await tester.pumpAndSettle();
 
-      verify(() => notifier.sendInvitation('ven@example.com')).called(1);
-      expect(find.byType(AlertDialog), findsNothing);
+      verify(() => invitations.send(
+            householdId: 'HH',
+            householdName: 'Familien',
+            email: 'ven@example.com',
+          )).called(1);
       expect(find.textContaining('ven@example.com er inviteret'), findsOneWidget);
+      // Feltet tømmes, så man kan invitere den næste.
+      expect(
+          tester
+              .widget<EditableText>(
+                  find.descendant(of: emailField(), matching: find.byType(EditableText)))
+              .controller
+              .text,
+          isEmpty);
     });
 
-    testWidgets('fejl vises i dialogen, som bliver stående', (tester) async {
+    testWidgets('fejl vises ved feltet, og e-mailen bliver stående', (tester) async {
       await pump(tester, _household());
-      when(() => notifier.sendInvitation(any()))
-          .thenAnswer((_) async => 'ven@example.com er allerede inviteret.');
+      stubSend('ven@example.com er allerede inviteret.');
 
-      await tester.tap(find.text('Inviter med e-mail'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), 'ven@example.com');
-      await tester.tap(find.widgetWithText(FilledButton, 'Inviter'));
+      await tester.enterText(emailField(), 'ven@example.com');
+      await tester.tap(find.text('Send invitation'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('invite_error')), findsOneWidget);
-      expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.textContaining('er inviteret. De ser'), findsNothing);
+      expect(find.text('ven@example.com'), findsOneWidget);
     });
 
-    testWidgets('ventende invitationer vises og kan annulleres', (tester) async {
+    testWidgets('ventende invitationer vises under medlemmerne og kan annulleres', (tester) async {
       await pump(tester, _household(), sent: const [
         SentInvitation(id: 'inv1', email: 'ven@example.com', fromUserName: 'Mig'),
       ]);
-      when(() => notifier.cancelInvitation(any())).thenAnswer((_) async => null);
+      when(() => invitations.cancel(any())).thenAnswer((_) async => null);
 
-      expect(find.text('Venter på svar'), findsOneWidget);
+      expect(find.text('Afventer svar …'), findsOneWidget);
       expect(find.text('ven@example.com'), findsOneWidget);
-      expect(find.text('Inviteret af Mig'), findsOneWidget);
 
-      await tester.tap(find.text('Annullér'));
+      await tester.tap(find.byTooltip('Annullér invitationen til ven@example.com'));
       await tester.pumpAndSettle();
 
-      verify(() => notifier.cancelInvitation('inv1')).called(1);
+      verify(() => invitations.cancel('inv1')).called(1);
       expect(find.text('Invitationen til ven@example.com er annulleret.'), findsOneWidget);
     });
 
-    testWidgets('ingen ventende invitationer: afsnittet vises ikke', (tester) async {
+    testWidgets('ingen ventende invitationer: ingen "Afventer svar"', (tester) async {
       await pump(tester, _household());
 
-      expect(find.text('Venter på svar'), findsNothing);
+      expect(find.text('Afventer svar …'), findsNothing);
+      expect(find.text('Medlemmer (2)'), findsOneWidget);
     });
   });
 
@@ -299,7 +329,7 @@ void main() {
 
       expect(find.textContaining('Du forlader "Familien"'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField), 'abcde-fghjk');
+      await tester.enterText(_dialogField(), 'abcde-fghjk');
       await tester.tap(find.text('Deltag'));
       await tester.pumpAndSettle();
 
@@ -314,9 +344,9 @@ void main() {
 
       await tester.tap(find.byTooltip('Omdøb husstand'));
       await tester.pumpAndSettle();
-      expect(tester.widget<TextField>(find.byType(TextField)).maxLength, 60);
+      expect(tester.widget<TextField>(_dialogField()).maxLength, 60);
 
-      await tester.enterText(find.byType(TextField), 'Nyt Navn');
+      await tester.enterText(_dialogField(), 'Nyt Navn');
       await tester.tap(find.text('Gem'));
       await tester.pumpAndSettle();
 
@@ -355,6 +385,7 @@ void main() {
         authProvider.overrideWith((ref) => _MockAuthNotifier(AuthState(user: user))),
         householdProvider.overrideWith((ref) => notifier),
         sentInvitationsProvider.overrideWith((ref) => Stream.value(const [])),
+        invitationServiceProvider.overrideWithValue(invitations),
         recipesProvider.overrideWith(() => _EmptyRecipes()),
         groceryListProvider.overrideWith(() => _EmptyGrocery()),
         mealPlanProvider.overrideWith(() => _EmptyMealPlan()),

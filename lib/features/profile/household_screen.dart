@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/widgets/confirm_dialog.dart';
+import '../../shared/widgets/settings_list.dart';
 import '../auth/auth_provider.dart';
 import 'household_dialogs.dart';
 import 'household_provider.dart';
+import 'invitation_service.dart';
+import 'invite_member_card.dart';
 
-/// "Husstand & deling": medlemmer, invitationer og ind- og udmeldelse.
+/// "Husstand & deling" (design/del_samarbejd_1): inviter, del en kode, se
+/// medlemmer og ventende invitationer, skift eller forlad husstand.
 class HouseholdScreen extends ConsumerWidget {
   const HouseholdScreen({super.key});
 
@@ -18,6 +22,7 @@ class HouseholdScreen extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
 
     ref.listen(householdProvider.select((s) => s.error), (previous, next) {
+      // Kun den øverste skærm viser fejlen (profilen ligger nedenunder).
       if (next != null && next != previous && ModalRoute.of(context)?.isCurrent != false) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next), backgroundColor: colors.error),
@@ -25,100 +30,53 @@ class HouseholdScreen extends ConsumerWidget {
       }
     });
 
+    final Widget body;
+    if (household.isLoading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (household.householdId == null) {
+      body = const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Du er ikke i en husstand. Gå tilbage til profilen for at '
+            'oprette en eller deltage med en kode.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    } else {
+      body = ListView(
+        // 20 px sidemargin (DESIGN.md: container-margin).
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        children: [
+          _Header(household: household),
+          const SizedBox(height: 24),
+          const InviteMemberCard(),
+          const SizedBox(height: 16),
+          const _JoinCodeCard(),
+          const SizedBox(height: 32),
+          _Members(household: household, myUid: myUid),
+          const SizedBox(height: 32),
+          const SectionTitle('Skift husstand'),
+          SettingsGroup(
+            children: [
+              SettingsTile(
+                icon: Icons.login_outlined,
+                title: 'Deltag i en anden husstand',
+                subtitle: 'Med en invitationskode',
+                onTap: () => showJoinDialog(context),
+              ),
+              _LeaveTile(household: household, myUid: myUid),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Husstand & deling')),
-      body: SafeArea(
-        child: household.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : household.householdId == null
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'Du er ikke i en husstand. Gå tilbage til profilen for at '
-                        'oprette en eller deltage med en kode.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                    children: [
-                      _Header(household: household),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Medlemmer'),
-                      _Card(
-                        children: [
-                          for (final uid in household.members)
-                            _MemberTile(
-                              uid: uid,
-                              name: household.memberNames[uid] ?? 'Bruger',
-                              photoUrl: household.memberPhotos[uid],
-                              isOwner: uid == household.adminUid,
-                              isMe: uid == myUid,
-                              canRemove: myUid != null &&
-                                  household.adminUid == myUid &&
-                                  uid != myUid,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Inviter'),
-                      _Card(
-                        children: [
-                          ListTile(
-                            leading: Icon(Icons.person_add_outlined,
-                                color: colors.primary),
-                            title: const Text('Inviter med e-mail'),
-                            subtitle: const Text(
-                                'Personen ser invitationen, når de logger ind'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => _invite(context),
-                          ),
-                          ListTile(
-                            leading: Icon(Icons.vpn_key_outlined,
-                                color: colors.primary),
-                            title: const Text('Del invitationskode'),
-                            subtitle: Text(
-                                'Koden virker i ${joinCodeValidity.inDays} dage'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => showDialog<void>(
-                              context: context,
-                              builder: (_) => const JoinCodeDialog(),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const _SentInvitations(),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Skift husstand'),
-                      _Card(
-                        children: [
-                          ListTile(
-                            leading: Icon(Icons.login_outlined,
-                                color: colors.onSurfaceVariant),
-                            title: const Text('Deltag i en anden husstand'),
-                            subtitle: const Text('Med en invitationskode'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => showJoinDialog(context),
-                          ),
-                          _LeaveTile(household: household, myUid: myUid),
-                        ],
-                      ),
-                    ],
-                  ),
-      ),
+      body: SafeArea(child: body),
     );
-  }
-
-  Future<void> _invite(BuildContext context) async {
-    final email = await showInviteDialog(context);
-    if (email == null || !context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:
-          Text('$email er inviteret. De ser invitationen, når de logger ind.'),
-      behavior: SnackBarBehavior.floating,
-    ));
   }
 }
 
@@ -137,7 +95,7 @@ class _Header extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 24,
-          backgroundColor: colors.primaryContainer.withValues(alpha: 0.15),
+          backgroundColor: colors.surfaceContainerLow,
           child: Icon(Icons.house_outlined, color: colors.primary),
         ),
         const SizedBox(width: 16),
@@ -145,13 +103,10 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name,
-                  style:
-                      text.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              Text(name, style: text.headlineLarge),
               Text(
                 count == 1 ? '1 medlem' : '$count medlemmer',
-                style:
-                    text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+                style: text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
               ),
             ],
           ),
@@ -166,7 +121,85 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _MemberTile extends ConsumerWidget {
+/// Lysegrønt kort (mockuppets "Delingslink") med invitationskoden.
+class _JoinCodeCard extends StatelessWidget {
+  const _JoinCodeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.primaryFixed.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.primaryFixed),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Invitationskode', style: text.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Lav en kode, der kan deles direkte. Den virker i ${joinCodeValidity.inDays} dage.',
+            style: text.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: colors.surfaceContainerLowest,
+              foregroundColor: colors.primary,
+              side: BorderSide(color: colors.outlineVariant),
+              minimumSize: const Size(0, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => const JoinCodeDialog(),
+            ),
+            icon: const Icon(Icons.vpn_key_outlined),
+            label: const Text('Del invitationskode'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Medlemmer (N)": ét kort pr. medlem, efterfulgt af ventende invitationer.
+class _Members extends ConsumerWidget {
+  final HouseholdState household;
+  final String? myUid;
+  const _Members({required this.household, required this.myUid});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final pending = ref.watch(sentInvitationsProvider).valueOrNull ?? const [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Medlemmer (${household.members.length})', style: text.headlineSmall),
+        const SizedBox(height: 12),
+        for (final uid in household.members)
+          _MemberCard(
+            uid: uid,
+            name: household.memberNames[uid] ?? 'Bruger',
+            photoUrl: household.memberPhotos[uid],
+            isOwner: uid == household.adminUid,
+            isMe: uid == myUid,
+            canRemove: myUid != null && household.adminUid == myUid && uid != myUid,
+          ),
+        for (final invite in pending) _PendingInviteCard(invite: invite),
+      ],
+    );
+  }
+}
+
+class _MemberCard extends ConsumerWidget {
   final String uid;
   final String name;
   final String? photoUrl;
@@ -174,7 +207,7 @@ class _MemberTile extends ConsumerWidget {
   final bool isMe;
   final bool canRemove;
 
-  const _MemberTile({
+  const _MemberCard({
     required this.uid,
     required this.name,
     required this.photoUrl,
@@ -187,45 +220,50 @@ class _MemberTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '?';
-    final initialWidget = Text(
-      initial,
-      style: text.titleSmall?.copyWith(
-        fontWeight: FontWeight.bold,
-        color: isOwner ? colors.onPrimary : colors.onSurface,
-      ),
+    final initial = Text(
+      name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '?',
+      style: text.titleMedium?.copyWith(color: colors.onPrimaryFixedVariant),
     );
 
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor:
-            isOwner ? colors.primary : colors.surfaceContainerHighest,
-        child: ClipOval(
-          child: photoUrl != null && photoUrl!.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: photoUrl!,
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => initialWidget,
-                )
-              : initialWidget,
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: colors.primaryFixed,
+          child: ClipOval(
+            child: photoUrl != null && photoUrl!.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: photoUrl!,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => initial,
+                  )
+                : initial,
+          ),
+        ),
+        title: Text(
+          isMe ? '$name (dig)' : name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.titleMedium,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isOwner) const _OwnerBadge() else Text('Kan redigere', style: text.labelSmall),
+            if (canRemove)
+              IconButton(
+                icon: Icon(Icons.person_remove_outlined, color: colors.error),
+                tooltip: 'Fjern $name',
+                onPressed: () => _remove(context, ref),
+              ),
+          ],
         ),
       ),
-      title: Text(
-        isMe ? '$name (dig)' : name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(isOwner ? 'Ejer' : 'Kan redigere'),
-      trailing: canRemove
-          ? IconButton(
-              icon: Icon(Icons.person_remove_outlined, color: colors.error),
-              tooltip: 'Fjern $name',
-              onPressed: () => _remove(context, ref),
-            )
-          : null,
     );
   }
 
@@ -233,8 +271,7 @@ class _MemberTile extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Fjern $name?',
-      message:
-          '$name mister adgang til indkøbslisten, madplanen og opskrifterne. '
+      message: '$name mister adgang til indkøbslisten, madplanen og opskrifterne. '
           'Husstandens aktive invitationskoder holder op med at virke, så '
           '$name ikke kan komme ind igen med en gammel kode.',
       confirmLabel: 'Fjern',
@@ -243,62 +280,79 @@ class _MemberTile extends ConsumerWidget {
     if (!confirmed || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
+    final colors = Theme.of(context).colorScheme;
     final error = await ref.read(householdProvider.notifier).removeMember(uid);
-    messenger.showSnackBar(SnackBar(
-      content: Text(error ?? '$name er fjernet fra husstanden.'),
-      backgroundColor: error != null ? errorColor : null,
-      behavior: SnackBarBehavior.floating,
-    ));
+    showResultSnackBar(messenger, colors,
+        error: error, success: '$name er fjernet fra husstanden.');
   }
 }
 
-class _SentInvitations extends ConsumerWidget {
-  const _SentInvitations();
+/// Pille-mærket "Ejer" fra mockuppet.
+class _OwnerBadge extends StatelessWidget {
+  const _OwnerBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.primaryFixed.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.primaryFixedDim),
+      ),
+      child: Text(
+        'Ejer',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.primary),
+      ),
+    );
+  }
+}
+
+/// En invitation, der venter på svar — vises nedtonet under medlemmerne.
+class _PendingInviteCard extends ConsumerWidget {
+  final SentInvitation invite;
+  const _PendingInviteCard({required this.invite});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final invitations =
-        ref.watch(sentInvitationsProvider).valueOrNull ?? const [];
-    if (invitations.isEmpty) return const SizedBox.shrink();
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 24),
-        const _SectionTitle('Venter på svar'),
-        _Card(
-          children: [
-            for (final invite in invitations)
-              ListTile(
-                leading: const Icon(Icons.schedule_outlined),
-                title: Text(invite.email,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: invite.fromUserName != null
-                    ? Text('Inviteret af ${invite.fromUserName}')
-                    : null,
-                trailing: TextButton(
-                  onPressed: () => _cancel(context, ref, invite),
-                  child: const Text('Annullér'),
-                ),
-              ),
-          ],
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: colors.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: colors.surfaceContainerHigh,
+          child: Icon(Icons.person_outline, color: colors.outline),
         ),
-      ],
+        title: Text(
+          'Afventer svar …',
+          style: text.titleMedium?.copyWith(
+            fontStyle: FontStyle.italic,
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+        subtitle: Text(invite.email, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: 'Annullér invitationen til ${invite.email}',
+          onPressed: () => _cancel(context, ref),
+        ),
+      ),
     );
   }
 
-  Future<void> _cancel(
-      BuildContext context, WidgetRef ref, SentInvitation invite) async {
+  Future<void> _cancel(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
-    final error =
-        await ref.read(householdProvider.notifier).cancelInvitation(invite.id);
-    messenger.showSnackBar(SnackBar(
-      content: Text(error ?? 'Invitationen til ${invite.email} er annulleret.'),
-      backgroundColor: error != null ? errorColor : null,
-      behavior: SnackBarBehavior.floating,
-    ));
+    final colors = Theme.of(context).colorScheme;
+    final error = await ref.read(invitationServiceProvider).cancel(invite.id);
+    showResultSnackBar(messenger, colors,
+        error: error, success: 'Invitationen til ${invite.email} er annulleret.');
   }
 }
 
@@ -309,29 +363,22 @@ class _LeaveTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
     final others = household.members.where((m) => m != myUid).toList();
     final canLeave = myUid != null && others.isNotEmpty;
 
-    return ListTile(
-      enabled: canLeave,
-      leading: Icon(Icons.logout, color: canLeave ? colors.error : null),
-      title: Text(
-        'Forlad husstand',
-        style: canLeave ? TextStyle(color: colors.error) : null,
-      ),
-      subtitle:
-          canLeave ? null : const Text('Ikke muligt, når du er eneste medlem'),
+    return SettingsTile(
+      icon: Icons.logout,
+      title: 'Forlad husstand',
+      subtitle: canLeave ? null : 'Ikke muligt, når du er eneste medlem',
+      destructive: true,
       onTap: canLeave ? () => _leave(context, ref, others) : null,
     );
   }
 
-  Future<void> _leave(
-      BuildContext context, WidgetRef ref, List<String> others) async {
+  Future<void> _leave(BuildContext context, WidgetRef ref, List<String> others) async {
     final name = household.householdName ?? 'husstanden';
     final isOwner = household.adminUid == myUid;
-    final successorName =
-        household.memberNames[others.first] ?? 'et andet medlem';
+    final successorName = household.memberNames[others.first] ?? 'et andet medlem';
 
     final confirmed = await showConfirmDialog(
       context,
@@ -345,47 +392,10 @@ class _LeaveTile extends ConsumerWidget {
     if (!confirmed || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
+    final colors = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
     final error = await ref.read(householdProvider.notifier).leaveHousehold();
-    messenger.showSnackBar(SnackBar(
-      content: Text(error ?? 'Du har forladt "$name".'),
-      backgroundColor: error != null ? errorColor : null,
-      behavior: SnackBarBehavior.floating,
-    ));
+    showResultSnackBar(messenger, colors, error: error, success: 'Du har forladt "$name".');
     if (error == null && router != null && router.canPop()) router.pop();
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-      ),
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  final List<Widget> children;
-  const _Card({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: Column(children: children),
-    );
   }
 }

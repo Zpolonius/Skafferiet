@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_info.dart';
+import '../../shared/widgets/settings_list.dart';
 
 /// Appens version, fx "1.0.0 (1)". Overskrives i tests.
 final appVersionProvider = FutureProvider<String>((ref) async {
@@ -75,14 +76,7 @@ class HelpScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            Text(
-              'Ofte stillede spørgsmål',
-              style: text.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colors.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
+            const SectionTitle('Ofte stillede spørgsmål'),
             Card(
               margin: EdgeInsets.zero,
               clipBehavior: Clip.antiAlias,
@@ -100,41 +94,29 @@ class HelpScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Kontakt',
-              style: text.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colors.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              margin: EdgeInsets.zero,
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.mail_outline, color: colors.primary),
-                    title: const Text('Skriv til os'),
-                    subtitle: const Text(AppInfo.contactEmail),
-                    trailing: const Icon(Icons.open_in_new, size: 18),
-                    onTap: () => _contact(context, ref, version),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.privacy_tip_outlined, color: colors.primary),
-                    title: const Text('Privatlivspolitik'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/privacy'),
-                  ),
-                ],
-              ),
+            const SectionTitle('Kontakt'),
+            SettingsGroup(
+              children: [
+                SettingsTile(
+                  icon: Icons.mail_outline,
+                  title: 'Skriv til os',
+                  subtitle: AppInfo.contactEmail,
+                  trailing: Icon(Icons.open_in_new, size: 18, color: colors.outline),
+                  onTap: () => _contact(context, ref, version),
+                ),
+                SettingsTile(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Privatlivspolitik',
+                  onTap: () => context.push('/privacy'),
+                ),
+              ],
             ),
             const SizedBox(height: 32),
             Center(
               child: Text(
                 version != null ? 'Skafferiet version $version' : 'Skafferiet',
                 key: const Key('app_version'),
-                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                style: text.bodySmall,
               ),
             ),
           ],

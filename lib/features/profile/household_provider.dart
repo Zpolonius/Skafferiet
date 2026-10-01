@@ -27,42 +27,14 @@ String generateSecureCode(int length, {Random? random}) {
 }
 
 /// Gør brugerens indtastning (fx "abcde-fghjk ") til "ABCDEFGHJK".
-String normalizeJoinCode(String input) =>
-    input.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+String normalizeJoinCode(String input) => input.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
 
 /// Viser en kode som "ABCDE-FGHJK", så den er nemmere at læse.
-String formatJoinCode(String code) => code.length == joinCodeLength
-    ? '${code.substring(0, 5)}-${code.substring(5)}'
-    : code;
+String formatJoinCode(String code) =>
+    code.length == joinCodeLength ? '${code.substring(0, 5)}-${code.substring(5)}' : code;
 
 /// Firestore tillader 500 skrivninger pr. batch; vi holder god afstand.
 const _batchLimit = 400;
-
-/// En invitation husstanden har sendt, som endnu ikke er besvaret.
-class SentInvitation {
-  final String id;
-  final String email;
-  final String? fromUserName;
-  final DateTime? createdAt;
-
-  const SentInvitation({
-    required this.id,
-    required this.email,
-    this.fromUserName,
-    this.createdAt,
-  });
-
-  factory SentInvitation.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data();
-    final created = data['createdAt'];
-    return SentInvitation(
-      id: doc.id,
-      email: data['toUserEmail'] as String? ?? '',
-      fromUserName: data['fromUserName'] as String?,
-      createdAt: created is Timestamp ? created.toDate() : null,
-    );
-  }
-}
 
 class HouseholdState {
   final String? householdId;
@@ -161,7 +133,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   // en fejl ikke giver en uendelig løkke af nye husstande.
   String? _recoveryFailedFor;
 
-  HouseholdNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth}) 
+  HouseholdNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance,
         super(HouseholdState(isLoading: true)) {
@@ -230,10 +202,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .listen((snapshot) {
-      final invites = snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
+      final invites = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
       state = state.copyWith(invitations: invites);
     }, onError: (e) {
       developer.log('FEJL i invitations listener', error: e, name: 'household_provider');
@@ -308,11 +282,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   void _listenToHousehold(String householdId) {
     _cancelHouseholdSubscription();
     _subscribedHouseholdId = householdId;
-    _householdSub = _firestore.collection('households').doc(householdId).snapshots().listen((doc) async {
+    _householdSub =
+        _firestore.collection('households').doc(householdId).snapshots().listen((doc) async {
       if (doc.exists) {
         final data = doc.data()!;
         final memberUids = List<String>.from(data['members'] ?? []);
-        
+
         // Hent navne og billeder for alle medlemmer
         final details = await _fetchMemberDetails(memberUids);
 
@@ -364,7 +339,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     });
   }
 
-  Future<({Map<String, String> names, Map<String, String?> photos})> _fetchMemberDetails(List<String> uids) async {
+  Future<({Map<String, String> names, Map<String, String?> photos})> _fetchMemberDetails(
+      List<String> uids) async {
     final details = await Future.wait(uids.map((uid) async {
       try {
         final userDoc = await _firestore.collection('users').doc(uid).get();
@@ -544,9 +520,9 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       if (user == null) return;
 
       state = state.copyWith(isLoading: true);
-      
+
       final code = _newHouseholdId();
-      
+
       final householdData = {
         'name': name,
         'members': [user.uid],
@@ -635,7 +611,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       final dayName = danishDays[now.weekday] ?? 'Mandag';
 
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
-      final weekId = '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+      final weekId =
+          '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
 
       if (starterRecipe != null) {
         final recipeRef = await _firestore.collection('recipes').add({
@@ -658,7 +635,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           'createdBy': user.uid,
         });
 
-        await _firestore.collection('households').doc(hId).collection('meal_plans').doc(weekId).set({
+        await _firestore
+            .collection('households')
+            .doc(hId)
+            .collection('meal_plans')
+            .doc(weekId)
+            .set({
           'days': {
             dayName: {
               'dinner': {
@@ -671,7 +653,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
         final batch = _firestore.batch();
         for (final ing in starterRecipe.ingredients) {
-          final itemRef = _firestore.collection('households').doc(hId).collection('grocery_list').doc();
+          final itemRef =
+              _firestore.collection('households').doc(hId).collection('grocery_list').doc();
           batch.set(itemRef, {
             'name': ing.name,
             'category': ing.category,
@@ -684,7 +667,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         }
         await batch.commit();
       } else if (customMeal != null && customMeal.trim().isNotEmpty) {
-        await _firestore.collection('households').doc(hId).collection('meal_plans').doc(weekId).set({
+        await _firestore
+            .collection('households')
+            .doc(hId)
+            .collection('meal_plans')
+            .doc(weekId)
+            .set({
           'days': {
             dayName: {
               'dinner': {
@@ -819,10 +807,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     }
 
     try {
-      final codes = await _firestore
-          .collection('join_codes')
-          .where('householdId', isEqualTo: hId)
-          .get();
+      final codes =
+          await _firestore.collection('join_codes').where('householdId', isEqualTo: hId).get();
       final codeRefs = codes.docs.map((d) => d.reference).toList();
 
       var batch = _firestore.batch();
@@ -846,71 +832,6 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     } catch (e) {
       developer.log('FEJL ved fjernelse af medlem', error: e, name: 'household_provider');
       return 'Kunne ikke fjerne medlemmet. Tjek din forbindelse, og prøv igen.';
-    }
-  }
-
-  /// Inviterer [email] til husstanden. Returnerer en fejlbesked, der kan
-  /// vises i dialogen, eller null hvis invitationen er gemt.
-  Future<String?> sendInvitation(String email) async {
-    final user = _auth.currentUser;
-    final hId = state.householdId;
-    if (user == null || hId == null) return 'Du er ikke medlem af en husstand.';
-
-    final cleanEmail = email.trim().toLowerCase();
-    if (cleanEmail == user.email?.trim().toLowerCase()) {
-      return 'Du kan ikke invitere dig selv.';
-    }
-
-    try {
-      final invitations = _firestore.collection('invitations');
-      final existing = await invitations
-          .where('fromHouseholdId', isEqualTo: hId)
-          .where('toUserEmail', isEqualTo: cleanEmail)
-          .where('status', isEqualTo: 'pending')
-          .limit(1)
-          .get();
-      if (existing.docs.isNotEmpty) {
-        return '$cleanEmail er allerede inviteret.';
-      }
-
-      await invitations.add({
-        'fromHouseholdId': hId,
-        'fromHouseholdName': state.householdName,
-        'fromUserName': user.displayName ?? user.email,
-        'fromUid': user.uid,
-        'toUserEmail': cleanEmail,
-        'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      return null;
-    } catch (e) {
-      developer.log('FEJL ved afsendelse af invitation', error: e, name: 'household_provider');
-      return 'Invitationen kunne ikke sendes. Tjek din forbindelse, og prøv igen.';
-    }
-  }
-
-  /// Husstandens ubesvarede invitationer, nyeste først.
-  Stream<List<SentInvitation>> watchSentInvitations(String householdId) {
-    return _firestore
-        .collection('invitations')
-        .where('fromHouseholdId', isEqualTo: householdId)
-        .where('status', isEqualTo: 'pending')
-        .snapshots()
-        .map((snapshot) {
-      final list = snapshot.docs.map(SentInvitation.fromDoc).toList()
-        ..sort((a, b) => (b.createdAt ?? DateTime(9999)).compareTo(a.createdAt ?? DateTime(9999)));
-      return list;
-    });
-  }
-
-  /// Trækker en invitation tilbage. Returnerer en fejlbesked eller null.
-  Future<String?> cancelInvitation(String invitationId) async {
-    try {
-      await _firestore.collection('invitations').doc(invitationId).delete();
-      return null;
-    } catch (e) {
-      developer.log('FEJL ved annullering af invitation', error: e, name: 'household_provider');
-      return 'Invitationen kunne ikke annulleres. Prøv igen.';
     }
   }
 
@@ -952,7 +873,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
       final data = inviteDoc.data()!;
       final targetEmail = data['toUserEmail'] as String?;
-      
+
       if (targetEmail != user.email?.toLowerCase()) {
         throw Exception('Sikkerhedsfejl: Invitation tilhører ikke denne bruger');
       }
@@ -993,12 +914,4 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
 final householdProvider = StateNotifierProvider<HouseholdNotifier, HouseholdState>((ref) {
   return HouseholdNotifier();
-});
-
-/// Husstandens udsendte, ubesvarede invitationer.
-final sentInvitationsProvider =
-    StreamProvider.autoDispose<List<SentInvitation>>((ref) {
-  final householdId = ref.watch(householdProvider.select((s) => s.householdId));
-  if (householdId == null) return Stream.value(const []);
-  return ref.read(householdProvider.notifier).watchSentInvitations(householdId);
 });

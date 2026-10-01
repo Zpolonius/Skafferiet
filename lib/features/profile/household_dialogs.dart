@@ -9,8 +9,6 @@ import 'household_provider.dart';
 /// Under reglernes grænse på 100 tegn, så der er plads til visning.
 const maxHouseholdNameLength = 60;
 
-final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
 /// Advarsel når brugeren er på vej til at forlade sin husstand (ved at
 /// deltage i en anden). Null, hvis brugeren ikke er i en husstand.
 String? leaveHouseholdWarning(HouseholdState household) {
@@ -22,119 +20,6 @@ String? leaveHouseholdWarning(HouseholdState household) {
   }
   return 'Du forlader "$name". De andre medlemmer beholder indkøbslisten, '
       'madplanen og opskrifterne.';
-}
-
-/// Inviter med e-mail. Returnerer e-mailen, hvis invitationen blev gemt.
-Future<String?> showInviteDialog(BuildContext context) {
-  return showDialog<String>(context: context, builder: (_) => const _InviteDialog());
-}
-
-class _InviteDialog extends ConsumerStatefulWidget {
-  const _InviteDialog();
-
-  @override
-  ConsumerState<_InviteDialog> createState() => _InviteDialogState();
-}
-
-class _InviteDialogState extends ConsumerState<_InviteDialog> {
-  final _controller = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _sending = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    if (_sending || !_formKey.currentState!.validate()) return;
-    setState(() {
-      _sending = true;
-      _error = null;
-    });
-    final email = _controller.text.trim().toLowerCase();
-    final error = await ref.read(householdProvider.notifier).sendInvitation(email);
-    if (!mounted) return;
-    if (error == null) {
-      Navigator.pop(context, email);
-    } else {
-      setState(() {
-        _sending = false;
-        _error = error;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    return AlertDialog(
-      title: const Text('Inviter til husstand'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Personen ser invitationen, når de logger ind i Skafferiet med '
-              'denne e-mail. Der sendes ikke en mail.',
-              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _controller,
-              autofocus: true,
-              enabled: !_sending,
-              decoration: const InputDecoration(
-                hintText: 'e-mail@eksempel.dk',
-                prefixIcon: Icon(Icons.email_outlined),
-              ),
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              textInputAction: TextInputAction.send,
-              onFieldSubmitted: (_) => _send(),
-              validator: (v) {
-                final value = v?.trim() ?? '';
-                if (value.isEmpty) return 'Indtast en e-mail';
-                if (value.length > 254 || !_emailPattern.hasMatch(value)) {
-                  return 'Ugyldig e-mail';
-                }
-                return null;
-              },
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                key: const Key('invite_error'),
-                style: text.bodySmall?.copyWith(color: colors.error),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _sending ? null : () => Navigator.pop(context),
-          child: const Text('Annuller'),
-        ),
-        FilledButton(
-          onPressed: _sending ? null : _send,
-          child: _sending
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Inviter'),
-        ),
-      ],
-    );
-  }
 }
 
 /// Dialog hvor brugeren indtaster en invitationskode. Er brugeren allerede i

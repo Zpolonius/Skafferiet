@@ -121,7 +121,9 @@ Ingen "Kommer snart" tilbage — Apple afviser apps med pladsholdere (retningsli
 
 - [ ] Login: fejl-snackbaren vises igen ved hver genopbygning, så længe fejlen står i state (`login_screen.dart`, `addPostFrameCallback` i `build`)
 - [x] Login: "Har du ikke en konto? Tilmeld dig" løb ud af skærmen ved stor tekst — nu `Wrap`
-- [ ] Profilskærmen bruger hårdkodede farver — `Colors.red` og `Colors.green` er væk (punkt 3), men `Color(0xFFF8F9F8)`, `Colors.white` og `AppColors.*` mangler at komme over på `Theme.of(context).colorScheme`. De nye sider bruger allerede temaet
+- [x] Profilskærmen bruger hårdkodede farver — hele profilen og dens undersider følger nu temaet og mockuppene (`profilside_1`, `del_samarbejd_1`); `test/design_system_test.dart` holder dem rene
+- [x] Temaet manglede de fleste tekstroller (dialogtitler, ListTile m.m. faldt tilbage til Roboto) og fladefarverne (`surfaceContainer*`) — nu komplet og testet
+- [ ] Resten af appen (login, onboarding, madplan, indkøb, opskrifter, bundmenu) bruger stadig `AppColors`/`GoogleFonts` direkte — læg dem om én ad gangen og tilføj dem til `test/design_system_test.dart`
 - [ ] Stats-label "MADPLANER" tæller dage i *denne uge* — omdøb eller tæl rigtigt
 - [x] "Aktiv" ved husstanden er hårdkodet — fjernet i punkt 3
 - [x] Invitationsdialogen findes i to identiske kopier — nu én, i `household_dialogs.dart`
