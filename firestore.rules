@@ -333,10 +333,16 @@ service cloud.firestore {
                          (isGlobal() && resource.data.get('createdBy', null) == request.auth.uid)
                        );
 
-      // Only the original creator may delete, and only while still a member.
-      allow delete: if isSignedIn() &&
-                       resource.data.get('createdBy', null) == request.auth.uid &&
-                       (isGlobal() || isMember(resource.data.householdId));
+      // The creator may delete while still a member. The household admin may
+      // also delete — needed to clean up when the last member deletes their
+      // account and the recipes were made by people who have since left.
+      allow delete: if isSignedIn() && (
+                       (resource.data.get('createdBy', null) == request.auth.uid &&
+                        (isGlobal() || isMember(resource.data.householdId))) ||
+                       (!isGlobal() &&
+                        exists(householdPath(resource.data.householdId)) &&
+                        get(householdPath(resource.data.householdId)).data.get('admin', null) == request.auth.uid)
+                     );
     }
 
     // ── Invitations ───────────────────────────────────────────────────────────
@@ -354,8 +360,10 @@ service cloud.firestore {
       // Household member creates the invitation; must start as 'pending'.
       allow create: if isMember(request.resource.data.fromHouseholdId) &&
                        request.resource.data.keys().hasOnly(
-                         ['fromHouseholdId', 'fromHouseholdName', 'fromUserName',
+                         ['fromHouseholdId', 'fromHouseholdName', 'fromUserName', 'fromUid',
                           'toUserEmail', 'status', 'createdAt']) &&
+                       // Lets the sender's invitations be found and deleted with their account.
+                       request.resource.data.get('fromUid', request.auth.uid) == request.auth.uid &&
                        request.resource.data.status == 'pending' &&
                        request.resource.data.toUserEmail is string &&
                        request.resource.data.toUserEmail.size() <= 254 &&
@@ -368,7 +376,9 @@ service cloud.firestore {
                        changedKeys().hasOnly(['status']) &&
                        request.resource.data.status in ['accepted', 'declined'];
 
-      allow delete: if false;
+      // The recipient may delete invitations sent to them, and members may
+      // delete their household's invitations — both needed for account deletion.
+      allow delete: if isRecipient() || isMember(resource.data.fromHouseholdId);
     }
   }
 }

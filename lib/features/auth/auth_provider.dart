@@ -59,6 +59,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Sender en mail med et link til at nulstille adgangskoden. Returnerer en
+  /// fejlbesked til brugeren, eller null hvis det lykkedes.
+  ///
+  /// Svaret afslører ikke, om e-mailen har en konto — ellers kunne funktionen
+  /// bruges til at finde ud af, hvem der bruger appen.
+  Future<String?> sendPasswordReset(String email) async {
+    try {
+      await _auth.setLanguageCode('da');
+    } catch (_) {
+      // Mailen sendes bare på engelsk.
+    }
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      return null;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return null;
+        case 'invalid-email':
+          return 'Ugyldig e-mailadresse.';
+        case 'too-many-requests':
+          return 'For mange forsøg. Vent lidt, og prøv igen.';
+        case 'network-request-failed':
+          return 'Ingen forbindelse. Tjek dit internet, og prøv igen.';
+        default:
+          return 'Mailen kunne ikke sendes. Prøv igen.';
+      }
+    }
+  }
+
   Future<void> logout() async {
     await _auth.signOut();
   }

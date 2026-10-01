@@ -158,6 +158,23 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     super.dispose();
   }
 
+  /// Stopper alle lyttere, før kontoen slettes. Ellers ville sletningen af
+  /// profilen få appen til automatisk at oprette en ny husstand, og
+  /// lytterne ville fejle, når brugeren meldes ud.
+  void pauseForAccountDeletion() {
+    _cancelDataSubscriptions();
+    state = HouseholdState(isLoading: true);
+  }
+
+  /// Starter lytterne igen, hvis sletningen fejlede, og brugeren stadig er
+  /// logget ind.
+  void resumeAfterFailedAccountDeletion() {
+    final user = _auth.currentUser;
+    if (user == null || _userSub != null) return;
+    _listenToUserHousehold(user.uid);
+    _listenToInvitations(user.email);
+  }
+
   void _cancelDataSubscriptions() {
     _userSub?.cancel();
     _userSub = null;
@@ -672,6 +689,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'fromHouseholdId': state.householdId,
         'fromHouseholdName': state.householdName,
         'fromUserName': user.displayName ?? user.email,
+        'fromUid': user.uid,
         'toUserEmail': cleanEmail,
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),

@@ -51,25 +51,34 @@ Testet mod Firebase-emulatoren: 49 tests i [`rules_test/`](rules_test/). Mod de 
 
 ---
 
-## 🍎 2. Apple-krav der giver afvisning
+## 🍎 2. Apple-krav der giver afvisning — ✅ koden er klar
 
-- [ ] **Slet konto i appen** (Guideline 5.1.1(v)) — kræver gen-login (`requires-recent-login`), sletning af `users/{uid}`, profilbillede i Storage, fjernelse fra husstanden (ejerskab videre / slet tom husstand). Mest robust som Cloud Function (`onDelete`), så data også ryddes hvis appen lukkes midt i
-- [ ] **Ingen "Kommer snart" / døde knapper** (Guideline 2.1) — 3 menupunkter + **"Glemt adgangskode?"** (`login_screen.dart:174`, `onPressed: () {}`). Sidstnævnte er én linje: `sendPasswordResetEmail`
-- [ ] **Privatlivspolitik** — skrives og hostes (fx GitHub Pages); link i appen og i App Store Connect
-- [ ] **Support-URL** i App Store Connect (kan være samme side som Hjælp & Support)
-- [ ] **Demo-konto til Apples reviewer** — appen kræver login
-- [ ] **App Privacy-deklaration** i App Store Connect: e-mail, navn, fotos, brugerindhold (opskrifter/lister)
+- [x] **Slet konto i appen** (Guideline 5.1.1(v)) — Profil → Konto → Slet konto. Kræver adgangskoden og forklarer først, hvad der slettes. Rækkefølge i `AccountDeletionService`: bekræft adgangskode → ryd op i husstanden (eneste medlem: alt slettes; ellers meldes man ud og ejerskabet gives videre) → invitationer → profilbillede → profil → login-konto. Kan køres igen, hvis den afbrydes. 13 tests + 9 regel-tests mod emulatoren
+- [x] **"Glemt adgangskode?"** sender nu en nulstillingsmail (på dansk) og afslører ikke, om e-mailen har en konto
+- [x] **Privatlivspolitik** i appen (Profil → Konto, og fra login/opret konto — også uden at være logget ind) og som [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) til hosting. Én kilde: `lib/features/legal/privacy_policy_content.dart` → `dart run tool/export_privacy_policy.dart`. En test fejler, hvis de to er ude af trit
+- [x] Nye invitationer gemmer afsenderens `fromUid`, så de kan slettes med kontoen (reglerne forhindrer at udgive sig for en anden)
 - [x] Sign in with Apple — *ikke* påkrævet, da der kun er e-mail-login (kræves først ved Google/Facebook-login)
 
+### ⚠️ Skal gøres manuelt
+- [ ] **Udfyld kontaktoplysninger** i `lib/core/app_info.dart` (`dataControllerName`, `contactEmail` står som pladsholdere) og kør `dart run tool/export_privacy_policy.dart`
+- [ ] **Læs privatlivspolitikken igennem** — den beskriver det appen gør i dag, men er ikke juridisk rådgivning
+- [ ] **Host `docs/PRIVACY_POLICY.md`** (fx GitHub Pages) og indsæt URL'en i App Store Connect
+- [ ] **Deploy reglerne** igen: `firebase deploy --only firestore:rules,storage` (nye slette-regler)
+- [ ] **Support-URL** i App Store Connect (kan være samme side, til Hjælp & Support er bygget i punkt 3)
+- [ ] **Demo-konto til Apples reviewer** — opret en testbruger med en husstand, et par opskrifter og en indkøbsliste, og skriv login i "App Review Information"
+- [ ] **App Privacy-deklaration** i App Store Connect — skal matche `ios/Runner/PrivacyInfo.xcprivacy`: Navn, E-mail, Bruger-ID, Fotos, Andet brugerindhold. Alle "knyttet til brugeren", "ikke sporing", formål "App-funktionalitet"
+- [ ] "Kommer snart"-menupunkterne (Notifikationer, Præferencer, Hjælp) bygges eller skjules i punkt 3 — ellers afvisning efter Guideline 2.1
+
 ### iOS-projektet (`ios/`)
-- [ ] `IPHONEOS_DEPLOYMENT_TARGET = 13.0` → sandsynligvis **15.0** (nyeste Firebase-pakker). Viser sig ved første `pod install`
-- [ ] `TARGETED_DEVICE_FAMILY = "1,2"` = iPad er slået til → kræver iPad-screenshots og -layout. Simplest i v1: kun iPhone (`"1"`)
-- [ ] Liggende skærm er tilladt på iPhone (`Info.plist`) — layoutet er ikke lavet til det. Lås til portræt
-- [ ] Tilføj `ITSAppUsesNonExemptEncryption = false` i `Info.plist` (slipper for eksport-spørgsmål ved hver upload)
-- [ ] Tilføj `PrivacyInfo.xcprivacy` (Apples privatlivs-manifest)
-- [ ] `NSUserNotificationUsageDescription` i `Info.plist` bruges ikke af iOS (notifikations-tilladelse kræver ingen forklaringstekst) — kan fjernes
-- [ ] `firebase_messaging` er installeret men ubrugt → fjern hvis push ikke er med i v1 (ellers advarsel om manglende push-entitlement)
+- [x] `IPHONEOS_DEPLOYMENT_TARGET` 13.0 → **15.0** — bekræftet: `firebase_core` kræver iOS 15 (Firebase iOS SDK 12)
+- [x] Kun iPhone (`TARGETED_DEVICE_FAMILY = 1`) — ingen iPad-screenshots eller -layout nødvendigt i v1
+- [x] Kun stående skærm på iPhone
+- [x] `ITSAppUsesNonExemptEncryption = false` i `Info.plist`
+- [x] `PrivacyInfo.xcprivacy` tilføjet og registreret i Runner-targetets Resources
+- [x] `NSUserNotificationUsageDescription` fjernet
+- [x] `firebase_messaging` fjernet (ubrugt) — tilføjes igen, når push bygges
 - [ ] `ios/Runner/GoogleService-Info.plist` mangler i repoet (git-ignoreret som `firebase_options.dart`) — skal med ved build
+- [ ] **Første build på en Mac:** `flutter build ios` → åbn `ios/Runner.xcworkspace` i Xcode og tjek at projektet åbner, signing virker, og at `PrivacyInfo.xcprivacy` ligger under Runner. Projektfilen er redigeret uden Xcode (valideret med en parser, men ikke bygget)
 
 ### Konto & bygning
 - [ ] Apple Developer Program (99 USD/år)
@@ -92,13 +101,15 @@ Testet mod Firebase-emulatoren: 49 tests i [`rules_test/`](rules_test/). Mod de 
   - [ ] Hvad ser en bruger, der er blevet fjernet? I dag: tomt husstandskort + besked "Du er ikke længere medlem"
 - [ ] **Præferencer & Diæt** — redigeringsside der genbruger onboardingens vælgere
 - [ ] **Notifikationer** — lokale påmindelser (fx "Hvad skal I have i aften?")
-- [ ] **Ny "Konto"-sektion** — skift navn, skift adgangskode, **slet konto**, privatlivspolitik
+- [ ] **"Konto"-sektion** — ~~slet konto~~ ✓, ~~privatlivspolitik~~ ✓; mangler: skift navn, skift adgangskode
 - [ ] Bekræftelse før "Log ud"
 
 ---
 
 ## 🧪 4. QA & UI-oprydning
 
+- [ ] Login: fejl-snackbaren vises igen ved hver genopbygning, så længe fejlen står i state (`login_screen.dart`, `addPostFrameCallback` i `build`)
+- [x] Login: "Har du ikke en konto? Tilmeld dig" løb ud af skærmen ved stor tekst — nu `Wrap`
 - [ ] Profilskærmen bruger hårdkodede farver (`Colors.red`, `Colors.green`, `Color(0xFFF8F9F8)`) — skal over på `Theme.of(context).colorScheme`
 - [ ] Stats-label "MADPLANER" tæller dage i *denne uge* — omdøb eller tæl rigtigt
 - [ ] "Aktiv" ved husstanden er hårdkodet
