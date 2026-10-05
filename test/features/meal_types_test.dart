@@ -22,9 +22,14 @@ class _FakeHouseholdNotifier extends StateNotifier<HouseholdState>
   _FakeHouseholdNotifier(List<MealType> mealTypes)
       : super(HouseholdState(householdId: 'h1', mealTypes: mealTypes));
 
+  /// Sæt for at lade serveren afvise valget, som den rigtige notifier ser det.
+  String? rejectWith;
+
   @override
-  Future<void> setMealTypes(Set<MealType> types) async {
+  Future<String?> setMealTypes(Set<MealType> types) async {
+    if (rejectWith != null) return rejectWith;
     state = state.copyWith(mealTypes: MealType.values.where(types.contains).toList());
+    return null;
   }
 }
 
@@ -91,6 +96,18 @@ void main() {
     await tester.tap(find.widgetWithText(SwitchListTile, 'Frokost'));
     await tester.pump();
     expect(household.state.mealTypes, MealType.values);
+  });
+
+  testWidgets('viser fejlen, hvis valget ikke kan gemmes', (tester) async {
+    phoneSize(tester);
+    final household = await pump(tester, const MealTypesSheet(), MealType.values);
+    household.rejectWith = 'Kunne ikke gemme dine måltider.';
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Frokost'));
+    await tester.pump();
+
+    expect(household.state.mealTypes, MealType.values);
+    expect(find.text('Kunne ikke gemme dine måltider.'), findsOneWidget);
   });
 
   testWidgets('det sidste valgte måltid kan ikke slås fra', (tester) async {

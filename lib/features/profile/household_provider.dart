@@ -546,9 +546,14 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
   /// Gemmer hvilke måltider brugeren vil se i madplanen. Mindst ét skal
   /// være valgt (det kræver firestore.rules også).
-  Future<void> setMealTypes(Set<MealType> types) async {
+  ///
+  /// Valget vises med det samme og rulles tilbage, hvis serveren afviser det.
+  /// Returnerer en fejlbesked eller null — kalderen skal vise den, ellers ser
+  /// brugeren bare kontakten hoppe tilbage.
+  Future<String?> setMealTypes(Set<MealType> types) async {
     final user = _auth.currentUser;
-    if (user == null || types.isEmpty) return;
+    if (user == null) return 'Du er ikke logget ind.';
+    if (types.isEmpty) return null;
 
     final ordered = MealType.values.where(types.contains).toList();
     final previous = state.mealTypes;
@@ -557,9 +562,11 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       await _firestore.collection('users').doc(user.uid).set({
         'mealTypes': [for (final t in ordered) t.key],
       }, SetOptions(merge: true));
+      return null;
     } catch (e) {
       developer.log('FEJL ved valg af måltider', error: e, name: 'household_provider');
-      state = state.copyWith(mealTypes: previous, error: 'Kunne ikke gemme dine måltider');
+      if (mounted) state = state.copyWith(mealTypes: previous);
+      return 'Kunne ikke gemme dine måltider. Tjek din forbindelse, og prøv igen.';
     }
   }
 

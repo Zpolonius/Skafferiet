@@ -633,14 +633,14 @@ void main() {
       notifier.dispose();
     });
 
-    test('setMealTypes ruller tilbage og viser fejl hvis skrivningen fejler', () async {
-      when(() => userRef.set(any(), any())).thenThrow(Exception('offline'));
+    test('setMealTypes ruller tilbage og returnerer en fejl hvis skrivningen fejler', () async {
+      when(() => userRef.set(any(), any())).thenThrow(Exception('permission-denied'));
       final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
 
-      await notifier.setMealTypes({MealType.dinner});
+      final error = await notifier.setMealTypes({MealType.dinner});
 
       expect(notifier.state.mealTypes, MealType.values);
-      expect(notifier.state.error, 'Kunne ikke gemme dine måltider');
+      expect(error, startsWith('Kunne ikke gemme dine måltider'));
       notifier.dispose();
     });
   });
