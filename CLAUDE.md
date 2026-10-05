@@ -14,6 +14,7 @@ dart format .                                           # Format code
 dart run build_runner build --delete-conflicting-outputs  # Regenerate Riverpod/codegen files
 flutterfire configure                                   # Reconfigure Firebase
 cd rules_test && npm install && npm test                # Test firestore.rules against the emulator (needs Java 11+)
+firebase deploy --only firestore:rules,storage          # Deploy rules (project comes from .firebaserc)
 ```
 
 After any change to `firestore.rules`, run the rules tests in `rules_test/` and add a test for the new rule.
@@ -59,6 +60,7 @@ After adding or modifying any `@riverpod`-annotated provider, run `build_runner`
 ## Firebase
 
 - Firebase project ID: `siet-8630a`. Platforms: Android, iOS, Web.
+- `.firebaserc` sets `siet-8630a` as the default project, so `firebase` CLI commands work without `--project`. In a checkout without that file (older branches), add `--project siet-8630a`.
 - `lib/firebase_options.dart` is auto-generated and git-ignored — regenerate with `flutterfire configure`.
 - `android/app/google-services.json` is git-ignored too. Both files are therefore **absent in a fresh clone and in every git worktree**, and Android builds fail until they are copied in from the main checkout.
 - Auth, Firestore, and Storage are all in use.
