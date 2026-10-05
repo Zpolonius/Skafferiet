@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
 
 /// Tegn i koder: uden 0/O og 1/I, så de er nemme at læse op og skrive af.
@@ -54,6 +55,11 @@ class HouseholdState {
   /// hvis den ikke er valgt endnu.
   final int? shoppingWeekday;
 
+  /// De måltider den indloggede bruger vil se i madplanen. Gemmes på
+  /// brugerprofilen (`users/{uid}.mealTypes`), ikke på husstanden, så hvert
+  /// medlem kan fravælge fx frokost uden at det påvirker de andre.
+  final List<MealType> mealTypes;
+
   HouseholdState({
     this.householdId,
     this.householdName,
@@ -69,6 +75,7 @@ class HouseholdState {
     this.childrenCount = 2,
     this.preferences = const [],
     this.shoppingWeekday,
+    this.mealTypes = MealType.values,
   });
 
   HouseholdState copyWith({
@@ -88,6 +95,7 @@ class HouseholdState {
     List<String>? preferences,
     int? shoppingWeekday,
     bool clearShoppingWeekday = false,
+    List<MealType>? mealTypes,
   }) {
     return HouseholdState(
       householdId: householdId ?? this.householdId,
@@ -106,6 +114,7 @@ class HouseholdState {
       shoppingWeekday: clearShoppingWeekday
           ? null
           : (shoppingWeekday ?? this.shoppingWeekday),
+      mealTypes: mealTypes ?? this.mealTypes,
     );
   }
 }
@@ -123,6 +132,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _invitationsSub;
   String? _subscribedHouseholdId;
   bool _hasCompletedOnboarding = true;
+  List<MealType> _mealTypes = MealType.values;
 
   // Mens vi selv skifter husstand, venter vi med at følge brugerdokumentet,
   // så vi ikke lytter på den nye husstand, før serveren har gjort os til medlem.
@@ -224,11 +234,15 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     final householdId = data?['householdId'] as String?;
     _hasCompletedOnboarding = data?['hasCompletedOnboarding'] == true ||
         (householdId != null && data?['hasCompletedOnboarding'] != false);
+    _mealTypes = MealType.parseList(data?['mealTypes']);
 
     if (householdId != null) {
       if (householdId == _subscribedHouseholdId) {
         // Samme husstand — kun profilfelter er ændret (fx profilbillede).
-        state = state.copyWith(hasCompletedOnboarding: _hasCompletedOnboarding);
+        state = state.copyWith(
+          hasCompletedOnboarding: _hasCompletedOnboarding,
+          mealTypes: _mealTypes,
+        );
       } else {
         _listenToHousehold(householdId);
       }
@@ -282,6 +296,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           shoppingWeekday: shoppingWeekday,
           clearShoppingWeekday: shoppingWeekday == null,
           hasCompletedOnboarding: _hasCompletedOnboarding,
+          mealTypes: _mealTypes,
           isLoading: false,
         );
       } else {
@@ -415,6 +430,25 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     } catch (e) {
       developer.log('FEJL ved omdøbning af husstand', error: e, name: 'household_provider');
       state = state.copyWith(error: 'Kunne ikke omdøbe husstanden');
+    }
+  }
+
+  /// Gemmer hvilke måltider brugeren vil se i madplanen. Mindst ét skal
+  /// være valgt (det kræver firestore.rules også).
+  Future<void> setMealTypes(Set<MealType> types) async {
+    final user = _auth.currentUser;
+    if (user == null || types.isEmpty) return;
+
+    final ordered = MealType.values.where(types.contains).toList();
+    final previous = state.mealTypes;
+    state = state.copyWith(mealTypes: ordered);
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'mealTypes': [for (final t in ordered) t.key],
+      }, SetOptions(merge: true));
+    } catch (e) {
+      developer.log('FEJL ved valg af måltider', error: e, name: 'household_provider');
+      state = state.copyWith(mealTypes: previous, error: 'Kunne ikke gemme dine måltider');
     }
   }
 

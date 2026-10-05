@@ -1,3 +1,4 @@
+import 'meal_type.dart';
 import 'recipe.dart';
 
 class MealSlot {
@@ -60,12 +61,23 @@ class DailyPlan {
     );
   }
 
-  int get totalCalories {
+  MealSlot slot(MealType type) {
+    switch (type) {
+      case MealType.breakfast: return breakfast;
+      case MealType.lunch: return lunch;
+      case MealType.dinner: return dinner;
+      case MealType.snack: return snack;
+    }
+  }
+
+  int get totalCalories => totalCaloriesFor(MealType.values);
+
+  /// Kalorier for de måltider brugeren har valgt at se.
+  int totalCaloriesFor(Iterable<MealType> types) {
     int total = 0;
-    if (breakfast.recipe != null) total += breakfast.recipe!.calories;
-    if (lunch.recipe != null) total += lunch.recipe!.calories;
-    if (dinner.recipe != null) total += dinner.recipe!.calories;
-    if (snack.recipe != null) total += snack.recipe!.calories;
+    for (final type in types) {
+      total += slot(type).recipe?.calories ?? 0;
+    }
     return total;
   }
 

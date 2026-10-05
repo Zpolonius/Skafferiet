@@ -7,10 +7,12 @@ import '../../core/models/meal_plan.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../grocery/grocery_provider.dart';
+import '../profile/household_provider.dart';
 import 'meal_plan_provider.dart';
 
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'add_custom_meal_sheet.dart';
+import 'meal_types_sheet.dart';
 
 class MealPlanScreen extends ConsumerWidget {
   const MealPlanScreen({super.key});
@@ -19,6 +21,7 @@ class MealPlanScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mealPlan = ref.watch(mealPlanProvider);
     final selectedDay = ref.watch(selectedDayProvider);
+    final mealTypes = ref.watch(householdProvider.select((h) => h.mealTypes));
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -35,6 +38,7 @@ class MealPlanScreen extends ConsumerWidget {
         child: mealPlan.when(
           data: (plan) {
             final dailyPlan = plan.days[selectedDay] ?? DailyPlan.empty();
+            final calories = dailyPlan.totalCaloriesFor(mealTypes);
             return CustomScrollView(
               slivers: [
                 SliverPadding(
@@ -83,7 +87,7 @@ class MealPlanScreen extends ConsumerWidget {
                                   '$selectedDay\'s Madplan',
                                   style: Theme.of(context).textTheme.displayMedium,
                                 ),
-                                if (dailyPlan.totalCalories > 0) ...[
+                                if (calories > 0) ...[
                                   const SizedBox(width: 10),
                                   Tooltip(
                                     message: 'Beregnet ud fra opskrifter i madplanen',
@@ -104,7 +108,7 @@ class MealPlanScreen extends ConsumerWidget {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            '${NumberFormat('#,###', 'da_DK').format(dailyPlan.totalCalories)} kcal',
+                                            '${NumberFormat('#,###', 'da_DK').format(calories)} kcal',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
@@ -138,30 +142,13 @@ class MealPlanScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      _MealSection(
-                        title: 'Morgenmad',
-                        icon: Icons.wb_twilight,
-                        slot: dailyPlan.breakfast,
-                        onTap: () => _showEditSlot(context, selectedDay, 'Morgenmad', dailyPlan.breakfast),
-                      ),
-                      _MealSection(
-                        title: 'Frokost',
-                        icon: Icons.light_mode,
-                        slot: dailyPlan.lunch,
-                        onTap: () => _showEditSlot(context, selectedDay, 'Frokost', dailyPlan.lunch),
-                      ),
-                      _MealSection(
-                        title: 'Aftensmad',
-                        icon: Icons.dark_mode,
-                        slot: dailyPlan.dinner,
-                        onTap: () => _showEditSlot(context, selectedDay, 'Aftensmad', dailyPlan.dinner),
-                      ),
-                      _MealSection(
-                        title: 'Snack',
-                        icon: Icons.cookie,
-                        slot: dailyPlan.snack,
-                        onTap: () => _showEditSlot(context, selectedDay, 'Snack', dailyPlan.snack),
-                      ),
+                      for (final type in mealTypes)
+                        _MealSection(
+                          title: type.label,
+                          icon: type.icon,
+                          slot: dailyPlan.slot(type),
+                          onTap: () => _showEditSlot(context, selectedDay, type.label, dailyPlan.slot(type)),
+                        ),
                       const SizedBox(height: 100),
                     ]),
                   ),
@@ -308,6 +295,14 @@ class _WeekNavigation extends ConsumerWidget {
         ),
         Row(
           children: [
+            Tooltip(
+              message: 'Mine måltider',
+              child: _NavBtn(
+                icon: Icons.tune,
+                onTap: () => MealTypesSheet.show(context),
+              ),
+            ),
+            const SizedBox(width: 16),
             _NavBtn(
               icon: Icons.chevron_left,
               onTap: () => ref.read(weekOffsetProvider.notifier).state--,

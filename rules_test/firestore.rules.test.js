@@ -550,6 +550,35 @@ describe('fast genkøb', () => {
   });
 });
 
+// ── Måltider i madplanen ──────────────────────────────────────────────────────
+// Spejler HouseholdNotifier.setMealTypes: et personligt valg på profilen.
+
+describe('måltider i madplanen', () => {
+  test('ejeren vælger sine måltider', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'users/bob'),
+      { mealTypes: ['breakfast', 'dinner'] }, { merge: true }));
+    await assertSucceeds(updateDoc(doc(db('bob'), 'users/bob'), { mealTypes: ['dinner'] }));
+  });
+
+  test('ugyldige valg afvises', async () => {
+    const bob = doc(db('bob'), 'users/bob');
+    await assertFails(updateDoc(bob, { mealTypes: [] }));
+    await assertFails(updateDoc(bob, { mealTypes: ['dinner', 'brunch'] }));
+    await assertFails(updateDoc(bob, { mealTypes: 'dinner' }));
+    await assertFails(updateDoc(bob, {
+      mealTypes: ['breakfast', 'lunch', 'dinner', 'snack', 'dinner'],
+    }));
+  });
+
+  test('en ny profil må oprettes med måltider', async () => {
+    await assertSucceeds(setDoc(doc(db('carol'), 'users/carol'),
+      { displayName: 'Carol', mealTypes: ['lunch'] }));
+  });
+
+  test('alice kan ikke ændre bobs måltider', async () => {
+    await assertFails(updateDoc(doc(db('alice'), 'users/bob'), { mealTypes: ['snack'] }));
+  });
+});
 
 describe('opslagstavle', () => {
   // alice er admin i Familien A, bob er medlem, eve er udefra.

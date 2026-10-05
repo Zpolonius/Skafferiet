@@ -54,7 +54,18 @@ service cloud.firestore {
       }
 
       function userKeys() {
-        return ['displayName', 'email', 'householdId', 'hasCompletedOnboarding', 'photoURL'];
+        return ['displayName', 'email', 'householdId', 'hasCompletedOnboarding', 'photoURL',
+                'mealTypes'];
+      }
+
+      // Which meals the user wants to see in the meal plan: missing, null, or
+      // 1–4 of the slot keys used in meal_plans (MealType in the app).
+      function validMealTypes() {
+        let d = request.resource.data;
+        return d.get('mealTypes', null) == null ||
+               (d.mealTypes is list &&
+                d.mealTypes.size() >= 1 && d.mealTypes.size() <= 4 &&
+                d.mealTypes.toSet().hasOnly(['breakfast', 'lunch', 'dinner', 'snack']));
       }
 
       // householdId may only point at a household the user is a member of.
@@ -79,6 +90,7 @@ service cloud.firestore {
       allow create: if isOwner() &&
                        request.resource.data.keys().hasOnly(userKeys()) &&
                        validProfile() &&
+                       validMealTypes() &&
                        validHouseholdRef();
 
       // An unchanged householdId is not re-checked, so someone who was removed
@@ -86,6 +98,7 @@ service cloud.firestore {
       allow update: if isOwner() &&
                        changedKeys().hasOnly(userKeys()) &&
                        validProfile() &&
+                       validMealTypes() &&
                        (!changedKeys().hasAny(['householdId']) || validHouseholdRef());
 
       allow delete: if isOwner();

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
 import '../recipes/recipes_provider.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
+import '../profile/household_provider.dart';
 import 'meal_plan_provider.dart';
 
 class AddCustomMealSheet extends ConsumerStatefulWidget {
@@ -56,6 +58,12 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
       _selectedCategory = _mapStringToCategory(widget.initialCategory!);
     } else {
       _selectedCategory = RecipeCategory.aftensmad;
+    }
+
+    // Har brugeren fravalgt måltidet, vælges det første de har valgt.
+    final mealTypes = ref.read(householdProvider).mealTypes;
+    if (!mealTypes.contains(MealType.fromCategory(_selectedCategory))) {
+      _selectedCategory = mealTypes.first.recipeCategory;
     }
   }
 
@@ -262,7 +270,10 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
-          children: RecipeCategory.values.map((cat) {
+          children: ref
+              .watch(householdProvider.select((h) => h.mealTypes))
+              .map((t) => t.recipeCategory)
+              .map((cat) {
             final isSelected = _selectedCategory == cat;
             return ChoiceChip(
               label: Text(cat.name),

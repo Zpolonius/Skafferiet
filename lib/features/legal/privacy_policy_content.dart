@@ -30,6 +30,7 @@ const privacyPolicySections = <PolicySection>[
     '• Konto: dit navn og din e-mail. Din adgangskode håndteres af Google '
         'Firebase, og vi kan ikke se den.',
     '• Profilbillede, hvis du vælger at tilføje et.',
+    '• Hvilke måltider du vil se i din madplan.',
     '• Husstand: navn, medlemmer, antal voksne og børn, madpræferencer og indkøbsdag.',
     '• Indhold du opretter: opskrifter (også billeder og næringsindhold), '
         'indkøbsliste (også faste genkøb) og madplaner.',

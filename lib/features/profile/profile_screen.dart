@@ -10,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../meal_plan/meal_plan_provider.dart';
+import '../meal_plan/meal_types_sheet.dart';
 import '../recipes/recipes_provider.dart';
 import 'household_provider.dart';
 
@@ -112,6 +113,11 @@ class ProfileScreen extends ConsumerWidget {
                           icon: Icons.restaurant_menu_outlined,
                           title: 'Mine opskrifter',
                           onTap: () => context.go('/recipes'),
+                        ),
+                        _ProfileTile(
+                          icon: Icons.restaurant_outlined,
+                          title: 'Mine måltider',
+                          onTap: () => MealTypesSheet.show(context),
                         ),
                         _ProfileTile(
                           icon: Icons.event_repeat,

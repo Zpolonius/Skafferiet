@@ -5,10 +5,18 @@ import 'package:mocktail/mocktail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:skafferiet/core/models/recipe.dart';
 import 'package:skafferiet/core/models/meal_plan.dart';
+import 'package:skafferiet/core/models/meal_type.dart';
+import 'package:skafferiet/features/profile/household_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
 import 'package:skafferiet/shared/widgets/add_to_meal_plan_sheet.dart';
 
 class MockFirestore extends Mock implements FirebaseFirestore {}
+
+class _MockHouseholdNotifier extends StateNotifier<HouseholdState>
+    with Mock
+    implements HouseholdNotifier {
+  _MockHouseholdNotifier(super.state);
+}
 
 class _MockMealPlanNotifier extends MealPlanNotifier {
   _MockMealPlanNotifier() : super(firestore: MockFirestore());
@@ -43,10 +51,19 @@ final _testRecipe = Recipe(
   ingredients: [],
 );
 
+Override _householdOverride(List<MealType> mealTypes) => householdProvider
+    .overrideWith((ref) => _MockHouseholdNotifier(HouseholdState(mealTypes: mealTypes)));
+
 // Hjælpefunktion der bygger sheet'en med en route så Navigator.pop() virker
-Widget _buildApp(_MockMealPlanNotifier notifier) {
+Widget _buildApp(
+  _MockMealPlanNotifier notifier, {
+  List<MealType> mealTypes = MealType.values,
+}) {
   return ProviderScope(
-    overrides: [mealPlanProvider.overrideWith(() => notifier)],
+    overrides: [
+      mealPlanProvider.overrideWith(() => notifier),
+      _householdOverride(mealTypes),
+    ],
     child: MaterialApp(
       home: Builder(
         builder: (context) => Scaffold(
@@ -54,10 +71,7 @@ Widget _buildApp(_MockMealPlanNotifier notifier) {
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => ProviderScope(
-                    overrides: [mealPlanProvider.overrideWith(() => notifier)],
-                    child: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
-                  ),
+                  builder: (_) => Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
                 ),
               ),
               child: const Text('Åbn'),
@@ -81,7 +95,10 @@ void main() {
       final notifier = _MockMealPlanNotifier();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [mealPlanProvider.overrideWith(() => notifier)],
+          overrides: [
+            mealPlanProvider.overrideWith(() => notifier),
+            _householdOverride(MealType.values),
+          ],
           child: MaterialApp(
             home: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
           ),
@@ -100,7 +117,10 @@ void main() {
       final notifier = _MockMealPlanNotifier();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [mealPlanProvider.overrideWith(() => notifier)],
+          overrides: [
+            mealPlanProvider.overrideWith(() => notifier),
+            _householdOverride(MealType.values),
+          ],
           child: MaterialApp(
             home: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
           ),
@@ -119,7 +139,10 @@ void main() {
       final notifier = _MockMealPlanNotifier();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [mealPlanProvider.overrideWith(() => notifier)],
+          overrides: [
+            mealPlanProvider.overrideWith(() => notifier),
+            _householdOverride(MealType.values),
+          ],
           child: MaterialApp(
             home: Scaffold(body: AddToMealPlanSheet(recipe: _testRecipe)),
           ),
@@ -157,8 +180,26 @@ void main() {
       await tester.pump(); // lad Navigator.pop animere
 
       expect(notifier.capturedDay, 'Onsdag');
-      expect(notifier.capturedSlot, 'Frokost');
+      // Firestore-nøglen, som madplanen læser — ikke den danske label.
+      expect(notifier.capturedSlot, 'lunch');
       expect(notifier.capturedRecipe?.id, _testRecipe.id);
+    });
+
+    testWidgets('viser kun de måltider brugeren har valgt', (tester) async {
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_buildApp(
+        _MockMealPlanNotifier(),
+        mealTypes: [MealType.breakfast, MealType.dinner],
+      ));
+      await tester.tap(find.text('Åbn'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Morgenmad'), findsOneWidget);
+      expect(find.text('Aftensmad'), findsOneWidget);
+      expect(find.text('Frokost'), findsNothing);
+      expect(find.text('Snack'), findsNothing);
     });
   });
 }
