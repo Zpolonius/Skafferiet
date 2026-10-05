@@ -18,18 +18,40 @@ class RecipesScreen extends ConsumerStatefulWidget {
 
 class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   String searchQuery = '';
   RecipeCategory? selectedCategory;
 
   @override
+  void initState() {
+    super.initState();
+    // Skærmen kan blive bygget første gang netop fordi nogen bad om søgning.
+    _focusSearchIfRequested();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
+  }
+
+  /// Giver søgefeltet fokus, hvis en anden skærm har bedt om det. Venter til
+  /// efter skiftet til fanen, så fokus ikke går tabt undervejs.
+  void _focusSearchIfRequested() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !ref.read(focusRecipeSearchProvider)) return;
+      ref.read(focusRecipeSearchProvider.notifier).state = false;
+      _searchFocus.requestFocus();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final recipes = ref.watch(recipesProvider);
+    ref.listen(focusRecipeSearchProvider, (_, requested) {
+      if (requested) _focusSearchIfRequested();
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -64,6 +86,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     const SizedBox(height: 16),
                     _SearchBar(
                       controller: _searchController,
+                      focusNode: _searchFocus,
                       onChanged: (val) => setState(() => searchQuery = val),
                     ),
                     const SizedBox(height: 16),
@@ -159,22 +182,22 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
 
 class _SearchBar extends StatelessWidget {
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String> onChanged;
 
-  const _SearchBar({this.controller, required this.onChanged});
+  const _SearchBar({this.controller, this.focusNode, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
+    // Ingen filter-knap: den gjorde intet, og kategorierne herunder filtrerer.
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       onChanged: onChanged,
+      textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: 'Søg i opskrifter, ingredienser...',
         prefixIcon: Icon(Icons.search, color: context.colors.outline),
-        suffixIcon: IconButton(
-          icon: Icon(Icons.tune, color: context.colors.outline),
-          onPressed: () {},
-        ),
       ),
     );
   }
@@ -296,18 +319,6 @@ class _RecipeCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: context.colors.surfaceContainerLowest.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.favorite_border, color: context.colors.onPrimary, size: 18),
             ),
           ),
           Positioned(

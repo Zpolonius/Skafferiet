@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/meal_plan.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../grocery/grocery_provider.dart';
+import '../recipes/recipes_provider.dart';
 import 'meal_plan_provider.dart';
 
 import '../../shared/widgets/app_bottom_sheet.dart';
@@ -63,7 +65,7 @@ class MealPlanScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _SearchBar(),
+                        const _SearchBar(),
                         const SizedBox(height: 24),
                         _WeekNavigation(),
                         const SizedBox(height: 16),
@@ -206,13 +208,23 @@ class MealPlanScreen extends ConsumerWidget {
   }
 }
 
-class _SearchBar extends StatelessWidget {
+/// Ser ud som et søgefelt, men åbner Opskrifter med markøren i søgefeltet dér.
+/// Så findes søgningen ét sted, og fra en opskrift kan man lægge den i madplanen.
+class _SearchBar extends ConsumerWidget {
+  const _SearchBar();
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return TextField(
+      readOnly: true,
+      onTap: () {
+        ref.read(focusRecipeSearchProvider.notifier).state = true;
+        context.go('/recipes');
+      },
       decoration: InputDecoration(
         hintText: 'Find opskrifter til din plan...',
         prefixIcon: Icon(Icons.search, color: context.colors.outline),
+        suffixIcon: Icon(Icons.chevron_right, color: context.colors.outline),
       ),
     );
   }
