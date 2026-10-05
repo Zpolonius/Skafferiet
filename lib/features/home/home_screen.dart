@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../auth/auth_provider.dart';
 import '../meal_plan/meal_plan_provider.dart';
 import '../grocery/grocery_provider.dart';
+import '../board/board_preview_card.dart';
 import '../../core/models/meal_plan.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'package:gap/gap.dart';
@@ -39,6 +40,8 @@ class HomeScreen extends ConsumerWidget {
                   _buildHeader(context, today, userName, greeting),
                   const Gap(24),
                   _buildQuickActions(context),
+                  const Gap(16),
+                  const BoardPreviewCard(),
                   const Gap(32),
                   _buildSectionHeader(context, 'Dagens Plan', 'Se hele ugen', () => context.go('/meal-plan')),
                   const Gap(16),

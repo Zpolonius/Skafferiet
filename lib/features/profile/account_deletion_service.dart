@@ -132,6 +132,11 @@ class AccountDeletionService {
     await _deleteAll(householdRef.collection('meal_plans'));
     await _deleteAll(householdRef.collection('recurring_items'));
     await _deleteAll(
+      householdRef.collection('board_notes'),
+      // Uden ejerrettigheder må man kun slette sine egne sedler (firestore.rules).
+      keep: isAdmin ? null : (doc) => doc.data()['authorId'] != uid,
+    );
+    await _deleteAll(
       _firestore.collection('recipes').where('householdId', isEqualTo: householdId),
       // Uden ejerrettigheder (ældre husstande) må man kun slette sine egne.
       keep: isAdmin ? null : (doc) => doc.data()['createdBy'] != uid,

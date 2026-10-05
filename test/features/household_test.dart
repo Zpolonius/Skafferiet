@@ -346,15 +346,15 @@ void main() {
 
       await notifier.joinHousehold('abcde-fghjk');
 
-      final oldUpdate = verify(() => batch.update(oldRef, captureAny())).captured.single as Map;
+      final oldUpdate = verify(() => batch.update<Map<String, dynamic>>(oldRef, captureAny())).captured.single as Map;
       expect(oldUpdate['members'], isA<FieldValue>());
       expect(oldUpdate['admin'], 'partner');
 
-      final newUpdate = verify(() => batch.update(newRef, captureAny())).captured.single as Map;
+      final newUpdate = verify(() => batch.update<Map<String, dynamic>>(newRef, captureAny())).captured.single as Map;
       expect(newUpdate['members'], isA<FieldValue>());
       expect(newUpdate['joinedWith'], {'type': 'code', 'id': 'ABCDEFGHJK'});
 
-      verify(() => batch.set(userRef, {'householdId': 'SK-NEW'}, any())).called(1);
+      verify(() => batch.set<Map<String, dynamic>>(userRef, {'householdId': 'SK-NEW'}, any())).called(1);
       verify(() => batch.commit()).called(1);
       expect(notifier.state.error, isNull);
     });
@@ -373,9 +373,9 @@ void main() {
 
       await notifier.acceptInvitation('inv1');
 
-      final newUpdate = verify(() => batch.update(newRef, captureAny())).captured.single as Map;
+      final newUpdate = verify(() => batch.update<Map<String, dynamic>>(newRef, captureAny())).captured.single as Map;
       expect(newUpdate['joinedWith'], {'type': 'invite', 'id': 'inv1'});
-      verify(() => batch.update(inviteRef, {'status': 'accepted'})).called(1);
+      verify(() => batch.update<Map<String, dynamic>>(inviteRef, {'status': 'accepted'})).called(1);
       verify(() => batch.commit()).called(1);
       verifyNever(() => inviteRef.update(any()));
     });
