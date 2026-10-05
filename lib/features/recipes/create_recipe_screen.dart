@@ -6,6 +6,7 @@ import '../../features/profile/household_provider.dart';
 import '../../shared/utils/image_upload_service.dart';
 import 'recipe_form_widgets.dart';
 import 'recipes_provider.dart';
+import '../../core/theme/theme_context.dart';
 
 class CreateRecipeScreen extends ConsumerStatefulWidget {
   const CreateRecipeScreen({super.key});
@@ -122,9 +123,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         height: 180,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: context.colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: context.colors.outlineVariant),
           image: _imageUrl != null
               ? DecorationImage(image: NetworkImage(_imageUrl!), fit: BoxFit.cover)
               : null,
@@ -135,11 +136,11 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey[400]),
+                      Icon(Icons.add_photo_alternate_outlined, size: 48, color: context.colors.outline),
                       const SizedBox(height: 8),
                       Text(
                         'Tilføj billede',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                        style: TextStyle(color: context.colors.outline, fontSize: 14),
                       ),
                     ],
                   )
@@ -149,10 +150,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       padding: const EdgeInsets.all(8),
                       child: CircleAvatar(
                         radius: 16,
-                        backgroundColor: Colors.black54,
+                        backgroundColor: context.colors.scrim.withValues(alpha: 0.54),
                         child: IconButton(
                           padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+                          icon: Icon(Icons.edit, size: 16, color: context.colors.onPrimary),
                           onPressed: () => _pickImage(context),
                         ),
                       ),
@@ -199,7 +200,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kunne ikke gemme opskrift: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Kunne ikke gemme opskrift: $e'), backgroundColor: context.colors.error),
         );
       }
     }

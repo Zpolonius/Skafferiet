@@ -3,6 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
+  static TextStyle _heading({required double fontSize, required double height}) =>
+      GoogleFonts.plusJakartaSans(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w600,
+        height: height,
+        color: AppColors.onBackground,
+      );
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -33,6 +41,15 @@ class AppTheme {
         onInverseSurface: AppColors.inverseOnSurface,
         inversePrimary: AppColors.inversePrimary,
         surfaceTint: AppColors.surfaceTint,
+        // Uden disse finder fromSeed selv på grønlige toner, så fx dialoger,
+        // chips og colorScheme.surfaceContainer* ikke matcher DESIGN.md.
+        surfaceDim: AppColors.surfaceDim,
+        surfaceBright: AppColors.surfaceBright,
+        surfaceContainerLowest: AppColors.surfaceContainerLowest,
+        surfaceContainerLow: AppColors.surfaceContainerLow,
+        surfaceContainer: AppColors.surfaceContainer,
+        surfaceContainerHigh: AppColors.surfaceContainerHigh,
+        surfaceContainerHighest: AppColors.surfaceContainerHighest,
         primaryFixed: AppColors.primaryFixed,
         primaryFixedDim: AppColors.primaryFixedDim,
         onPrimaryFixed: AppColors.onPrimaryFixed,
@@ -66,6 +83,16 @@ class AppTheme {
           height: 1.3,
           color: AppColors.onBackground,
         ),
+        // Rollerne herunder står ikke i DESIGN.md, men bruges af Flutter selv
+        // (AppBar-titler, dialoger, ListTile, knapper). Uden dem falder de
+        // tilbage til Roboto. Størrelser følger Material 3; skrifttyperne
+        // følger reglen: overskrifter i Plus Jakarta Sans, resten i Be Vietnam Pro.
+        displaySmall: _heading(fontSize: 28, height: 1.25),
+        headlineMedium: _heading(fontSize: 22, height: 1.3),
+        headlineSmall: _heading(fontSize: 20, height: 1.3),
+        titleLarge: _heading(fontSize: 20, height: 1.3),
+        titleMedium: _heading(fontSize: 16, height: 1.4),
+        titleSmall: _heading(fontSize: 14, height: 1.4),
         bodyLarge: GoogleFonts.beVietnamPro(
           fontSize: 18,
           fontWeight: FontWeight.w400,
@@ -76,6 +103,24 @@ class AppTheme {
           fontSize: 16,
           fontWeight: FontWeight.w400,
           height: 1.5,
+          color: AppColors.onBackground,
+        ),
+        bodySmall: GoogleFonts.beVietnamPro(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          height: 1.4,
+          color: AppColors.onSurfaceVariant,
+        ),
+        labelLarge: GoogleFonts.beVietnamPro(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
+          color: AppColors.onBackground,
+        ),
+        labelMedium: GoogleFonts.beVietnamPro(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
           color: AppColors.onBackground,
         ),
         labelSmall: GoogleFonts.beVietnamPro(
@@ -93,6 +138,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.surfaceVariant, width: 1),
         ),
+      ),
+      // Niveau 2 i DESIGN.md: modaler er hvide ("Paper White") og løftet.
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       buttonTheme: const ButtonThemeData(
         height: 48,

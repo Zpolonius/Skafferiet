@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
+import '../../core/theme/theme_context.dart';
 
 
 class RecipesScreen extends ConsumerStatefulWidget {
@@ -51,10 +50,10 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                             const SizedBox(width: 12),
                             Text(
                               'Opskrifter',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: context.text.headlineLarge?.copyWith(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.primaryContainer,
+                                color: context.colors.primaryContainer,
                               ),
                             ),
                           ],
@@ -171,9 +170,9 @@ class _SearchBar extends StatelessWidget {
       onChanged: onChanged,
       decoration: InputDecoration(
         hintText: 'Søg i opskrifter, ingredienser...',
-        prefixIcon: const Icon(Icons.search, color: AppColors.outline),
+        prefixIcon: Icon(Icons.search, color: context.colors.outline),
         suffixIcon: IconButton(
-          icon: const Icon(Icons.tune, color: AppColors.outline),
+          icon: Icon(Icons.tune, color: context.colors.outline),
           onPressed: () {},
         ),
       ),
@@ -235,19 +234,19 @@ class _CategoryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryContainer : AppColors.surfaceContainerLowest,
+          color: isSelected ? context.colors.primaryContainer : context.colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
-            color: isSelected ? AppColors.primaryContainer : AppColors.outlineVariant,
+            color: isSelected ? context.colors.primaryContainer : context.colors.outlineVariant,
           ),
           boxShadow: isSelected
-              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: context.colors.primary.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))]
               : null,
         ),
         child: Text(
           label,
-          style: GoogleFonts.beVietnamPro(
-            color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+          style: context.text.bodySmall?.copyWith(
+            color: isSelected ? context.colors.onPrimary : context.colors.onSurfaceVariant,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -276,7 +275,7 @@ class _RecipeCard extends StatelessWidget {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: context.colors.shadow.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -292,8 +291,8 @@ class _RecipeCard extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.1),
-                    Colors.black.withValues(alpha: 0.8),
+                    context.colors.scrim.withValues(alpha: 0.1),
+                    context.colors.scrim.withValues(alpha: 0.8),
                   ],
                 ),
               ),
@@ -305,10 +304,10 @@ class _RecipeCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: context.colors.surfaceContainerLowest.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.favorite_border, color: Colors.white, size: 18),
+              child: Icon(Icons.favorite_border, color: context.colors.onPrimary, size: 18),
             ),
           ),
           Positioned(
@@ -322,13 +321,13 @@ class _RecipeCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryContainer.withValues(alpha: 0.9),
+                    color: context.colors.primaryContainer.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     recipe.category.name.toUpperCase(),
-                    style: GoogleFonts.beVietnamPro(
-                      color: Colors.white,
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.colors.surfaceContainerLowest,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1,
@@ -340,8 +339,8 @@ class _RecipeCard extends StatelessWidget {
                   recipe.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Colors.white,
+                  style: context.text.titleMedium?.copyWith(
+                    color: context.colors.surfaceContainerLowest,
                     fontSize: isFeatured ? 20 : 16,
                     fontWeight: FontWeight.w600,
                   ),

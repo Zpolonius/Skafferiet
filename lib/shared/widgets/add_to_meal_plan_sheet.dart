@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/app_colors.dart';
 import 'app_bottom_sheet.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
 import '../../features/profile/household_provider.dart';
+import '../../core/theme/theme_context.dart';
 
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
   final Recipe recipe;
@@ -28,9 +27,9 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
     final slots = ref.watch(householdProvider.select((h) => h.mealTypes));
     return Container(
       padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + sheetBottomInset(context)),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerLowest,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -53,7 +52,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
           const SizedBox(height: 8),
           Text(
             widget.recipe.title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.primary),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.colors.primary),
           ),
           const SizedBox(height: 24),
           
@@ -73,9 +72,9 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                     label: Text(day),
                     selected: isSelected,
                     onSelected: (val) => setState(() => selectedDay = val ? day : null),
-                    selectedColor: AppColors.primaryContainer,
-                    labelStyle: GoogleFonts.beVietnamPro(
-                      color: isSelected ? Colors.white : AppColors.onSurface,
+                    selectedColor: context.colors.primaryContainer,
+                    labelStyle: context.text.bodySmall?.copyWith(
+                      color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
                       fontSize: 13,
                     ),
                   ),
@@ -95,9 +94,9 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                 label: Text(slot.label),
                 selected: isSelected,
                 onSelected: (val) => setState(() => selectedSlot = val ? slot : null),
-                selectedColor: AppColors.secondaryContainer,
-                labelStyle: GoogleFonts.beVietnamPro(
-                  color: isSelected ? AppColors.onSecondaryContainer : AppColors.onSurface,
+                selectedColor: context.colors.secondaryContainer,
+                labelStyle: context.text.bodySmall?.copyWith(
+                  color: isSelected ? context.colors.onSecondaryContainer : context.colors.onSurface,
                   fontSize: 13,
                 ),
               );
@@ -119,7 +118,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${widget.recipe.title} tilføjet til $selectedDay (${selectedSlot!.label})'),
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: context.colors.primary,
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -129,7 +128,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Noget gik galt: $e'),
-                            backgroundColor: AppColors.error,
+                            backgroundColor: context.colors.error,
                             behavior: SnackBarBehavior.floating,
                           ),
                         );

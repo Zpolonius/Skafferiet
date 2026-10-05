@@ -1,1165 +1,158 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../core/providers/profile_image_provider.dart';
-import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/confirm_dialog.dart';
+import '../../shared/widgets/settings_list.dart';
 import '../auth/auth_provider.dart';
-import '../grocery/grocery_provider.dart';
-import '../meal_plan/meal_plan_provider.dart';
 import '../meal_plan/meal_types_sheet.dart';
-import '../recipes/recipes_provider.dart';
+import 'change_name_dialog.dart';
 import 'household_provider.dart';
+import 'profile_header.dart';
+import 'profile_household_section.dart';
 
+/// Profilen (design/profilside_1). Skærmen sætter kun delene sammen; hver
+/// del ligger i sin egen fil.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final household = ref.watch(householdProvider);
-    final auth = ref.watch(authProvider);
-    final user = auth.user;
+    final user = ref.watch(authProvider).user;
+    final hasHousehold = household.householdId != null;
+    final colors = Theme.of(context).colorScheme;
 
     ref.listen(householdProvider.select((s) => s.error), (previous, next) {
-      if (next != null) {
+      // Kun den øverste skærm viser fejlen — ellers ses den to gange, når
+      // "Husstand & deling" ligger oven på profilen.
+      if (next != null && ModalRoute.of(context)?.isCurrent != false) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next), backgroundColor: Colors.red),
+          SnackBar(content: Text(next), backgroundColor: colors.error),
         );
       }
     });
 
-    String initial = 'U';
-    if (user?.displayName != null && user!.displayName!.isNotEmpty) {
-      initial = user.displayName![0].toUpperCase();
-    }
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9F8),
-      appBar: AppBar(
-        title: const Text('Profil'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Profil'), centerTitle: true),
       body: SafeArea(
         child: household.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ── User header ──────────────────────────────────
-                        Center(
-                          child: Column(
-                            children: [
-                              _ProfileHeaderAvatar(
-                                user: user,
-                                initial: initial,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                user?.displayName ?? 'Bruger',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryContainer,
-                                ),
-                              ),
-                              Text(
-                                user?.email ?? '',
-                                style: GoogleFonts.beVietnamPro(
-                                  fontSize: 14,
-                                  color: AppColors.outline,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+            : ListView(
+                // 20 px sidemargin (DESIGN.md: container-margin).
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+                children: [
+                  ProfileHeader(user: user),
+                  const SizedBox(height: 24),
+                  const ProfileStatsRow(),
+                  const SizedBox(height: 32),
 
-                        // ── Stats row ────────────────────────────────────
-                        const _StatsRow(),
-                        const SizedBox(height: 32),
+                  const SectionTitle('Husholdning'),
+                  if (!hasHousehold)
+                    const NoHouseholdCard()
+                  else
+                    HouseholdSummaryCard(household: household, myUid: user?.uid),
 
-                        // ── Husholdning ──────────────────────────────────
-                        const _SectionHeader(title: 'Husholdning'),
-                        const SizedBox(height: 12),
-                        if (household.householdId == null)
-                          const _NoHouseholdCard()
-                        else
-                          _HouseholdDetailCard(household: household),
+                  if (household.invitations.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const SectionTitle('Invitationer'),
+                    for (final invite in household.invitations)
+                      ReceivedInvitationCard(invite: invite),
+                  ],
+                  const SizedBox(height: 32),
 
-                        // Pending invitations
-                        if (household.invitations.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          const _SectionHeader(title: 'Invitationer'),
-                          const SizedBox(height: 12),
-                          ...household.invitations
-                              .map((invite) => _InvitationCard(invite: invite)),
-                        ],
-                        const SizedBox(height: 32),
-
-                        // ── Menu ─────────────────────────────────────────
-                        const _SectionHeader(title: 'Menu'),
-                        const SizedBox(height: 12),
-                        _ProfileTile(
-                          icon: Icons.restaurant_menu_outlined,
-                          title: 'Mine opskrifter',
-                          onTap: () => context.go('/recipes'),
-                        ),
-                        _ProfileTile(
-                          icon: Icons.restaurant_outlined,
-                          title: 'Mine måltider',
-                          onTap: () => MealTypesSheet.show(context),
-                        ),
-                        _ProfileTile(
-                          icon: Icons.event_repeat,
-                          title: 'Faste varer & indkøbsdag',
-                          onTap: household.householdId != null
-                              ? () => context.go('/grocery/recurring')
-                              : null,
-                        ),
-                        _ProfileTile(
-                          icon: Icons.people_outlined,
-                          title: 'Delte lister',
-                          onTap: household.householdId != null
-                              ? () => _showInviteDialog(context, ref)
-                              : null,
-                        ),
-                        _ProfileTile(
-                          icon: Icons.notifications_outlined,
-                          title: 'Notifikationer',
-                          onTap: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Notifikationer kommer snart!')),
-                          ),
-                        ),
-                        _ProfileTile(
-                          icon: Icons.tune_outlined,
-                          title: 'Præferencer & Diæt',
-                          onTap: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Kommer snart')),
-                          ),
-                        ),
-                        _ProfileTile(
-                          icon: Icons.help_outline,
-                          title: 'Hjælp & Support',
-                          onTap: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Kommer snart')),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ── Konto ────────────────────────────────────────
-                        const _SectionHeader(title: 'Konto'),
-                        const SizedBox(height: 12),
-                        _ProfileTile(
-                          icon: Icons.privacy_tip_outlined,
-                          title: 'Privatlivspolitik',
-                          onTap: () => context.push('/privacy'),
-                        ),
-                        _ProfileTile(
-                          icon: Icons.delete_forever_outlined,
-                          title: 'Slet konto',
-                          color: Theme.of(context).colorScheme.error,
-                          onTap: () => context.push('/profile/delete-account'),
-                        ),
-                        const SizedBox(height: 40),
-
-                        // ── Logout ───────────────────────────────────────
-                        SizedBox(
-                          height: 56,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                ref.read(authProvider.notifier).logout(),
-                            icon: const Icon(Icons.logout),
-                            label: const Text('Log ud'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side: const BorderSide(color: AppColors.error),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-      ),
-    );
-  }
-
-  void _showInviteDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Inviter til husstand'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'e-mail@eksempel.dk',
-              prefixIcon: Icon(Icons.email_outlined),
-            ),
-            keyboardType: TextInputType.emailAddress,
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Indtast e-mail';
-              if (!v.contains('@') || !v.contains('.')) return 'Ugyldig e-mail';
-              return null;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuller')),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final email = controller.text.trim();
-                ref.read(householdProvider.notifier).sendInvitation(email);
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Invitation sendt til $email'),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                ));
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Stats row ──────────────────────────────────────────────────────────────────
-
-class _StatsRow extends ConsumerWidget {
-  const _StatsRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recipeCount = ref.watch(recipesProvider).value?.length;
-    final mealDays = ref.watch(mealPlanProvider).value?.days.length;
-    final groceryCount = ref.watch(groceryListProvider).value?.length;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _StatCard(value: recipeCount, label: 'OPSKRIFTER'),
-          _VerticalDivider(),
-          _StatCard(value: mealDays, label: 'MADPLANER'),
-          _VerticalDivider(),
-          _StatCard(value: groceryCount, label: 'GEMTE VARER'),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final int? value;
-  final String label;
-  const _StatCard({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value?.toString() ?? '–',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.beVietnamPro(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.outline,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VerticalDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: 1, height: 40, color: Colors.grey[200]);
-  }
-}
-
-// ── Household detail card ──────────────────────────────────────────────────────
-
-class _HouseholdDetailCard extends ConsumerWidget {
-  final HouseholdState household;
-  const _HouseholdDetailCard({required this.household});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: icon + name + rename button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryContainer.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.house_outlined,
-                      color: AppColors.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SectionTitle('Menu'),
+                  SettingsGroup(
                     children: [
-                      Text(
-                        household.householdName ?? 'Min Husholdning',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.bold, fontSize: 15),
+                      SettingsTile(
+                        icon: Icons.menu_book_outlined,
+                        title: 'Mine opskrifter',
+                        onTap: () => context.go('/recipes'),
                       ),
-                      const Text('Aktiv',
-                          style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600)),
+                      SettingsTile(
+                        icon: Icons.restaurant_outlined,
+                        title: 'Mine måltider',
+                        onTap: () => MealTypesSheet.show(context),
+                      ),
+                      SettingsTile(
+                        icon: Icons.event_repeat,
+                        title: 'Faste varer & indkøbsdag',
+                        onTap: hasHousehold ? () => context.go('/grocery/recurring') : null,
+                      ),
+                      SettingsTile(
+                        icon: Icons.people_outlined,
+                        title: 'Husstand & deling',
+                        onTap: hasHousehold ? () => context.push('/profile/household') : null,
+                      ),
+                      SettingsTile(
+                        icon: Icons.tune_outlined,
+                        title: 'Præferencer & Diæt',
+                        onTap: hasHousehold ? () => context.push('/profile/preferences') : null,
+                      ),
+                      SettingsTile(
+                        icon: Icons.help_outline,
+                        title: 'Hjælp & Support',
+                        onTap: () => context.push('/profile/help'),
+                      ),
                     ],
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      size: 18, color: AppColors.outline),
-                  tooltip: 'Omdøb husstand',
-                  onPressed: () => _showRenameDialog(context, ref),
-                ),
-              ],
-            ),
-          ),
+                  const SizedBox(height: 32),
 
-          Divider(height: 1, color: Colors.grey[100]),
-
-          // Members section
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'MEDLEMMER',
-                  style: GoogleFonts.beVietnamPro(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.outline,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ...household.memberNames.entries.map((entry) {
-                  final isOwner = entry.key == household.adminUid;
-                  final initial = entry.value.isNotEmpty
-                      ? entry.value[0].toUpperCase()
-                      : '?';
-                  final photoUrl = household.memberPhotos[entry.key];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: isOwner
-                              ? AppColors.primaryContainer
-                              : Colors.grey[300],
-                          child: ClipOval(
-                            child: photoUrl != null && photoUrl.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: photoUrl,
-                                    width: 36,
-                                    height: 36,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) =>
-                                        const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                    errorWidget: (context, url, error) => Text(
-                                      initial,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: isOwner
-                                            ? Colors.white
-                                            : Colors.black87,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                    initial,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isOwner
-                                          ? Colors.white
-                                          : Colors.black87,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            entry.value,
-                            style: GoogleFonts.beVietnamPro(
-                                fontSize: 14, fontWeight: FontWeight.w500),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: isOwner
-                                ? AppColors.primaryContainer
-                                    .withValues(alpha: 0.12)
-                                : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isOwner
-                                  ? AppColors.primary.withValues(alpha: 0.25)
-                                  : Colors.grey[300]!,
-                            ),
-                          ),
-                          child: Text(
-                            isOwner ? 'Ejer' : 'Kan redigere',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isOwner
-                                  ? AppColors.primary
-                                  : AppColors.outline,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-
-          Divider(height: 1, color: Colors.grey[100]),
-
-          // Invite tile
-          ListTile(
-            leading: const Icon(Icons.person_add_outlined,
-                color: AppColors.primary, size: 20),
-            title: Text(
-              'Inviter et medlem',
-              style: GoogleFonts.beVietnamPro(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary),
-            ),
-            trailing: const Icon(Icons.chevron_right,
-                size: 18, color: AppColors.outline),
-            onTap: () => _showInviteDialog(context, ref),
-          ),
-
-          // Share code tile
-          ListTile(
-            leading: const Icon(Icons.vpn_key_outlined,
-                color: AppColors.primary, size: 20),
-            title: Text(
-              'Del invitationskode',
-              style: GoogleFonts.beVietnamPro(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary),
-            ),
-            trailing: const Icon(Icons.chevron_right,
-                size: 18, color: AppColors.outline),
-            onTap: () => showDialog(
-              context: context,
-              builder: (_) => const _JoinCodeDialog(),
-            ),
-          ),
-
-          // Join another household tile
-          ListTile(
-            leading: const Icon(Icons.login_outlined,
-                color: AppColors.outline, size: 20),
-            title: Text(
-              'Deltag i en anden husstand',
-              style: GoogleFonts.beVietnamPro(
-                  fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            trailing: const Icon(Icons.chevron_right,
-                size: 18, color: AppColors.outline),
-            onTap: () => _showJoinDialog(context, ref,
-                currentHouseholdName: household.householdName),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRenameDialog(BuildContext context, WidgetRef ref) {
-    final controller =
-        TextEditingController(text: household.householdName ?? '');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Omdøb husstand'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Navn på husstand'),
-          autofocus: true,
-          maxLength: _maxHouseholdNameLength,
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuller')),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                ref.read(householdProvider.notifier).renameHousehold(name);
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Gem'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInviteDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Inviter til husstand'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'e-mail@eksempel.dk',
-              prefixIcon: Icon(Icons.email_outlined),
-            ),
-            keyboardType: TextInputType.emailAddress,
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Indtast e-mail';
-              if (!v.contains('@') || !v.contains('.')) {
-                return 'Ugyldig e-mail';
-              }
-              return null;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuller')),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final email = controller.text.trim();
-                ref.read(householdProvider.notifier).sendInvitation(email);
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Invitation sendt til $email'),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                ));
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Shared helpers ─────────────────────────────────────────────────────────────
-
-/// Under reglernes grænse på 100 tegn, så der er plads til visning.
-const _maxHouseholdNameLength = 60;
-
-/// Dialog hvor brugeren indtaster en invitationskode. Er brugeren allerede i
-/// en husstand, står det tydeligt, at den forlades.
-void _showJoinDialog(BuildContext context, WidgetRef ref,
-    {String? currentHouseholdName}) {
-  final controller = TextEditingController();
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Deltag med kode'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'F.eks. ABCDE-FGHJK',
-              prefixIcon: Icon(Icons.vpn_key_outlined),
-            ),
-            textCapitalization: TextCapitalization.characters,
-            autocorrect: false,
-          ),
-          if (currentHouseholdName != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Du forlader "$currentHouseholdName", når du deltager i en ny husstand.',
-              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuller')),
-        FilledButton(
-          onPressed: () {
-            final code = controller.text.trim();
-            if (code.isNotEmpty) {
-              ref.read(householdProvider.notifier).joinHousehold(code);
-              Navigator.pop(ctx);
-            }
-          },
-          child: const Text('Deltag'),
-        ),
-      ],
-    ),
-  );
-}
-
-/// Laver en ny invitationskode og viser den, så den kan kopieres og deles.
-class _JoinCodeDialog extends ConsumerStatefulWidget {
-  const _JoinCodeDialog();
-
-  @override
-  ConsumerState<_JoinCodeDialog> createState() => _JoinCodeDialogState();
-}
-
-class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
-  late final Future<String?> _code;
-  bool _copied = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _code = ref.read(householdProvider.notifier).createJoinCode();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-
-    return AlertDialog(
-      title: const Text('Invitationskode'),
-      content: FutureBuilder<String?>(
-        future: _code,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const SizedBox(
-              height: 80,
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final code = snapshot.data;
-          if (code == null) {
-            return const Text('Koden kunne ikke laves. Tjek din forbindelse og prøv igen.');
-          }
-          final formatted = formatJoinCode(code);
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Del koden med dem, der skal være med. De vælger '
-                '"Deltag i en anden husstand" på deres profil.',
-                style: text.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SelectableText(
-                  formatted,
-                  key: const Key('join_code_text'),
-                  textAlign: TextAlign.center,
-                  style: text.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    color: colors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Koden virker i ${joinCodeValidity.inDays} dage.',
-                textAlign: TextAlign.center,
-                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-              ),
-              const SizedBox(height: 8),
-              // Bekræftelsen vises på knappen: en SnackBar ville ligge
-              // bag dialogens mørke baggrund.
-              TextButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: formatted));
-                  if (mounted) setState(() => _copied = true);
-                },
-                icon: Icon(_copied ? Icons.check : Icons.copy_outlined),
-                label: Text(_copied ? 'Kopieret' : 'Kopiér kode'),
-              ),
-            ],
-          );
-        },
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Luk'),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: AppColors.primary,
-        letterSpacing: 0.5,
-      ),
-    );
-  }
-}
-
-class _ProfileTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback? onTap;
-
-  /// Farve på ikon og tekst, fx fejlfarven til "Slet konto".
-  final Color? color;
-
-  const _ProfileTile({
-    required this.icon,
-    required this.title,
-    this.onTap,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: color ?? AppColors.primary, size: 22),
-        title: Text(title,
-            style: GoogleFonts.beVietnamPro(
-                fontSize: 15, fontWeight: FontWeight.w500, color: color)),
-        trailing:
-            const Icon(Icons.chevron_right, size: 20, color: AppColors.outline),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-}
-
-// ── No household card (unchanged) ─────────────────────────────────────────────
-
-class _InvitationCard extends ConsumerWidget {
-  final Map<String, dynamic> invite;
-  const _InvitationCard({required this.invite});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.secondaryContainer.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: AppColors.secondaryContainer.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Invitation modtaget!',
-              style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: 4),
-          Text(
-            '${invite['fromUserName'] ?? 'Nogen'} har inviteret dig til "${invite['fromHouseholdName'] ?? 'et Skafferi'}".',
-            style: GoogleFonts.beVietnamPro(fontSize: 13),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => ref
-                      .read(householdProvider.notifier)
-                      .declineInvitation(invite['id']),
-                  child: const Text('Afvis'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => ref
-                      .read(householdProvider.notifier)
-                      .acceptInvitation(invite['id']),
-                  child: const Text('Accepter'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NoHouseholdCard extends ConsumerWidget {
-  const _NoHouseholdCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.house_siding_rounded,
-              size: 48, color: AppColors.outlineVariant),
-          const SizedBox(height: 16),
-          const Text('Du er ikke i en husstand endnu',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text(
-            'Bliv inviteret via e-mail, indtast en kode eller opret din egen herunder.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.outline),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _showJoinDialog(context, ref),
-                  child: const Text('Indtast kode'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => _showCreateDialog(context, ref),
-                  child: const Text('Opret ny'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController(text: 'Mit Skafferi');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Navngiv dit Skafferi'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Navn på husstand'),
-          autofocus: true,
-          maxLength: _maxHouseholdNameLength,
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuller')),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                ref.read(householdProvider.notifier).createHousehold(name);
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Opret'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileHeaderAvatar extends ConsumerStatefulWidget {
-  final User? user;
-  final String initial;
-
-  const _ProfileHeaderAvatar({
-    required this.user,
-    required this.initial,
-  });
-
-  @override
-  ConsumerState<_ProfileHeaderAvatar> createState() =>
-      _ProfileHeaderAvatarState();
-}
-
-class _ProfileHeaderAvatarState extends ConsumerState<_ProfileHeaderAvatar> {
-  bool _isUploading = false;
-
-  Future<void> _handleAvatarTap() async {
-    final user = widget.user;
-    if (user == null) return;
-
-    final imageService = ref.read(profileImageServiceProvider);
-    String? photoUrl;
-    try {
-      photoUrl = user.photoURL;
-    } catch (_) {}
-
-    setState(() => _isUploading = true);
-    try {
-      final newUrl = await imageService.pickAndUploadProfileImage(
-        context,
-        userId: user.uid,
-        showDeleteOption: photoUrl != null && photoUrl.isNotEmpty,
-      );
-
-      if (!mounted) return;
-
-      if (newUrl == '') {
-        // Bruger valgte at fjerne billedet
-        final success =
-            await ref.read(authProvider.notifier).removeProfilePhoto();
-        if (mounted && success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profilbillede fjernet'),
-              backgroundColor: AppColors.primary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } else if (newUrl != null && newUrl.isNotEmpty) {
-        // Nyt billede uploadet
-        final success =
-            await ref.read(authProvider.notifier).updateProfilePhoto(newUrl);
-        if (mounted && success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profilbillede opdateret'),
-              backgroundColor: AppColors.primary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isUploading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    String? photoUrl;
-    try {
-      photoUrl = widget.user?.photoURL;
-    } catch (_) {}
-
-    return GestureDetector(
-      onTap: _isUploading ? null : _handleAvatarTap,
-      child: Stack(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: AppColors.primaryContainer,
-            child: ClipOval(
-              child: photoUrl != null && photoUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                  const SectionTitle('Konto'),
+                  SettingsGroup(
+                    children: [
+                      SettingsTile(
+                        icon: Icons.badge_outlined,
+                        title: 'Skift navn',
+                        onTap: () => showChangeNameDialog(context, user?.displayName ?? ''),
                       ),
-                      errorWidget: (context, url, error) => Text(
-                        widget.initial,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      SettingsTile(
+                        icon: Icons.lock_outline,
+                        title: 'Skift adgangskode',
+                        onTap: () => context.push('/profile/change-password'),
                       ),
-                    )
-                  : Text(
-                      widget.initial,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                      SettingsTile(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privatlivspolitik',
+                        onTap: () => context.push('/privacy'),
+                      ),
+                      SettingsTile(
+                        icon: Icons.delete_forever_outlined,
+                        title: 'Slet konto',
+                        destructive: true,
+                        onTap: () => context.push('/profile/delete-account'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Log ud — lys rød kant som i mockuppet.
+                  SizedBox(
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _confirmLogout(context, ref),
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Log ud'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.error,
+                        backgroundColor: colors.surfaceContainerLowest,
+                        side: BorderSide(color: colors.errorContainer, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     ),
-            ),
-          ),
-          if (_isUploading)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.camera_alt_rounded,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Log ud?',
+      message: 'Du skal bruge din e-mail og adgangskode for at logge ind igen.',
+      confirmLabel: 'Log ud',
+    );
+    if (confirmed) await ref.read(authProvider.notifier).logout();
   }
 }

@@ -16,6 +16,7 @@ import '../utils/danish_dates.dart';
 import '../utils/image_upload_service.dart';
 import 'app_bottom_sheet.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/theme/theme_context.dart';
 
 class AddGroceryItemSheet extends ConsumerStatefulWidget {
   const AddGroceryItemSheet({super.key});
@@ -186,9 +187,9 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
         left: 24,
         right: 24,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerLowest,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -237,9 +238,9 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: context.colors.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(color: context.colors.outlineVariant),
                       image: _imageUrl != null
                           ? DecorationImage(
                               image: NetworkImage(_imageUrl!),
@@ -253,8 +254,8 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : _imageUrl == null
-                            ? const Icon(Icons.add_a_photo_outlined,
-                                color: Colors.grey)
+                            ? Icon(Icons.add_a_photo_outlined,
+                                color: context.colors.outline)
                             : null,
                   ),
                 ),

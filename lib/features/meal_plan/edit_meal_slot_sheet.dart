@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
-import '../../core/theme/app_colors.dart';
 import '../../features/recipes/recipes_provider.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
+import '../../core/theme/theme_context.dart';
 
 class EditMealSlotSheet extends ConsumerStatefulWidget {
   final String day;
@@ -24,6 +24,12 @@ class EditMealSlotSheet extends ConsumerStatefulWidget {
 
 class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
   final _textController = TextEditingController();
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
   Recipe? _selectedRecipe;
 
   @override
@@ -44,9 +50,9 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
         left: 24,
         right: 24,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerLowest,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -86,14 +92,14 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : Colors.transparent,
+                          color: isSelected ? context.colors.primary : Colors.transparent,
                           width: 2,
                         ),
                         image: DecorationImage(
                           image: NetworkImage(recipe.imageUrl ?? ''),
                           fit: BoxFit.cover,
                           colorFilter: isSelected 
-                            ? ColorFilter.mode(AppColors.primary.withValues(alpha: 0.3), BlendMode.srcOver)
+                            ? ColorFilter.mode(context.colors.primary.withValues(alpha: 0.3), BlendMode.srcOver)
                             : null,
                         ),
                       ),
@@ -101,11 +107,11 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
                         child: Text(
                           recipe.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: context.colors.surfaceContainerLowest,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            shadows: [Shadow(blurRadius: 4)],
+                            shadows: const [Shadow(blurRadius: 4)],
                           ),
                         ),
                       ),
@@ -126,7 +132,7 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
                     ref.read(mealPlanProvider.notifier).updateSlot(widget.day, widget.slotType);
                     Navigator.pop(context);
                   },
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+                  style: OutlinedButton.styleFrom(foregroundColor: context.colors.error),
                   child: const Text('Ryd felt'),
                 ),
               ),

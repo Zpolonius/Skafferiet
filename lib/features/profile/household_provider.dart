@@ -28,13 +28,14 @@ String generateSecureCode(int length, {Random? random}) {
 }
 
 /// Gør brugerens indtastning (fx "abcde-fghjk ") til "ABCDEFGHJK".
-String normalizeJoinCode(String input) =>
-    input.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+String normalizeJoinCode(String input) => input.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
 
 /// Viser en kode som "ABCDE-FGHJK", så den er nemmere at læse.
-String formatJoinCode(String code) => code.length == joinCodeLength
-    ? '${code.substring(0, 5)}-${code.substring(5)}'
-    : code;
+String formatJoinCode(String code) =>
+    code.length == joinCodeLength ? '${code.substring(0, 5)}-${code.substring(5)}' : code;
+
+/// Firestore tillader 500 skrivninger pr. batch; vi holder god afstand.
+const _batchLimit = 400;
 
 class HouseholdState {
   final String? householdId;
@@ -46,6 +47,10 @@ class HouseholdState {
   final Map<String, String?> memberPhotos; // Map fra UID til Foto-URL
   final bool isLoading;
   final String? error;
+
+  /// Besked til brugeren, der ikke er en fejl — fx at man er blevet fjernet
+  /// fra en husstand. Vises én gang af appen og ryddes med [HouseholdNotifier.clearNotice].
+  final String? notice;
   final bool hasCompletedOnboarding;
   final int adultsCount;
   final int childrenCount;
@@ -70,6 +75,7 @@ class HouseholdState {
     this.memberPhotos = const {},
     this.isLoading = false,
     this.error,
+    this.notice,
     this.hasCompletedOnboarding = true,
     this.adultsCount = 2,
     this.childrenCount = 2,
@@ -89,6 +95,8 @@ class HouseholdState {
     bool? isLoading,
     String? error,
     bool clearError = false,
+    String? notice,
+    bool clearNotice = false,
     bool? hasCompletedOnboarding,
     int? adultsCount,
     int? childrenCount,
@@ -107,6 +115,7 @@ class HouseholdState {
       memberPhotos: memberPhotos ?? this.memberPhotos,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
+      notice: clearNotice ? null : (notice ?? this.notice),
       hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
       adultsCount: adultsCount ?? this.adultsCount,
       childrenCount: childrenCount ?? this.childrenCount,
@@ -140,7 +149,11 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   bool _hasUserSnapshot = false;
   bool _membershipChangeInFlight = false;
 
-  HouseholdNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth}) 
+  // Husstand vi forgæves prøvede at komme videre fra. Forsøges ikke igen, så
+  // en fejl ikke giver en uendelig løkke af nye husstande.
+  String? _recoveryFailedFor;
+
+  HouseholdNotifier({FirebaseFirestore? firestore, FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance,
         super(HouseholdState(isLoading: true)) {
@@ -209,10 +222,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .listen((snapshot) {
-      final invites = snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
+      final invites = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
       state = state.copyWith(invitations: invites);
     }, onError: (e) {
       developer.log('FEJL i invitations listener', error: e, name: 'household_provider');
@@ -238,12 +253,31 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
     if (householdId != null) {
       if (householdId == _subscribedHouseholdId) {
-        // Samme husstand — kun profilfelter er ændret (fx profilbillede).
+        // Samme husstand — kun profilfelter er ændret (fx navn eller billede).
+        // Opdatér brugerens egen linje i medlemslisten med det samme.
+        final uid = _auth.currentUser?.uid;
+        final names = Map<String, String>.of(state.memberNames);
+        final photos = Map<String, String?>.of(state.memberPhotos);
+        if (uid != null && names.containsKey(uid)) {
+          names[uid] = data?['displayName'] as String? ?? names[uid]!;
+          photos[uid] = data?['photoURL'] as String?;
+        }
         state = state.copyWith(
           hasCompletedOnboarding: _hasCompletedOnboarding,
+          memberNames: names,
+          memberPhotos: photos,
           mealTypes: _mealTypes,
         );
       } else {
+        if (state.householdId != null && state.householdId != householdId) {
+          // Skift til en anden husstand: vis ikke den gamle, mens den nye hentes.
+          state = HouseholdState(
+            isLoading: true,
+            invitations: state.invitations,
+            notice: state.notice,
+            hasCompletedOnboarding: _hasCompletedOnboarding,
+          );
+        }
         _listenToHousehold(householdId);
       }
       return;
@@ -270,12 +304,13 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   void _listenToHousehold(String householdId) {
     _cancelHouseholdSubscription();
     _subscribedHouseholdId = householdId;
-    _householdSub = _firestore.collection('households').doc(householdId).snapshots().listen((doc) async {
+    _householdSub =
+        _firestore.collection('households').doc(householdId).snapshots().listen((doc) async {
       if (doc.exists) {
         final data = doc.data()!;
         final memberUids = List<String>.from(data['members'] ?? []);
         final shoppingWeekday = _parseWeekday(data['shoppingWeekday']);
-        
+
         // Hent navne og billeder for alle medlemmer
         final details = await _fetchMemberDetails(memberUids);
 
@@ -310,11 +345,21 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         // Kun medlemmer må læse en husstand, så brugeren er blevet fjernet
         // (eller husstanden er slettet).
         _cancelHouseholdSubscription();
+        if (_recoveryFailedFor == householdId) {
+          state = HouseholdState(
+            invitations: state.invitations,
+            hasCompletedOnboarding: _hasCompletedOnboarding,
+            error: 'Du er ikke længere medlem af husstanden',
+          );
+          return;
+        }
+        final formerName = state.householdName;
         state = HouseholdState(
+          isLoading: true,
           invitations: state.invitations,
           hasCompletedOnboarding: _hasCompletedOnboarding,
-          error: 'Du er ikke længere medlem af husstanden',
         );
+        _startOverAfterRemoval(householdId, formerName);
         return;
       }
       state = state.copyWith(isLoading: false, error: 'Kunne ikke hente husstand');
@@ -322,11 +367,10 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   }
 
   static int? _parseWeekday(Object? value) =>
-      value is int && value >= DateTime.monday && value <= DateTime.sunday
-          ? value
-          : null;
+      value is int && value >= DateTime.monday && value <= DateTime.sunday ? value : null;
 
-  Future<({Map<String, String> names, Map<String, String?> photos})> _fetchMemberDetails(List<String> uids) async {
+  Future<({Map<String, String> names, Map<String, String?> photos})> _fetchMemberDetails(
+      List<String> uids) async {
     final details = await Future.wait(uids.map((uid) async {
       try {
         final userDoc = await _firestore.collection('users').doc(uid).get();
@@ -355,11 +399,19 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
   /// permission-denied, så snart vi ikke er medlem længere. Når skrivningen er
   /// færdig, følger vi brugerdokumentet igen, som nu peger på den nye husstand
   /// (eller den gamle, hvis skrivningen fejlede).
-  Future<void> _commitMembershipChange(WriteBatch batch) async {
+  ///
+  /// [householdIdAfter] er den husstand, brugerdokumentet peger på, når
+  /// skrivningen er gået igennem. Den bruges, hvis det nye snapshot ikke er
+  /// nået frem endnu — ellers ville vi lytte på den husstand, vi lige har forladt.
+  Future<void> _commitMembershipChange(
+    WriteBatch batch, {
+    required String householdIdAfter,
+  }) async {
     _membershipChangeInFlight = true;
     _cancelHouseholdSubscription();
     try {
       await batch.commit();
+      _latestUserData = {...?_latestUserData, 'householdId': householdIdAfter};
     } finally {
       _membershipChangeInFlight = false;
       // Uden et modtaget brugerdokument ved vi intet — og "ingen husstand"
@@ -415,7 +467,66 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         {'status': 'accepted'},
       );
     }
-    await _commitMembershipChange(batch);
+    await _commitMembershipChange(batch, householdIdAfter: householdId);
+  }
+
+  /// Lægger en ny, tom husstand med [user] som eneste medlem og ejer i
+  /// [batch] og peger brugerens profil på den. Returnerer husstandens ID.
+  String _addFreshHouseholdToBatch(WriteBatch batch, User user) {
+    final id = _newHouseholdId();
+    batch.set(_firestore.collection('households').doc(id), {
+      'name': 'Mit Skafferi',
+      'members': [user.uid],
+      'admin': user.uid,
+      'adultsCount': 2,
+      'childrenCount': 2,
+      'preferences': <String>[],
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(
+      _firestore.collection('users').doc(user.uid),
+      {'householdId': id},
+      SetOptions(merge: true),
+    );
+    return id;
+  }
+
+  /// Brugeren kan ikke længere læse [lostHouseholdId] — ejeren har fjernet
+  /// dem, eller husstanden er slettet. Giv dem en ny, tom husstand, så resten
+  /// af appen virker, og fortæl hvad der skete.
+  Future<void> _startOverAfterRemoval(String lostHouseholdId, String? formerName) async {
+    final user = _auth.currentUser;
+    if (user == null || _isCreatingHousehold) return;
+    _isCreatingHousehold = true;
+    developer.log('Ikke længere medlem af $lostHouseholdId — opretter ny husstand',
+        name: 'household_provider');
+    try {
+      final batch = _firestore.batch();
+      final newId = _addFreshHouseholdToBatch(batch, user);
+      await _commitMembershipChange(batch, householdIdAfter: newId);
+      if (!mounted) return;
+      state = state.copyWith(
+        notice: formerName != null
+            ? 'Du er ikke længere medlem af "$formerName". Du har fået din egen husstand i stedet.'
+            : 'Du er ikke længere medlem af husstanden. Du har fået din egen husstand i stedet.',
+      );
+    } catch (e) {
+      developer.log('FEJL ved oprettelse af ny husstand efter udmeldelse',
+          error: e, name: 'household_provider');
+      _recoveryFailedFor = lostHouseholdId;
+      if (!mounted) return;
+      state = HouseholdState(
+        invitations: state.invitations,
+        hasCompletedOnboarding: _hasCompletedOnboarding,
+        error: 'Du er ikke længere medlem af husstanden',
+      );
+    } finally {
+      _isCreatingHousehold = false;
+    }
+  }
+
+  void clearNotice() {
+    if (state.notice != null) state = state.copyWith(clearNotice: true);
   }
 
   /// Husstands-ID'et er ikke en hemmelighed længere (reglerne kræver kode
@@ -458,9 +569,9 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       if (user == null) return;
 
       state = state.copyWith(isLoading: true);
-      
+
       final code = _newHouseholdId();
-      
+
       final householdData = {
         'name': name,
         'members': [user.uid],
@@ -549,7 +660,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       final dayName = danishDays[now.weekday] ?? 'Mandag';
 
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
-      final weekId = '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+      final weekId =
+          '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
 
       if (starterRecipe != null) {
         final recipeRef = await _firestore.collection('recipes').add({
@@ -572,7 +684,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           'createdBy': user.uid,
         });
 
-        await _firestore.collection('households').doc(hId).collection('meal_plans').doc(weekId).set({
+        await _firestore
+            .collection('households')
+            .doc(hId)
+            .collection('meal_plans')
+            .doc(weekId)
+            .set({
           'days': {
             dayName: {
               'dinner': {
@@ -585,7 +702,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
         final batch = _firestore.batch();
         for (final ing in starterRecipe.ingredients) {
-          final itemRef = _firestore.collection('households').doc(hId).collection('grocery_list').doc();
+          final itemRef =
+              _firestore.collection('households').doc(hId).collection('grocery_list').doc();
           batch.set(itemRef, {
             'name': ing.name,
             'category': ing.category,
@@ -598,7 +716,12 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         }
         await batch.commit();
       } else if (customMeal != null && customMeal.trim().isNotEmpty) {
-        await _firestore.collection('households').doc(hId).collection('meal_plans').doc(weekId).set({
+        await _firestore
+            .collection('households')
+            .doc(hId)
+            .collection('meal_plans')
+            .doc(weekId)
+            .set({
           'days': {
             dayName: {
               'dinner': {
@@ -693,44 +816,93 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     }
   }
 
-  Future<void> leaveHousehold() async {
+  /// Forlader husstanden og giver brugeren en ny, tom husstand i samme
+  /// batch. Er brugeren ejer, gives ejerskabet videre.
+  ///
+  /// Kun muligt, når der er andre medlemmer — ellers ville husstandens
+  /// indkøbsliste, madplaner og opskrifter ligge tilbage uden nogen, der kan
+  /// se eller slette dem. Returnerer en fejlbesked, eller null hvis det lykkedes.
+  Future<String?> leaveHousehold() async {
     final user = _auth.currentUser;
     final hId = state.householdId;
-    if (user == null || hId == null) return;
+    if (user == null || hId == null) return 'Du er ikke medlem af en husstand.';
+    if (!state.members.any((m) => m != user.uid)) {
+      return 'Du er eneste medlem af husstanden og kan ikke forlade den.';
+    }
 
     try {
       final batch = _firestore.batch();
       _addLeaveToBatch(batch, hId, user.uid);
-      batch.update(_firestore.collection('users').doc(user.uid), {
-        'householdId': FieldValue.delete(),
-      });
-      await _commitMembershipChange(batch);
-
-      state = HouseholdState(isLoading: true, invitations: state.invitations);
+      final newId = _addFreshHouseholdToBatch(batch, user);
+      await _commitMembershipChange(batch, householdIdAfter: newId);
+      return null;
     } catch (e) {
       developer.log('FEJL ved udmeldelse af husstand', error: e, name: 'household_provider');
-      state = state.copyWith(error: 'Kunne ikke forlade husstanden');
+      return 'Kunne ikke forlade husstanden. Tjek din forbindelse, og prøv igen.';
     }
   }
 
-  Future<void> sendInvitation(String email) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null || state.householdId == null) return;
+  /// Ejeren fjerner [uid] fra husstanden. Alle aktive invitationskoder
+  /// slettes i samme batch, så den fjernede ikke kan bruge en kode, de har
+  /// gemt, til at komme ind igen. Returnerer en fejlbesked eller null.
+  Future<String?> removeMember(String uid) async {
+    final me = _auth.currentUser;
+    final hId = state.householdId;
+    if (me == null || hId == null || state.adminUid != me.uid) {
+      return 'Kun ejeren kan fjerne medlemmer.';
+    }
+    if (uid == me.uid || !state.members.contains(uid)) {
+      return 'Medlemmet findes ikke i husstanden.';
+    }
 
-      final cleanEmail = email.trim().toLowerCase();
-      await _firestore.collection('invitations').add({
-        'fromHouseholdId': state.householdId,
-        'fromHouseholdName': state.householdName,
-        'fromUserName': user.displayName ?? user.email,
-        'fromUid': user.uid,
-        'toUserEmail': cleanEmail,
-        'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
+    try {
+      final codes =
+          await _firestore.collection('join_codes').where('householdId', isEqualTo: hId).get();
+      final codeRefs = codes.docs.map((d) => d.reference).toList();
+
+      var batch = _firestore.batch();
+      batch.update(_firestore.collection('households').doc(hId), {
+        'members': FieldValue.arrayRemove([uid]),
       });
+      // Et batch rummer højst 500 skrivninger. Er der (usandsynligt) flere
+      // koder, slettes resten bagefter.
+      var inBatch = 1;
+      for (final ref in codeRefs) {
+        if (inBatch == _batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          inBatch = 0;
+        }
+        batch.delete(ref);
+        inBatch++;
+      }
+      await batch.commit();
+      return null;
     } catch (e) {
-      developer.log('FEJL ved afsendelse af invitation', error: e, name: 'household_provider');
-      state = state.copyWith(error: 'Kunne ikke sende invitation');
+      developer.log('FEJL ved fjernelse af medlem', error: e, name: 'household_provider');
+      return 'Kunne ikke fjerne medlemmet. Tjek din forbindelse, og prøv igen.';
+    }
+  }
+
+  /// Gemmer husstandens størrelse og madpræferencer. Returnerer en
+  /// fejlbesked eller null.
+  Future<String?> updatePreferences({
+    required int adultsCount,
+    required int childrenCount,
+    required List<String> preferences,
+  }) async {
+    final hId = state.householdId;
+    if (hId == null) return 'Du er ikke medlem af en husstand.';
+    try {
+      await _firestore.collection('households').doc(hId).update({
+        'adultsCount': adultsCount,
+        'childrenCount': childrenCount,
+        'preferences': preferences,
+      });
+      return null;
+    } catch (e) {
+      developer.log('FEJL ved opdatering af præferencer', error: e, name: 'household_provider');
+      return 'Kunne ikke gemme. Tjek din forbindelse, og prøv igen.';
     }
   }
 
@@ -750,7 +922,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
 
       final data = inviteDoc.data()!;
       final targetEmail = data['toUserEmail'] as String?;
-      
+
       if (targetEmail != user.email?.toLowerCase()) {
         throw Exception('Sikkerhedsfejl: Invitation tilhører ikke denne bruger');
       }

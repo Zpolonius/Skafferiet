@@ -41,6 +41,8 @@ dependencies:
   collection: ^1.18.0
 
   cupertino_icons: ^1.0.8
+  url_launcher: ^6.3.2
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
@@ -53,9 +55,12 @@ dev_dependencies:
   riverpod_test: ^0.1.9
   mocktail: ^1.0.5
   flutter_launcher_icons: ^0.14.3
-  fake_cloud_firestore: ^4.1.1
+  fake_cloud_firestore: ^4.3.0
   firebase_auth_mocks: ^0.15.2
   firebase_storage_mocks: 0.8.1
+
+dependency_overrides:
+  meta: 1.16.0
 
 flutter:
   uses-material-design: true

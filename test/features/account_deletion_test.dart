@@ -74,6 +74,7 @@ void main() {
       await db.doc('households/HH/grocery_list/g1').set({'name': 'Mælk'});
       await db.doc('households/HH/meal_plans/w1').set({'days': {}});
       await db.doc('households/HH/recurring_items/m1').set({'name': 'Mælk'});
+      await db.doc('households/HH/board_notes/n1').set({'type': 'text', 'authorId': 'zed'});
       await db.doc('recipes/mine').set({'householdId': 'HH', 'createdBy': 'me'});
       await db.doc('recipes/byFormerMember').set({'householdId': 'HH', 'createdBy': 'zed'});
       await db.doc('recipes/otherHousehold').set({'householdId': 'HH_OTHER', 'createdBy': 'x'});
@@ -81,6 +82,8 @@ void main() {
         'fromHouseholdId': 'HH', 'fromUid': 'me', 'toUserEmail': 'y@example.com', 'status': 'pending',
       });
       await storage.ref('households/HH/recipes/r.jpg').putString('billede');
+      await db.doc('join_codes/AAAAAAAAAA').set({'householdId': 'HH', 'createdBy': 'me'});
+      await db.doc('join_codes/OTHERHHHHH').set({'householdId': 'HH_OTHER', 'createdBy': 'x'});
     });
 
     test('sletter hele husstanden, profilen og login-kontoen', () async {
@@ -90,10 +93,12 @@ void main() {
       expect(await exists('households/HH/grocery_list/g1'), false);
       expect(await exists('households/HH/meal_plans/w1'), false);
       expect(await exists('households/HH/recurring_items/m1'), false);
+      expect(await exists('households/HH/board_notes/n1'), false);
       expect(await exists('recipes/mine'), false);
       expect(await exists('recipes/byFormerMember'), false);
       expect(await exists('invitations/fromMyHousehold'), false);
       expect(await exists('invitations/toMe'), false);
+      expect(await exists('join_codes/AAAAAAAAAA'), false);
       expect(await exists('users/me'), false);
       expect(storage.storedDataMap.containsKey('users/me/avatar.jpg'), false);
       expect(storage.storedDataMap.containsKey('households/HH/recipes/r.jpg'), false);
@@ -105,6 +110,7 @@ void main() {
 
       expect(await exists('recipes/otherHousehold'), true);
       expect(await exists('invitations/toSomeoneElse'), true);
+      expect(await exists('join_codes/OTHERHHHHH'), true);
     });
 
     test('sletter mere end ét batch (over 400 varer)', () async {
@@ -153,6 +159,16 @@ void main() {
       expect(await exists('recipes/mine'), true);
     });
 
+    test('sletter kun de invitationskoder brugeren selv har lavet', () async {
+      await db.doc('join_codes/MINEMINEMI').set({'householdId': 'HH', 'createdBy': 'me'});
+      await db.doc('join_codes/PARTNERPAR').set({'householdId': 'HH', 'createdBy': 'partner'});
+
+      await service.deleteAccount(password: 'hemmelig');
+
+      expect(await exists('join_codes/MINEMINEMI'), false);
+      expect(await exists('join_codes/PARTNERPAR'), true);
+    });
+
     test('sletter kun de invitationer brugeren selv har sendt', () async {
       await service.deleteAccount(password: 'hemmelig');
 
@@ -168,11 +184,15 @@ void main() {
     await db.doc('households/OLD').set({'name': 'Gammel', 'members': ['me']});
     await db.doc('recipes/mine').set({'householdId': 'OLD', 'createdBy': 'me'});
     await db.doc('recipes/theirs').set({'householdId': 'OLD', 'createdBy': 'zed'});
+    await db.doc('households/OLD/board_notes/mine').set({'authorId': 'me'});
+    await db.doc('households/OLD/board_notes/theirs').set({'authorId': 'zed'});
 
     await service.deleteAccount(password: 'hemmelig');
 
     expect(await exists('recipes/mine'), false);
     expect(await exists('recipes/theirs'), true);
+    expect(await exists('households/OLD/board_notes/mine'), false);
+    expect(await exists('households/OLD/board_notes/theirs'), true);
     expect((await db.doc('households/OLD').get()).data()!['members'], isEmpty);
     expect(user.deleted, true);
   });

@@ -12,7 +12,7 @@ import '../../core/models/meal_plan.dart';
 import '../../core/models/meal_type.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'package:gap/gap.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme/theme_context.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,7 +29,7 @@ class HomeScreen extends ConsumerWidget {
     final greeting = _getGreeting();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: context.colors.surface,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -40,13 +40,13 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(today, userName, greeting),
+                  _buildHeader(context, today, userName, greeting),
                   const Gap(24),
                   _buildQuickActions(context),
                   const Gap(16),
                   const BoardPreviewCard(),
                   const Gap(32),
-                  _buildSectionHeader('Dagens Plan', 'Se hele ugen', () => context.go('/meal-plan')),
+                  _buildSectionHeader(context, 'Dagens Plan', 'Se hele ugen', () => context.go('/meal-plan')),
                   const Gap(16),
                   _buildDailyPlan(mealPlan, mealTypes),
                   const Gap(32),
@@ -74,7 +74,7 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildAppBar(BuildContext context, AuthState auth) {
     return SliverAppBar(
       floating: true,
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.surfaceContainerLowest,
       elevation: 0,
       centerTitle: false,
       title: Row(
@@ -83,8 +83,8 @@ class HomeScreen extends ConsumerWidget {
           const Gap(12),
           Text(
             'Skafferiet',
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFF0F5238),
+            style: context.text.headlineLarge?.copyWith(
+              color: context.colors.primary,
               fontWeight: FontWeight.bold,
               fontSize: 24,
             ),
@@ -98,18 +98,18 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(String date, String name, String greeting) {
+  Widget _buildHeader(BuildContext context, String date, String name, String greeting) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 20),
+            Icon(Icons.wb_sunny_outlined, color: context.colors.secondaryContainer, size: 20),
             const Gap(8),
             Text(
               date,
-              style: const TextStyle(
-                color: Color(0xFF404943),
+              style: TextStyle(
+                color: context.colors.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
                 letterSpacing: 0.5,
@@ -120,19 +120,19 @@ class HomeScreen extends ConsumerWidget {
         const Gap(8),
         Text(
           '$greeting, $name!',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF191C1D),
+            color: context.colors.onSurface,
             height: 1.2,
           ),
         ),
         const Gap(4),
-        const Text(
+        Text(
           'Her er dit overblik for i dag.',
           style: TextStyle(
             fontSize: 18,
-            color: Color(0xFF404943),
+            color: context.colors.onSurfaceVariant,
           ),
         ),
       ],
@@ -146,7 +146,7 @@ class HomeScreen extends ConsumerWidget {
           child: _QuickActionButton(
             label: 'Tilføj måltid',
             icon: Icons.restaurant_menu,
-            color: const Color(0xFF0F5238),
+            color: context.colors.primary,
             onTap: () => context.go('/meal-plan'),
           ),
         ),
@@ -155,8 +155,8 @@ class HomeScreen extends ConsumerWidget {
           child: _QuickActionButton(
             label: 'Tilføj vare',
             icon: Icons.shopping_basket_outlined,
-            color: const Color(0xFFB1F0CE),
-            textColor: const Color(0xFF0F5238),
+            color: context.colors.primaryFixed,
+            textColor: context.colors.primary,
             onTap: () => context.go('/grocery'),
           ),
         ),
@@ -164,19 +164,19 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title, String action, VoidCallback onTap) {
+  Widget _buildSectionHeader(BuildContext context, String title, String action, VoidCallback onTap) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF191C1D)),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: context.colors.onSurface),
         ),
         TextButton(
           onPressed: onTap,
           child: Text(
             action,
-            style: const TextStyle(color: Color(0xFF0F5238), fontWeight: FontWeight.w600),
+            style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -210,11 +210,11 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: context.colors.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -223,14 +223,14 @@ class HomeScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 '3 vigtige ting at huske',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              Icon(Icons.shopping_cart_outlined, color: Color(0xFF404943)),
+              Icon(Icons.shopping_cart_outlined, color: context.colors.onSurfaceVariant),
             ],
           ),
           const Gap(16),
@@ -241,9 +241,9 @@ class HomeScreen extends ConsumerWidget {
                 return Column(
                   children: [
                     const Gap(8),
-                    const Text(
+                    Text(
                       'Din indkøbsliste er tom. Mangler du mælk, æg eller måske noget lækkert til aftensmaden?',
-                      style: TextStyle(color: Color(0xFF404943)),
+                      style: TextStyle(color: context.colors.onSurfaceVariant),
                       textAlign: TextAlign.center,
                     ),
                     const Gap(16),
@@ -264,14 +264,14 @@ class HomeScreen extends ConsumerWidget {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFBFC9C1), width: 2),
+                          border: Border.all(color: context.colors.outlineVariant, width: 2),
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
                       const Gap(12),
                       Text(
                         item.name,
-                        style: const TextStyle(fontSize: 16, color: Color(0xFF191C1D)),
+                        style: TextStyle(fontSize: 16, color: context.colors.onSurface),
                       ),
                     ],
                   ),
@@ -285,9 +285,9 @@ class HomeScreen extends ConsumerWidget {
           Center(
             child: TextButton(
               onPressed: () => context.go('/grocery'),
-              child: const Text(
+              child: Text(
                 'Åbn fuld indkøbsliste',
-                style: TextStyle(color: Color(0xFF0F5238), fontWeight: FontWeight.bold),
+                style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -325,12 +325,12 @@ class _QuickActionButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: textColor ?? Colors.white, size: 32),
+            Icon(icon, color: textColor ?? context.colors.onPrimary, size: 32),
             const Gap(12),
             Text(
               label,
               style: TextStyle(
-                color: textColor ?? Colors.white,
+                color: textColor ?? context.colors.onPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -357,12 +357,12 @@ class _MealCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEDEEEF)),
+          border: Border.all(color: context.colors.surfaceContainer),
           boxShadow: isEmpty ? null : [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
+              color: context.colors.shadow.withValues(alpha: 0.02),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -376,8 +376,8 @@ class _MealCard extends StatelessWidget {
                 ? Container(
                     width: 64,
                     height: 64,
-                    color: const Color(0xFFF1F3F2),
-                    child: const Icon(Icons.add_circle_outline, color: Color(0xFF0F5238)),
+                    color: context.colors.surfaceContainerLow,
+                    child: Icon(Icons.add_circle_outline, color: context.colors.primary),
                   )
                 : CachedNetworkImage(
                     imageUrl: slot.recipe?.imageUrl ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200',
@@ -387,7 +387,7 @@ class _MealCard extends StatelessWidget {
                     placeholder: (context, url) => Container(
                       width: 64,
                       height: 64,
-                      color: const Color(0xFFF1F3F2),
+                      color: context.colors.surfaceContainerLow,
                       child: const Center(
                         child: SizedBox(
                           width: 20,
@@ -399,8 +399,8 @@ class _MealCard extends StatelessWidget {
                     errorWidget: (context, url, error) => Container(
                       width: 64,
                       height: 64,
-                      color: const Color(0xFFF1F3F2),
-                      child: const Icon(Icons.error_outline, color: Colors.red),
+                      color: context.colors.surfaceContainerLow,
+                      child: Icon(Icons.error_outline, color: context.colors.error),
                     ),
                   ),
             ),
@@ -411,8 +411,8 @@ class _MealCard extends StatelessWidget {
                 children: [
                   Text(
                     type,
-                    style: const TextStyle(
-                      color: Color(0xFF0F5238),
+                    style: TextStyle(
+                      color: context.colors.primary,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -423,7 +423,7 @@ class _MealCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isEmpty ? const Color(0xFF9BA49F) : const Color(0xFF191C1D),
+                      color: isEmpty ? context.colors.outline : context.colors.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -432,13 +432,13 @@ class _MealCard extends StatelessWidget {
                     const Gap(4),
                     Row(
                       children: [
-                        const Icon(Icons.access_time, size: 14, color: Color(0xFF404943)),
+                        Icon(Icons.access_time, size: 14, color: context.colors.onSurfaceVariant),
                         const Gap(4),
-                        Text(slot.recipe!.time, style: const TextStyle(fontSize: 12, color: Color(0xFF404943))),
+                        Text(slot.recipe!.time, style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant)),
                         const Gap(12),
-                        const Icon(Icons.local_fire_department_outlined, size: 14, color: Color(0xFF404943)),
+                        Icon(Icons.local_fire_department_outlined, size: 14, color: context.colors.onSurfaceVariant),
                         const Gap(4),
-                        Text('${slot.recipe!.calories} kcal', style: const TextStyle(fontSize: 12, color: Color(0xFF404943))),
+                        Text('${slot.recipe!.calories} kcal', style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant)),
                       ],
                     ),
                   ],
