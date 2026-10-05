@@ -10,11 +10,16 @@ import 'package:skafferiet/core/theme/app_theme.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_screen.dart';
+import 'package:skafferiet/features/profile/household_provider.dart';
 
 class _User extends Mock implements User {}
 
 class _Auth extends StateNotifier<AuthState> with Mock implements AuthNotifier {
   _Auth(super.state);
+}
+
+class _Household extends StateNotifier<HouseholdState> with Mock implements HouseholdNotifier {
+  _Household() : super(HouseholdState(householdId: 'h1'));
 }
 
 class _Plan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
@@ -61,6 +66,7 @@ void main() {
         overrides: [
           authProvider.overrideWith((ref) => _Auth(AuthState(user: user))),
           mealPlanProvider.overrideWith(() => _Plan()),
+          householdProvider.overrideWith((ref) => _Household()),
           selectedDayProvider.overrideWith((ref) => day),
         ],
         child: MaterialApp(theme: AppTheme.lightTheme, home: const MealPlanScreen()),

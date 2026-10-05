@@ -11,6 +11,7 @@ import 'package:skafferiet/core/theme/app_theme.dart';
 import 'package:skafferiet/features/auth/auth_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_screen.dart';
+import 'package:skafferiet/features/profile/household_provider.dart';
 import 'package:skafferiet/features/recipes/recipes_provider.dart';
 import 'package:skafferiet/features/recipes/recipes_screen.dart';
 
@@ -36,6 +37,10 @@ class _Recipes extends StreamNotifier<List<Recipe>> with Mock implements Recipes
       ]);
 }
 
+class _Household extends StateNotifier<HouseholdState> with Mock implements HouseholdNotifier {
+  _Household() : super(HouseholdState(householdId: 'h1'));
+}
+
 class _Plan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
   Future<WeeklyMealPlan> build() async =>
@@ -58,6 +63,7 @@ void main() {
       authProvider.overrideWith((ref) => _Auth(AuthState(user: user))),
       recipesProvider.overrideWith(() => _Recipes()),
       mealPlanProvider.overrideWith(() => _Plan()),
+      householdProvider.overrideWith((ref) => _Household()),
     ]);
     addTearDown(container.dispose);
     final router = GoRouter(initialLocation: start, routes: [

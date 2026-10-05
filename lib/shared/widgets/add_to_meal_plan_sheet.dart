@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
 import 'app_bottom_sheet.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
+import '../../features/profile/household_provider.dart';
 import '../../core/theme/theme_context.dart';
 
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
@@ -16,13 +18,13 @@ class AddToMealPlanSheet extends ConsumerStatefulWidget {
 
 class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
   String? selectedDay;
-  String? selectedSlot;
+  MealType? selectedSlot;
 
   final days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
-  final slots = ['Morgenmad', 'Frokost', 'Aftensmad', 'Snack'];
 
   @override
   Widget build(BuildContext context) {
+    final slots = ref.watch(householdProvider.select((h) => h.mealTypes));
     return Container(
       padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + sheetBottomInset(context)),
       decoration: BoxDecoration(
@@ -89,7 +91,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
             children: slots.map((slot) {
               final isSelected = selectedSlot == slot;
               return ChoiceChip(
-                label: Text(slot),
+                label: Text(slot.label),
                 selected: isSelected,
                 onSelected: (val) => setState(() => selectedSlot = val ? slot : null),
                 selectedColor: context.colors.secondaryContainer,
@@ -108,14 +110,14 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
                     try {
                       await ref.read(mealPlanProvider.notifier).updateSlot(
                         selectedDay!,
-                        selectedSlot!,
+                        selectedSlot!.key,
                         recipe: widget.recipe,
                       );
                       if (context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${widget.recipe.title} tilføjet til $selectedDay ($selectedSlot)'),
+                            content: Text('${widget.recipe.title} tilføjet til $selectedDay (${selectedSlot!.label})'),
                             backgroundColor: context.colors.primary,
                             behavior: SnackBarBehavior.floating,
                           ),

@@ -7,7 +7,9 @@ import '../auth/auth_provider.dart';
 import '../meal_plan/meal_plan_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../board/board_preview_card.dart';
+import '../profile/household_provider.dart';
 import '../../core/models/meal_plan.dart';
+import '../../core/models/meal_type.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'package:gap/gap.dart';
 import '../../core/theme/theme_context.dart';
@@ -20,6 +22,7 @@ class HomeScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final mealPlan = ref.watch(mealPlanProvider);
     final groceryList = ref.watch(groceryListProvider);
+    final mealTypes = ref.watch(householdProvider.select((h) => h.mealTypes));
     
     final userName = authState.user?.displayName?.split(' ').first ?? 'Bruger';
     final today = DateFormat('EEEE, d. MMMM', 'da_DK').format(DateTime.now()).toUpperCase();
@@ -45,7 +48,7 @@ class HomeScreen extends ConsumerWidget {
                   const Gap(32),
                   _buildSectionHeader(context, 'Dagens Plan', 'Se hele ugen', () => context.go('/meal-plan')),
                   const Gap(16),
-                  _buildDailyPlan(mealPlan),
+                  _buildDailyPlan(mealPlan, mealTypes),
                   const Gap(32),
                   _buildShoppingPreview(context, groceryList),
                   const Gap(40),
@@ -180,7 +183,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDailyPlan(AsyncValue<WeeklyMealPlan> planAsync) {
+  Widget _buildDailyPlan(AsyncValue<WeeklyMealPlan> planAsync, List<MealType> mealTypes) {
     return planAsync.when(
       data: (plan) {
         final rawDayName = DateFormat('EEEE', 'da_DK').format(DateTime.now());
@@ -191,13 +194,10 @@ class HomeScreen extends ConsumerWidget {
         
         return Column(
           children: [
-            _MealCard(type: 'MORGENMAD', slot: day?.breakfast ?? MealSlot()),
-            const Gap(12),
-            _MealCard(type: 'FROKOST', slot: day?.lunch ?? MealSlot()),
-            const Gap(12),
-            _MealCard(type: 'AFTENSMAD', slot: day?.dinner ?? MealSlot()),
-            const Gap(12),
-            _MealCard(type: 'SNACK', slot: day?.snack ?? MealSlot()),
+            for (final (i, type) in mealTypes.indexed) ...[
+              if (i > 0) const Gap(12),
+              _MealCard(type: type.label.toUpperCase(), slot: day?.slot(type) ?? MealSlot()),
+            ],
           ],
         );
       },

@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skafferiet/core/models/meal_type.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
 
 class MockFirestore extends Mock implements FirebaseFirestore {}
@@ -539,5 +540,113 @@ void main() {
       notifier.dispose();
       await userStream.close();
     });
+  });
+
+  group('mine måltider', () {
+    late MockFirestore mockFirestore;
+    late MockFirebaseAuth mockAuth;
+    late MockUser mockUser;
+    late MockDocumentReference userRef;
+    late MockDocumentReference householdRef;
+    late StreamController<DocumentSnapshot<Map<String, dynamic>>> userStream;
+    late StreamController<DocumentSnapshot<Map<String, dynamic>>> householdStream;
+
+    setUp(() {
+      mockFirestore = MockFirestore();
+      mockAuth = MockFirebaseAuth();
+      mockUser = MockUser();
+      userRef = MockDocumentReference();
+      householdRef = MockDocumentReference();
+      userStream = StreamController();
+      householdStream = StreamController();
+      final users = MockCollectionReference();
+      final households = MockCollectionReference();
+      registerFallbackValue(SetOptions(merge: true));
+
+      when(() => mockAuth.authStateChanges()).thenAnswer((_) => Stream.value(mockUser));
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.uid).thenReturn('me');
+      when(() => mockUser.email).thenReturn(null);
+      when(() => mockFirestore.collection('users')).thenReturn(users);
+      when(() => mockFirestore.collection('households')).thenReturn(households);
+      when(() => users.doc('me')).thenReturn(userRef);
+      when(() => userRef.snapshots()).thenAnswer((_) => userStream.stream);
+      when(() => households.doc('SK-A')).thenReturn(householdRef);
+      when(() => householdRef.snapshots()).thenAnswer((_) => householdStream.stream);
+    });
+
+    // Ikke await: close() venter på en lytter, og nogle tests lytter aldrig.
+    tearDown(() {
+      userStream.close();
+      householdStream.close();
+    });
+
+    test('læses fra brugerprofilen og overlever husstandens snapshot', () async {
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+      await Future<void>.delayed(Duration.zero);
+      userStream.add(DataSnapshot({'householdId': 'SK-A', 'mealTypes': ['dinner', 'breakfast']}));
+      await Future<void>.delayed(Duration.zero);
+      householdStream.add(DataSnapshot({'name': 'Hjem', 'members': <String>[]}));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(notifier.state.householdId, 'SK-A');
+      expect(notifier.state.mealTypes, [MealType.breakfast, MealType.dinner]);
+
+      // Ændres valget på profilen, følger state med uden ny husstandslytter.
+      userStream.add(DataSnapshot({'householdId': 'SK-A', 'mealTypes': ['snack']}));
+      await Future<void>.delayed(Duration.zero);
+      expect(notifier.state.mealTypes, [MealType.snack]);
+      verify(() => householdRef.snapshots()).called(1);
+
+      notifier.dispose();
+    });
+
+    test('uden felt på profilen vises alle måltider', () async {
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+      await Future<void>.delayed(Duration.zero);
+      userStream.add(DataSnapshot({'householdId': 'SK-A'}));
+      await Future<void>.delayed(Duration.zero);
+      householdStream.add(DataSnapshot({'name': 'Hjem', 'members': <String>[]}));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(notifier.state.mealTypes, MealType.values);
+      notifier.dispose();
+    });
+
+    test('setMealTypes gemmer nøglerne i fast rækkefølge på profilen', () async {
+      when(() => userRef.set(any(), any())).thenAnswer((_) async {});
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+
+      await notifier.setMealTypes({MealType.snack, MealType.breakfast});
+
+      final written = verify(() => userRef.set(captureAny(), any())).captured.single;
+      expect(written, {'mealTypes': ['breakfast', 'snack']});
+      expect(notifier.state.mealTypes, [MealType.breakfast, MealType.snack]);
+      notifier.dispose();
+    });
+
+    test('setMealTypes ignorerer et tomt valg', () async {
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+      await notifier.setMealTypes({});
+      verifyNever(() => userRef.set(any(), any()));
+      expect(notifier.state.mealTypes, MealType.values);
+      notifier.dispose();
+    });
+
+    test('setMealTypes ruller tilbage og viser fejl hvis skrivningen fejler', () async {
+      when(() => userRef.set(any(), any())).thenThrow(Exception('offline'));
+      final notifier = HouseholdNotifier(firestore: mockFirestore, auth: mockAuth);
+
+      await notifier.setMealTypes({MealType.dinner});
+
+      expect(notifier.state.mealTypes, MealType.values);
+      expect(notifier.state.error, 'Kunne ikke gemme dine måltider');
+      notifier.dispose();
+    });
+  });
+
+  test('HouseholdState.copyWith bevarer mealTypes', () {
+    final state = HouseholdState(mealTypes: [MealType.dinner]);
+    expect(state.copyWith(householdId: 'x').mealTypes, [MealType.dinner]);
   });
 }

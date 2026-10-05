@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../../shared/widgets/settings_list.dart';
 import '../auth/auth_provider.dart';
+import '../meal_plan/meal_types_sheet.dart';
 import 'change_name_dialog.dart';
 import 'household_provider.dart';
 import 'profile_header.dart';
@@ -66,6 +67,11 @@ class ProfileScreen extends ConsumerWidget {
                         icon: Icons.menu_book_outlined,
                         title: 'Mine opskrifter',
                         onTap: () => context.go('/recipes'),
+                      ),
+                      SettingsTile(
+                        icon: Icons.restaurant_outlined,
+                        title: 'Mine måltider',
+                        onTap: () => MealTypesSheet.show(context),
                       ),
                       SettingsTile(
                         icon: Icons.event_repeat,
