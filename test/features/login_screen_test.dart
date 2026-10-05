@@ -78,4 +78,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('accepterer du privatlivspolitikken'), findsOneWidget);
   });
+
+  testWidgets('en login-fejl vises én gang — ikke igen ved hver genopbygning', (tester) async {
+    await pumpLogin(tester);
+
+    // ignore: invalid_use_of_protected_member
+    auth.state = AuthState(error: 'Forkert e-mail eller adgangskode.');
+    await tester.pumpAndSettle();
+    expect(find.text('Forkert e-mail eller adgangskode.'), findsOneWidget);
+
+    // Lad beskeden udløbe, og byg skærmen om (her: vis adgangskode).
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.visibility_outlined));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Forkert e-mail eller adgangskode.'), findsNothing);
+  });
 }

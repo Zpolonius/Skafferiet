@@ -87,35 +87,50 @@ Testet mod Firebase-emulatoren: 49 tests i [`rules_test/`](rules_test/). Mod de 
 
 ---
 
-## 🧭 3. Profil-menuen — bygges færdig
+## 🧭 3. Profil-menuen — ✅ Gennemført
 
-- [ ] **Hjælp & Support** — FAQ, "Kontakt os" (`mailto:` via `url_launcher`), privatlivspolitik, app-version
-- [ ] **Husstand & deling** (erstatter "Delte lister"):
-  - [x] Del invitationskode *(lavet i punkt 1)*
-  - [x] Deltag i en anden husstand med kode *(lavet i punkt 1)*
-  - [ ] Forlad husstand (`leaveHousehold()` findes og giver ejerskab videre — mangler knap + bekræftelse)
-  - [ ] Ejer kan fjerne medlemmer (reglerne tillader det nu)
-  - [ ] Se/annullér udsendte invitationer
-  - [ ] "Invitation sendt" vises før serveren har svaret — også når det fejler (`profile_screen.dart`, `_showInviteDialog`)
-  - [ ] Når man accepterer en invitation, forlades den nuværende husstand uden advarsel
-  - [ ] Hvad ser en bruger, der er blevet fjernet? I dag: tomt husstandskort + besked "Du er ikke længere medlem"
-- [ ] **Præferencer & Diæt** — redigeringsside der genbruger onboardingens vælgere
-- [ ] **Notifikationer** — lokale påmindelser (fx "Hvad skal I have i aften?")
-- [ ] **"Konto"-sektion** — ~~slet konto~~ ✓, ~~privatlivspolitik~~ ✓; mangler: skift navn, skift adgangskode
-- [ ] Bekræftelse før "Log ud"
+Ingen "Kommer snart" tilbage — Apple afviser apps med pladsholdere (retningslinje 2.1).
+
+- [x] **Hjælp & Support** (`/profile/help`) — FAQ, "Skriv til os" (åbner mail-appen; findes der ingen, kopieres adressen), privatlivspolitik og app-version
+- [x] **Husstand & deling** (`/profile/household`, erstatter "Delte lister"):
+  - [x] Del invitationskode / deltag med kode *(fra punkt 1, flyttet hertil)*
+  - [x] Forlad husstand — med bekræftelse; man får en ny, tom husstand i samme batch og sendes ikke gennem onboarding igen. Ikke muligt som eneste medlem (data ville ellers ligge tilbage, uden at nogen kan se eller slette dem)
+  - [x] Ejer kan fjerne medlemmer — med bekræftelse. Husstandens invitationskoder slettes i samme batch, så den fjernede ikke kan komme ind igen med en gemt kode
+  - [x] Se og annullér ventende invitationer
+  - [x] "Invitation sendt" vises først, når invitationen er gemt; fejl (fx allerede inviteret, din egen e-mail) vises i dialogen. Teksten siger ærligt, at der ikke sendes en mail
+  - [x] Accept af en invitation advarer først om, at den nuværende husstand forlades — og om data går tabt, hvis man er eneste medlem
+  - [x] En fjernet bruger får automatisk en ny husstand og en besked ("Du er ikke længere medlem af …"), uanset hvilken skærm de står på
+- [x] **Præferencer & Diæt** (`/profile/preferences`) — genbruger onboardingens vælgere (nu i `onboarding/household_setup_widgets.dart`)
+- [x] **Notifikationer** — fjernet fra menuen i v1 (se nedenfor)
+- [x] **Konto** — skift navn, skift adgangskode (`/profile/change-password`), privatlivspolitik, slet konto
+- [x] Bekræftelse før "Log ud"
+
+### ⚠️ Skal gøres manuelt
+- [ ] **Deploy reglerne igen** (`firebase deploy --only firestore:rules`) — medlemmer skal nu kunne liste husstandens invitationskoder, ellers fejler "Fjern medlem"
+- [ ] **Udfyld `AppInfo.contactEmail`** i `lib/core/app_info.dart` — bruges nu også af "Skriv til os"
+- [ ] Første iOS-build: kør `pod install` — `url_launcher` og `package_info_plus` er nye
+
+### Bevidst udskudt
+- **Notifikationer** (fx "Hvad skal I have i aften?"): kræver `flutter_local_notifications`, en tilladelsesdialog og test på en rigtig iPhone. Bedre som v1.1 end halvfærdigt i v1
+- **Præferencerne bruges stadig ingen steder** i appen. Siden er ærlig om det (lover ingen effekt), men en naturlig næste ting er at bruge antal personer som standard-portioner
+- **Eneste medlem der deltager i en anden husstand** efterlader den gamle husstand uden medlemmer. Brugeren advares nu, men data slettes ikke automatisk
 
 ---
 
 ## 🧪 4. QA & UI-oprydning
 
-- [ ] Login: fejl-snackbaren vises igen ved hver genopbygning, så længe fejlen står i state (`login_screen.dart`, `addPostFrameCallback` i `build`)
+- [x] Login: fejl-snackbaren blev vist igen ved hver genopbygning — nu `ref.listen`, så den kun vises, når fejlen ændrer sig (test fanger den gamle fejl)
 - [x] Login: "Har du ikke en konto? Tilmeld dig" løb ud af skærmen ved stor tekst — nu `Wrap`
-- [ ] Profilskærmen bruger hårdkodede farver (`Colors.red`, `Colors.green`, `Color(0xFFF8F9F8)`) — skal over på `Theme.of(context).colorScheme`
-- [ ] Stats-label "MADPLANER" tæller dage i *denne uge* — omdøb eller tæl rigtigt
-- [ ] "Aktiv" ved husstanden er hårdkodet
-- [ ] Invitationsdialogen findes i to identiske kopier (`ProfileScreen` og `_HouseholdDetailCard`)
-- [ ] `TextEditingController`s i dialoger disposes ikke
-- [ ] Widget-tests for hvert nyt menupunkt i `test/features/profile_screen_test.dart`
+- [x] Profilskærmen bruger hårdkodede farver — hele profilen og dens undersider følger nu temaet og mockuppene (`profilside_1`, `del_samarbejd_1`); `test/design_system_test.dart` holder dem rene
+- [x] Temaet manglede de fleste tekstroller (dialogtitler, ListTile m.m. faldt tilbage til Roboto) og fladefarverne (`surfaceContainer*`) — nu komplet og testet
+- [x] Hele appen går nu gennem temaet (`context.colors`/`context.text`) — ca. 325 hårdkodede farver og skrifter i 19 filer lagt om; `test/design_system_test.dart` dækker hele `lib/`. Skærmbilleder før/efter var stort set ens
+- [x] Madplanen: overskrift og "Overfør til indkøb" løb 26 px ud over kanten på en 390 pt bred iPhone — nu `Wrap`. "Mandag's Madplan" → "Mandagens madplan"
+- [x] Skygge i "Tilføj eget måltid" var helt sort (`alpha: 13` i stedet for 0–1)
+- [x] Stats-label "MADPLANER" talte alle dage i ugen — nu "PLANLAGTE DAGE", og kun dage med mindst ét måltid tæller
+- [x] "Aktiv" ved husstanden er hårdkodet — fjernet i punkt 3
+- [x] Invitationsdialogen findes i to identiske kopier — nu én, i `household_dialogs.dart`
+- [x] `TextEditingController`s disposes nu overalt — også i "Tilføj vare", "Tilføj eget måltid" og "Rediger måltid"
+- [x] Widget-tests for hvert nyt menupunkt (`profile_screen_test.dart`, `household_screen_test.dart`, `profile_subpages_test.dart`)
 - [ ] Test på fysisk iPhone (kamera/galleri-tilladelser, tastatur, safe area)
 - [ ] Screenshots (6.9" og 6.5" iPhone), app-beskrivelse, nøgleord, kategori
 

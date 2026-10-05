@@ -418,6 +418,9 @@ describe('slet konto', () => {
       await setDoc(doc(s, 'households/HH_E/grocery_list/e1'), { name: 'Æg' });
       await setDoc(doc(s, 'households/HH_E/meal_plans/2026-09-28'), { days: {} });
       await setDoc(doc(s, 'households/HH_E/recurring_items/m1'), { name: 'Mælk' });
+      await setDoc(doc(s, 'households/HH_E/board_notes/n1'), {
+        type: 'text', authorId: 'zed', createdAt: 1, isPinned: false, text: 'Hej',
+      });
       await setDoc(doc(s, 'recipes/eveR'), { title: 'Eves ret', householdId: 'HH_E', createdBy: 'eve' });
       // Lavet af et tidligere medlem, der har forladt husstanden.
       await setDoc(doc(s, 'recipes/zedR'), { title: 'Zeds ret', householdId: 'HH_E', createdBy: 'zed' });
@@ -440,10 +443,13 @@ describe('slet konto', () => {
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/grocery_list')));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/meal_plans')));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/recurring_items')));
+    await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/board_notes')));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'recipes'),
       where('householdId', '==', 'HH_E'))));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
       where('fromHouseholdId', '==', 'HH_E'))));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'join_codes'),
+      where('householdId', '==', 'HH_E'))));
     await assertSucceeds(deleteDoc(doc(s, 'households/HH_E')));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
       where('toUserEmail', '==', 'eve@example.com'))));
@@ -465,6 +471,8 @@ describe('slet konto', () => {
     const s = db('bob');
     await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
       where('fromHouseholdId', '==', 'HH_A'), where('fromUid', '==', 'bob'))));
+    await assertSucceeds(deleteMatching(s, query(collection(s, 'join_codes'),
+      where('householdId', '==', 'HH_A'), where('createdBy', '==', 'bob'))));
     await assertSucceeds(updateDoc(doc(s, 'households/HH_A'), { members: arrayRemove('bob') }));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'invitations'),
       where('toUserEmail', '==', 'bob@example.com'))));
@@ -505,6 +513,117 @@ describe('slet konto', () => {
 
   test('man kan ikke slette en andens profil', async () => {
     await assertFails(deleteDoc(doc(db('eve'), 'users/alice')));
+  });
+});
+
+// ── Husstand & deling ─────────────────────────────────────────────────────────
+// Spejler forespørgslerne i HouseholdNotifier (household_provider.dart).
+
+describe('husstand & deling', () => {
+  // Det appen skriver, når nogen får en ny, tom husstand (_addFreshHouseholdToBatch).
+  function addFreshHousehold(s, batch, uid, id) {
+    batch.set(doc(s, `households/${id}`), {
+      name: 'Mit Skafferi', members: [uid], admin: uid,
+      adultsCount: 2, childrenCount: 2, preferences: [], createdAt: serverTimestamp(),
+    });
+    batch.set(doc(s, `users/${uid}`), { householdId: id }, { merge: true });
+  }
+
+  async function aliceRemovesBob() {
+    const s = db('alice');
+    const codes = await getDocs(query(collection(s, 'join_codes'), where('householdId', '==', 'HH_A')));
+    const batch = writeBatch(s);
+    batch.update(doc(s, 'households/HH_A'), { members: arrayRemove('bob') });
+    codes.forEach((c) => batch.delete(c.ref));
+    await batch.commit();
+  }
+
+  test('bob forlader husstanden og får en ny i samme batch', async () => {
+    const s = db('bob');
+    const batch = writeBatch(s);
+    batch.update(doc(s, 'households/HH_A'), { members: arrayRemove('bob') });
+    addFreshHousehold(s, batch, 'bob', 'SK-BOBNY');
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(getDoc(doc(s, 'households/SK-BOBNY')));
+    await assertFails(getDoc(doc(s, 'households/HH_A')));
+  });
+
+  test('alice (ejer) forlader husstanden, giver ejerskabet til bob og får en ny', async () => {
+    const s = db('alice');
+    const batch = writeBatch(s);
+    batch.update(doc(s, 'households/HH_A'), { members: arrayRemove('alice'), admin: 'bob' });
+    addFreshHousehold(s, batch, 'alice', 'SK-ALICENY');
+    await assertSucceeds(batch.commit());
+  });
+
+  test('alice fjerner bob og sletter alle koder i samme batch', async () => {
+    await assertSucceeds(aliceRemovesBob());
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const left = await getDocs(collection(ctx.firestore(), 'join_codes'));
+      if (!left.empty) throw new Error('Koderne blev ikke slettet');
+    });
+  });
+
+  test('bob kan ikke komme ind igen med en kode, han havde gemt', async () => {
+    await aliceRemovesBob();
+    await assertFails(updateDoc(doc(db('bob'), 'households/HH_A'), {
+      members: arrayUnion('bob'), joinedWith: { type: 'code', id: VALID_CODE },
+    }));
+  });
+
+  test('den fjernede bob mister adgang, men kan starte forfra i en ny husstand', async () => {
+    await aliceRemovesBob();
+    const s = db('bob');
+    // Det er den fejl, appen reagerer på.
+    await assertFails(getDoc(doc(s, 'households/HH_A')));
+    // Bobs profil peger stadig på HH_A; den nye husstand + ny pegepind i ét batch.
+    const batch = writeBatch(s);
+    addFreshHousehold(s, batch, 'bob', 'SK-BOBNY');
+    await assertSucceeds(batch.commit());
+  });
+
+  test('bob (ikke ejer) kan ikke fjerne alice', async () => {
+    await assertFails(updateDoc(doc(db('bob'), 'households/HH_A'), {
+      members: arrayRemove('alice'),
+    }));
+  });
+
+  test('eve kan ikke liste Familien A\'s invitationskoder', async () => {
+    const s = db('eve');
+    await assertFails(getDocs(query(collection(s, 'join_codes'), where('householdId', '==', 'HH_A'))));
+  });
+
+  test('medlemmer ser husstandens ubesvarede invitationer — eve gør ikke', async () => {
+    const q = (s, hh) => query(collection(s, 'invitations'),
+      where('fromHouseholdId', '==', hh), where('status', '==', 'pending'));
+    await assertSucceeds(getDocs(q(db('bob'), 'HH_A')));
+    await assertFails(getDocs(q(db('eve'), 'HH_A')));
+  });
+
+  test('tjek for dobbelt-invitation (appens forespørgsel) er tilladt for medlemmer', async () => {
+    const s = db('bob');
+    await assertSucceeds(getDocs(query(collection(s, 'invitations'),
+      where('fromHouseholdId', '==', 'HH_A'),
+      where('toUserEmail', '==', 'carol@example.com'),
+      where('status', '==', 'pending'),
+      limit(1))));
+  });
+
+  test('et medlem kan annullere en invitation — eve kan ikke', async () => {
+    await assertFails(deleteDoc(doc(db('eve'), 'invitations/inv1')));
+    await assertSucceeds(deleteDoc(doc(db('bob'), 'invitations/inv1')));
+  });
+
+  test('alice kan skifte navn, men ikke til over 100 tegn', async () => {
+    await assertSucceeds(updateDoc(doc(db('alice'), 'users/alice'), { displayName: 'Alice A.' }));
+    await assertFails(updateDoc(doc(db('alice'), 'users/alice'), { displayName: 'x'.repeat(101) }));
+  });
+
+  test('præferencer: antal over 50 afvises', async () => {
+    await assertFails(updateDoc(doc(db('bob'), 'households/HH_A'), { adultsCount: 51 }));
+    await assertSucceeds(updateDoc(doc(db('bob'), 'households/HH_A'), {
+      adultsCount: 1, childrenCount: 0, preferences: ['Budgetvenligt'],
+    }));
   });
 });
 // ── Fast genkøb (fra main, #13) mod de strammere husstandsregler ──────────────

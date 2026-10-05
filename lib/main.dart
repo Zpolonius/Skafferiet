@@ -14,6 +14,10 @@ import 'features/recipes/create_recipe_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/household_provider.dart';
 import 'features/profile/delete_account_screen.dart';
+import 'features/profile/change_password_screen.dart';
+import 'features/profile/help_screen.dart';
+import 'features/profile/household_screen.dart';
+import 'features/profile/preferences_screen.dart';
 import 'features/legal/privacy_policy_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
@@ -59,6 +63,9 @@ class MyApp extends ConsumerStatefulWidget {
 class _MyAppState extends ConsumerState<MyApp> {
   late final _AuthRouterNotifier _notifier;
   late final GoRouter _router;
+
+  // Beskeder der skal ses, uanset hvilken skærm brugeren står på.
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -149,6 +156,22 @@ class _MyAppState extends ConsumerState<MyApp> {
           builder: (context, state) => const ProfileScreen(),
           routes: [
             GoRoute(
+              path: 'household',
+              builder: (context, state) => const HouseholdScreen(),
+            ),
+            GoRoute(
+              path: 'preferences',
+              builder: (context, state) => const PreferencesScreen(),
+            ),
+            GoRoute(
+              path: 'help',
+              builder: (context, state) => const HelpScreen(),
+            ),
+            GoRoute(
+              path: 'change-password',
+              builder: (context, state) => const ChangePasswordScreen(),
+            ),
+            GoRoute(
               path: 'delete-account',
               builder: (context, state) => const DeleteAccountScreen(),
             ),
@@ -197,8 +220,19 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(householdProvider.select((s) => s.notice), (_, notice) {
+      if (notice == null) return;
+      _messengerKey.currentState?.showSnackBar(SnackBar(
+        content: Text(notice),
+        duration: const Duration(seconds: 8),
+        behavior: SnackBarBehavior.floating,
+      ));
+      Future.microtask(() => ref.read(householdProvider.notifier).clearNotice());
+    });
+
     return MaterialApp.router(
       title: 'Skafferiet',
+      scaffoldMessengerKey: _messengerKey,
       theme: AppTheme.lightTheme,
       routerConfig: _router,
       debugShowCheckedModeBanner: false,

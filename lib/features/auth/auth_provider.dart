@@ -1,6 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'auth_error_messages.dart';
+
+/// Navne gemmes med højst 100 tegn i firestore.rules; vi holder dem kortere,
+/// så de kan vises på skærmen.
+const maxDisplayNameLength = 50;
+
+/// Firebase kræver mindst 6 tegn — samme grænse som ved oprettelse.
+const minPasswordLength = 6;
 
 class AuthState {
   final User? user;
@@ -49,7 +57,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signUp(String email, String password, String name) async {
     state = state.copyWith(isLoading: true);
     try {
-      final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      final credential =
+          await _auth.createUserWithEmailAndPassword(email: email, password: password);
       // Opdater profil med navn
       await credential.user?.updateDisplayName(name);
       // Tving Firebase til at hente de nye profil-data (som navnet)
@@ -74,18 +83,73 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _auth.sendPasswordResetEmail(email: email.trim());
       return null;
     } on FirebaseAuthException catch (e) {
-      switch (e.code) {
-        case 'user-not-found':
-          return null;
-        case 'invalid-email':
-          return 'Ugyldig e-mailadresse.';
-        case 'too-many-requests':
-          return 'For mange forsøg. Vent lidt, og prøv igen.';
-        case 'network-request-failed':
-          return 'Ingen forbindelse. Tjek dit internet, og prøv igen.';
-        default:
-          return 'Mailen kunne ikke sendes. Prøv igen.';
-      }
+      // Samme svar, uanset om e-mailen har en konto.
+      if (e.code == 'user-not-found') return null;
+      return authErrorMessage(e.code, fallback: 'Mailen kunne ikke sendes. Prøv igen.');
+    }
+  }
+
+  /// Skifter brugerens navn både i login-kontoen og i profilen, som de andre
+  /// i husstanden ser. Returnerer en fejlbesked eller null.
+  Future<String?> updateDisplayName(String name) async {
+    final user = _auth.currentUser;
+    final clean = name.trim();
+    if (user == null) return 'Du er ikke logget ind.';
+    if (clean.isEmpty) return 'Indtast dit navn.';
+    if (clean.length > maxDisplayNameLength) {
+      return 'Navnet må højst være $maxDisplayNameLength tegn.';
+    }
+
+    try {
+      await user.updateDisplayName(clean);
+      await user.reload();
+      final firestore = _firestore ?? FirebaseFirestore.instance;
+      await firestore.collection('users').doc(user.uid).set({
+        'displayName': clean,
+      }, SetOptions(merge: true));
+      state = AuthState(user: _auth.currentUser);
+      return null;
+    } catch (e) {
+      return 'Navnet kunne ikke gemmes. Tjek din forbindelse, og prøv igen.';
+    }
+  }
+
+  /// Skifter adgangskode. Firebase kræver, at man for nylig har logget ind,
+  /// så vi beder om den nuværende adgangskode og logger ind igen med den først.
+  /// Returnerer en fejlbesked eller null.
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) return 'Du er ikke logget ind.';
+
+    try {
+      await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: currentPassword),
+      );
+    } on FirebaseAuthException catch (e) {
+      return authErrorMessage(
+        e.code,
+        fallback: _passwordChangeFailed,
+        overrides: const {
+          'wrong-password': _currentPasswordWrong,
+          'invalid-credential': _currentPasswordWrong,
+          'INVALID_LOGIN_CREDENTIALS': _currentPasswordWrong,
+        },
+      );
+    }
+
+    try {
+      await user.updatePassword(newPassword);
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return authErrorMessage(
+        e.code,
+        fallback: _passwordChangeFailed,
+        overrides: const {'weak-password': 'Den nye adgangskode er for svag.'},
+      );
     }
   }
 
@@ -143,15 +207,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  String _mapError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found': return 'Ingen bruger fundet med denne e-mail.';
-      case 'wrong-password': return 'Forkert adgangskode.';
-      case 'email-already-in-use': return 'Denne e-mail er allerede i brug.';
-      case 'weak-password': return 'Adgangskoden er for svag.';
-      default: return 'Der skete en fejl. Prøv igen.';
-    }
-  }
+  static const _currentPasswordWrong = 'Den nuværende adgangskode er forkert.';
+  static const _passwordChangeFailed = 'Adgangskoden kunne ikke skiftes. Prøv igen.';
+
+  /// Ved login siges det ikke, om det var e-mailen eller adgangskoden, der
+  /// var forkert — ellers kan man bruge login til at finde ud af, hvem der
+  /// har en konto. (Firebase svarer selv 'invalid-credential' i begge tilfælde.)
+  String _mapError(FirebaseAuthException e) => authErrorMessage(
+        e.code,
+        fallback: 'Der skete en fejl. Prøv igen.',
+        overrides: const {
+          'user-not-found': _wrongLogin,
+          'wrong-password': _wrongLogin,
+          'invalid-credential': _wrongLogin,
+          'INVALID_LOGIN_CREDENTIALS': _wrongLogin,
+        },
+      );
+
+  static const _wrongLogin = 'Forkert e-mail eller adgangskode.';
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
