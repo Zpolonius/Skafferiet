@@ -6,7 +6,7 @@ import '../profile/household_provider.dart';
 
 /// Lader brugeren vælge, hvilke måltider der vises i deres madplan — fx
 /// uden frokost, hvis de har frokostordning. Valget er personligt.
-class MealTypesSheet extends ConsumerWidget {
+class MealTypesSheet extends ConsumerStatefulWidget {
   const MealTypesSheet({super.key});
 
   static Future<void> show(BuildContext context) => showAppBottomSheet<void>(
@@ -15,7 +15,21 @@ class MealTypesSheet extends ConsumerWidget {
       );
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MealTypesSheet> createState() => _MealTypesSheetState();
+}
+
+class _MealTypesSheetState extends ConsumerState<MealTypesSheet> {
+  // Vises i sheetet selv: en snackbar ville ligge skjult bag det.
+  String? _error;
+
+  Future<void> _save(Set<MealType> next) async {
+    setState(() => _error = null);
+    final error = await ref.read(householdProvider.notifier).setMealTypes(next);
+    if (mounted && error != null) setState(() => _error = error);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final selected = ref.watch(householdProvider.select((h) => h.mealTypes));
@@ -56,8 +70,16 @@ class MealTypesSheet extends ConsumerWidget {
                   : (on) {
                       final next = {...selected};
                       on ? next.add(type) : next.remove(type);
-                      ref.read(householdProvider.notifier).setMealTypes(next);
+                      _save(next);
                     },
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: Text(
+                _error!,
+                style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+              ),
             ),
         ],
       ),
