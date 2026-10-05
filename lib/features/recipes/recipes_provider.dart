@@ -123,3 +123,7 @@ class RecipesNotifier extends StreamNotifier<List<Recipe>> {
 final recipesProvider = StreamNotifierProvider<RecipesNotifier, List<Recipe>>(() {
   return RecipesNotifier();
 });
+
+/// Sættes af andre skærme (fx madplanens søgefelt) for at åbne Opskrifter med
+/// markøren i søgefeltet. Opskrifter nulstiller den, når søgefeltet har fået fokus.
+final focusRecipeSearchProvider = StateProvider<bool>((ref) => false);
