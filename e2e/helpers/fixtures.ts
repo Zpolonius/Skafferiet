@@ -43,7 +43,12 @@ export const test = base.extend<{ consoleLog: ConsoleEntry[]; app: void }>({
   consoleLog: async ({ page }, use, testInfo) => {
     const entries: ConsoleEntry[] = [];
     page.on('console', (m) => entries.push({ type: m.type(), text: m.text() }));
-    page.on('pageerror', (e) => entries.push({ type: 'pageerror', text: String(e) }));
+    page.on('pageerror', (e) => {
+      // google_fonts henter skrifttyper fra fonts.gstatic.com ved kørsel; det
+      // afvises af routeNetwork, og fejlen er kendt støj (se docs/E2E.md).
+      if (/Failed to load font with url/.test(String(e.message ?? e))) return;
+      entries.push({ type: 'pageerror', text: String(e) });
+    });
     await use(entries);
     if (testInfo.status !== testInfo.expectedStatus) {
       await testInfo.attach('console.log', {

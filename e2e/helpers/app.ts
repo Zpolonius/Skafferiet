@@ -7,10 +7,27 @@ export async function waitForApp(page: Page): Promise<void> {
   await page.locator('flt-semantics-host').waitFor({ state: 'attached', timeout: 60_000 });
 }
 
-/** Skriver i et Flutter-tekstfelt (fundet via dets label). */
+/**
+ * Skriver i et Flutter-tekstfelt (fundet via dets label). Flutter flytter
+ * fokus til et skjult input efter klikket; skrives der før det er sket, går
+ * tastetryk tabt. Derfor venter vi på fokus, rydder feltet, skriver og
+ * kontrollerer værdien — og prøver igen et begrænset antal gange.
+ */
 export async function typeInto(page: Page, label: string, text: string): Promise<void> {
-  await page.getByLabel(label).click();
-  await page.keyboard.type(text);
+  const field = page.getByLabel(label);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await field.click();
+    await page.waitForFunction(() => {
+      const a = document.activeElement;
+      return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+    });
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type(text, { delay: 20 });
+    const value = await page.evaluate(() => (document.activeElement as HTMLInputElement | null)?.value);
+    if (value === text) return;
+  }
+  throw new Error(`Kunne ikke skrive i feltet "${label}" (tastetryk blev ved med at gå tabt)`);
 }
 
 /** Logger ind gennem den rigtige loginskærm og venter på hjemskærmen. */

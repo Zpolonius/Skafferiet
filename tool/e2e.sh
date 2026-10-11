@@ -7,13 +7,32 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# 1. firebase_options.dart er git-ignoreret og mangler i en frisk klon. Lav kun
-#    en stub hvis filen ikke findes — en rigtig fil overskrives aldrig.
+# 1+2. Flutter web-build med lokal CanvasKit (ingen CDN-afhængighed).
+#    firebase_options.dart er git-ignoreret og mangler i en frisk klon. Hvis den
+#    mangler, skrives en stub kun mens der bygges, og den fjernes igen bagefter.
+#    En rigtig fil røres aldrig.
 OPTIONS="lib/firebase_options.dart"
-if [ ! -f "$OPTIONS" ]; then
-  echo "==> $OPTIONS mangler: skriver en stub (git-ignoreret, bruges kun til at kompilere)"
-  cat > "$OPTIONS" <<'DART'
-// STUB genereret af tool/e2e.sh. Erstattes af `flutterfire configure`.
+CREATED_STUB=0
+cleanup() {
+  if [ "$CREATED_STUB" = "1" ]; then
+    rm -f "$ROOT/$OPTIONS"
+    echo "==> Fjernede stub-filen $OPTIONS igen (den blev oprettet af dette script)"
+  fi
+}
+trap cleanup EXIT
+
+BUILD_ARGS=(--target lib/main_e2e.dart --no-web-resources-cdn)
+if [ -n "${EMULATOR_HOST:-}" ]; then
+  BUILD_ARGS+=("--dart-define=EMULATOR_HOST=$EMULATOR_HOST")
+fi
+if [ "${E2E_SKIP_BUILD:-0}" = "1" ]; then
+  echo "==> E2E_SKIP_BUILD=1: genbruger eksisterende build/web"
+else
+  if [ ! -f "$OPTIONS" ]; then
+    echo "==> $OPTIONS mangler: skriver en midlertidig stub, så appen kan kompilere"
+    CREATED_STUB=1
+    cat > "$OPTIONS" <<'DART'
+// STUB genereret af tool/e2e.sh (fjernes igen). Erstattes af `flutterfire configure`.
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 
 class DefaultFirebaseOptions {
@@ -25,18 +44,11 @@ class DefaultFirebaseOptions {
   );
 }
 DART
-fi
-
-# 2. Flutter web-build med lokal CanvasKit (ingen CDN-afhængighed).
-BUILD_ARGS=(--target lib/main_e2e.dart --no-web-resources-cdn)
-if [ -n "${EMULATOR_HOST:-}" ]; then
-  BUILD_ARGS+=("--dart-define=EMULATOR_HOST=$EMULATOR_HOST")
-fi
-if [ "${E2E_SKIP_BUILD:-0}" = "1" ]; then
-  echo "==> E2E_SKIP_BUILD=1: genbruger eksisterende build/web"
-else
+  fi
   echo "==> flutter build web ${BUILD_ARGS[*]}"
   flutter build web "${BUILD_ARGS[@]}"
+  cleanup
+  CREATED_STUB=0
 fi
 
 # 3. Node-afhængigheder.
@@ -46,11 +58,13 @@ if [ ! -d node_modules ]; then
 fi
 
 # 4. Emulatorer (med de rigtige regler fra ../firebase.json) + Playwright.
-#    "$@" sendes videre som korrekt citerede argumenter.
-PW_ARGS=""
-for a in "$@"; do PW_ARGS+=" $(printf '%q' "$a")"; done
-exec npx firebase emulators:exec \
+#    Argumenterne sendes som JSON i en miljøvariabel og startes af
+#    run-playwright.mjs uden om en shell, så specialtegn (æøå, mellemrum,
+#    citationstegn) overlever uændret.
+E2E_PLAYWRIGHT_ARGS="$(node -e 'console.log(JSON.stringify(process.argv.slice(1)))' -- "$@")"
+export E2E_PLAYWRIGHT_ARGS
+npx firebase emulators:exec \
   --config ../firebase.json \
   --only auth,firestore,storage \
   --project demo-skafferiet \
-  "npx playwright test$PW_ARGS"
+  "node run-playwright.mjs"

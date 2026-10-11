@@ -14,7 +14,7 @@ dart format .                                           # Format code
 dart run build_runner build --delete-conflicting-outputs  # Regenerate Riverpod/codegen files
 flutterfire configure                                   # Reconfigure Firebase
 cd rules_test && npm install && npm test                # Test firestore.rules against the emulator (needs Java 11+)
-tool/e2e.sh                                             # E2E: Flutter web + Playwright mod Firebase-emulatorer (se docs/E2E.md)
+tool/e2e.sh                                             # E2E: Flutter web + Playwright mod Firebase-emulatorer (Java 21+, se docs/E2E.md)
 firebase deploy --only firestore:rules,storage          # Deploy rules (project comes from .firebaserc)
 ```
 

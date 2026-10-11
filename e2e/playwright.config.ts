@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-const port = Number(process.env.E2E_PORT ?? 4173);
+const port = Number(process.env.E2E_PORT ?? 4317);
 
 // På en maskine med en anden Chromium end den Playwright selv henter kan stien
 // angives med E2E_CHROMIUM_PATH. Uden den bruges Playwrights egen Chromium
@@ -28,7 +28,7 @@ export default defineConfig({
   webServer: {
     command: 'node server.mjs',
     url: `http://127.0.0.1:${port}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 30_000,
     env: { E2E_PORT: String(port) },
   },

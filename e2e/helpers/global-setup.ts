@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { firebaseCoreWebVersion, pubCacheDir } from './pubspec';
 
 /**
  * Appen henter Firebase JS SDK fra gstatic (se fixtures.ts, hvor det serveres
@@ -11,11 +11,10 @@ import { createRequire } from 'node:module';
 export default function globalSetup(): void {
   const repo = resolve(__dirname, '..', '..');
   const lock = readFileSync(join(repo, 'pubspec.lock'), 'utf8');
-  const m = lock.match(/^ {2}firebase_core_web:\n(?: {4}.*\n)*? {4}version: "([^"]+)"/m);
-  if (!m) throw new Error('Fandt ikke firebase_core_web i pubspec.lock — kør "flutter pub get".');
-  const webVersion = m[1];
+  const webVersion = firebaseCoreWebVersion(lock);
+  if (!webVersion) throw new Error('Fandt ikke firebase_core_web i pubspec.lock — kør "flutter pub get".');
 
-  const pubCache = process.env.PUB_CACHE ?? join(homedir(), '.pub-cache');
+  const pubCache = pubCacheDir();
   const file = join(pubCache, 'hosted', 'pub.dev', `firebase_core_web-${webVersion}`, 'lib', 'src', 'firebase_sdk_version.dart');
   if (!existsSync(file)) {
     console.warn(`[e2e] Kunne ikke finde ${file}; springer tjek af Firebase JS SDK-version over.`);

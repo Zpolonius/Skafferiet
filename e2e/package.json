@@ -3,7 +3,7 @@
   "private": true,
   "description": "End-to-end-tests af Skafferiet (Flutter web) mod Firebase-emulatorerne.",
   "scripts": {
-    "test": "firebase emulators:exec --config ../firebase.json --only auth,firestore,storage --project demo-skafferiet \"playwright test\""
+    "test": "firebase emulators:exec --config ../firebase.json --only auth,firestore,storage --project demo-skafferiet \"node run-playwright.mjs\""
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

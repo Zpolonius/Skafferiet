@@ -1,11 +1,11 @@
 // Minimal statisk server til Flutter web-builden (build/web). Ingen afhængigheder.
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('../build/web', import.meta.url)));
-const port = Number(process.env.E2E_PORT ?? 4173);
+const port = Number(process.env.E2E_PORT ?? 4317);
 
 if (!existsSync(join(root, 'index.html'))) {
   console.error(`Fandt ikke ${root}/index.html — kør "flutter build web --target lib/main_e2e.dart" først (eller tool/e2e.sh).`);
@@ -30,7 +30,7 @@ const types = {
 createServer((req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   let file = normalize(join(root, path));
-  if (!file.startsWith(root)) {
+  if (file !== root && !file.startsWith(root + sep)) {
     res.writeHead(403).end();
     return;
   }
