@@ -185,6 +185,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildDailyPlan(AsyncValue<WeeklyMealPlan> planAsync, List<MealType> mealTypes) {
     return planAsync.when(
+      skipLoadingOnReload: true,
       data: (plan) {
         final rawDayName = DateFormat('EEEE', 'da_DK').format(DateTime.now());
         final dayName = rawDayName.isNotEmpty
@@ -350,7 +351,9 @@ class _MealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isEmpty = slot.recipe == null && slot.directEntry == null;
+    final bool hasContent = slot.recipe != null || slot.directEntry != null;
+    final bool isMissing = !hasContent && slot.missingRecipe;
+    final bool isEmpty = !hasContent && !isMissing;
     
     return GestureDetector(
       onTap: () => context.go('/meal-plan'),
@@ -372,12 +375,14 @@ class _MealCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: isEmpty 
+              child: (isEmpty || isMissing)
                 ? Container(
                     width: 64,
                     height: 64,
                     color: context.colors.surfaceContainerLow,
-                    child: Icon(Icons.add_circle_outline, color: context.colors.primary),
+                    child: isMissing
+                        ? Icon(Icons.link_off, color: context.colors.outline)
+                        : Icon(Icons.add_circle_outline, color: context.colors.primary),
                   )
                 : CachedNetworkImage(
                     imageUrl: slot.recipe?.imageUrl ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200',
@@ -419,11 +424,15 @@ class _MealCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    isEmpty ? 'Tilføj til madplan' : (slot.recipe?.title ?? slot.directEntry!),
+                    isEmpty
+                        ? 'Tilføj til madplan'
+                        : isMissing
+                            ? 'Opskriften findes ikke længere'
+                            : (slot.recipe?.title ?? slot.directEntry!),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isEmpty ? context.colors.outline : context.colors.onSurface,
+                      color: (isEmpty || isMissing) ? context.colors.outline : context.colors.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,

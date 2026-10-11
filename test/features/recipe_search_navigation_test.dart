@@ -41,10 +41,10 @@ class _Household extends StateNotifier<HouseholdState> with Mock implements Hous
   _Household() : super(HouseholdState(householdId: 'h1'));
 }
 
-class _Plan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
+class _Plan extends StreamNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async =>
-      WeeklyMealPlan(id: 'w', weekStart: DateTime(2026, 9, 28), days: {});
+  Stream<WeeklyMealPlan> build() =>
+      Stream.value(WeeklyMealPlan(id: 'w', weekStart: DateTime(2026, 9, 28), days: {}));
 }
 
 void main() {

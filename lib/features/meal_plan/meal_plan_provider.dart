@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_plan.dart';
@@ -9,7 +11,7 @@ import '../profile/household_provider.dart';
 
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
 
-class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
+class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
   final FirebaseFirestore _firestore;
 
   MealPlanNotifier({FirebaseFirestore? firestore})
@@ -26,35 +28,64 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   }
 
   @override
-  Future<WeeklyMealPlan> build() async {
+  Stream<WeeklyMealPlan> build() {
+    // Kun husstand og uge styrer Firestore-abonnementet. Opskrifter lyttes der
+    // separat til, så abonnementet ikke genstartes (og UI'et ikke viser en
+    // spinner), når opskrifter indlæses eller ændres.
     final householdId = ref.watch(householdProvider).householdId;
     final offset = ref.watch(weekOffsetProvider);
-    
+
     final weekStart = _getWeekStart(DateTime.now()).add(Duration(days: offset * 7));
     final weekId = _getWeekId(weekStart);
 
     if (householdId == null) {
-      return WeeklyMealPlan(id: 'empty', weekStart: weekStart, days: {});
+      return Stream.value(WeeklyMealPlan(id: 'empty', weekStart: weekStart, days: {}));
     }
 
-    final doc = await _firestore
+    final controller = StreamController<WeeklyMealPlan>();
+    DocumentSnapshot<Map<String, dynamic>>? latest;
+
+    void emit() {
+      final doc = latest;
+      if (doc == null || controller.isClosed) return;
+      if (!doc.exists) {
+        controller.add(WeeklyMealPlan(id: weekId, weekStart: weekStart, days: {}));
+        return;
+      }
+      controller.add(_mapDocToPlan(doc, weekStart, ref.read(recipesProvider)));
+    }
+
+    final sub = _firestore
         .collection('households')
         .doc(householdId)
         .collection('meal_plans')
         .doc(weekId)
-        .get();
-    
-    if (!doc.exists) {
-      return WeeklyMealPlan(id: weekId, weekStart: weekStart, days: {});
-    }
+        .snapshots()
+        .listen((doc) {
+      latest = doc;
+      emit();
+    }, onError: controller.addError);
 
-    return _mapDocToPlan(doc, weekStart);
+    // Opskrifter der indlæses/ændres genberegner planen uden at gå via loading.
+    ref.listen(recipesProvider, (_, __) => emit());
+
+    ref.onDispose(() {
+      sub.cancel();
+      controller.close();
+    });
+
+    return controller.stream;
   }
 
-  WeeklyMealPlan _mapDocToPlan(DocumentSnapshot doc, DateTime weekStart) {
-    final data = doc.data() as Map<String, dynamic>;
+  WeeklyMealPlan _mapDocToPlan(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+    DateTime weekStart,
+    AsyncValue<List<Recipe>> recipesAsync,
+  ) {
+    final data = doc.data() ?? {};
     final daysData = data['days'] as Map<String, dynamic>? ?? {};
-    final recipes = ref.read(recipesProvider).value ?? [];
+    // null = opskrifter ikke indlæst endnu; så afgør vi ikke om en opskrift mangler.
+    final recipes = recipesAsync.hasValue ? recipesAsync.value : null;
 
     final Map<String, DailyPlan> days = {};
     daysData.forEach((key, value) {
@@ -73,19 +104,23 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
     );
   }
 
-  MealSlot _mapSlot(Map<String, dynamic>? data, List<Recipe> recipes) {
+  MealSlot _mapSlot(Map<String, dynamic>? data, List<Recipe>? recipes) {
     if (data == null) return MealSlot();
+    final recipeId = data['recipeId'] as String?;
     Recipe? recipe;
-    if (data['recipeId'] != null) {
-      try {
-        recipe = recipes.firstWhere((r) => r.id == data['recipeId']);
-      } catch (_) {
-        // Opskrift ikke fundet - vi returnerer null i stedet for at gætte
-        recipe = null;
+    var missing = false;
+    if (recipeId != null && recipes != null) {
+      final matches = recipes.where((r) => r.id == recipeId);
+      if (matches.isEmpty) {
+        missing = true;
+      } else {
+        recipe = matches.first;
       }
     }
     return MealSlot(
       recipe: recipe,
+      recipeId: recipeId,
+      missingRecipe: missing,
       directEntry: data['directEntry'],
     );
   }
@@ -112,13 +147,12 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
         }
       }
     }, SetOptions(merge: true));
-    
-    ref.invalidateSelf();
   }
 
   Future<int> transferToShoppingList() async {
     final householdId = ref.read(householdProvider).householdId;
-    if (householdId == null || state.value == null) return 0;
+    // Under skift af uge/husstand viser state stadig den forrige plan.
+    if (householdId == null || state.isLoading || state.value == null) return 0;
 
     final plan = state.value!;
     final batch = _firestore.batch();
@@ -158,7 +192,7 @@ class MealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> {
   }
 }
 
-final mealPlanProvider = AsyncNotifierProvider<MealPlanNotifier, WeeklyMealPlan>(
+final mealPlanProvider = StreamNotifierProvider<MealPlanNotifier, WeeklyMealPlan>(
   MealPlanNotifier.new,
 );
 

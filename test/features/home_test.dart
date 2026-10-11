@@ -25,9 +25,10 @@ class MockRecipesNotifier extends StreamNotifier<List<Recipe>> with Mock impleme
   Stream<List<Recipe>> build() => const Stream.empty();
 }
 
-class MockMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
+class MockMealPlanNotifier extends StreamNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async => WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {});
+  Stream<WeeklyMealPlan> build() =>
+      Stream.value(WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {}));
 }
 
 class _MockUser extends Mock implements User {}

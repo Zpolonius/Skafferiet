@@ -33,12 +33,12 @@ class _FakeHouseholdNotifier extends StateNotifier<HouseholdState>
   }
 }
 
-class _EmptyMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan>
+class _EmptyMealPlanNotifier extends StreamNotifier<WeeklyMealPlan>
     with Mock
     implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async =>
-      WeeklyMealPlan(id: 'test', weekStart: DateTime(2026, 10, 5), days: {});
+  Stream<WeeklyMealPlan> build() =>
+      Stream.value(WeeklyMealPlan(id: 'test', weekStart: DateTime(2026, 10, 5), days: {}));
 }
 
 void main() {
