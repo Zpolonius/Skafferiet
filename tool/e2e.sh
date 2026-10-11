@@ -28,6 +28,11 @@ fi
 if [ "${E2E_SKIP_BUILD:-0}" = "1" ]; then
   echo "==> E2E_SKIP_BUILD=1: genbruger eksisterende build/web"
 else
+  # En stub efterladt af en afbrudt kørsel (fx SIGKILL) genkendes på første
+  # linje og behandles som scriptets egen, så den også fjernes denne gang.
+  if [ -f "$OPTIONS" ] && head -n 1 "$OPTIONS" | grep -q '^// STUB genereret af tool/e2e.sh'; then
+    rm -f "$OPTIONS"
+  fi
   if [ ! -f "$OPTIONS" ]; then
     echo "==> $OPTIONS mangler: skriver en midlertidig stub, så appen kan kompilere"
     CREATED_STUB=1

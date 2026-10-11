@@ -11,7 +11,7 @@ genindlæsning, lyttere der ikke opdaterer live, regler der afviser en skrivning
 ## Forudsætninger
 
 - Flutter (samme version som resten af projektet) og Node 20+ (testet med 22).
-- Java 21+ (Firebase-emulatorerne; firebase-tools 14 kræver 21, 11 er ikke nok).
+- Java 21+ (Firebase-emulatorerne; firebase-tools 14 advarer under Java 21, og v15 kræver det).
 - Første gang på egen maskine: `cd e2e && npm ci && npx playwright install chromium`.
 
 ## Kør alle tests
@@ -27,7 +27,7 @@ Scriptet:
    eller fjernes aldrig),
 2. bygger `flutter build web --target lib/main_e2e.dart --no-web-resources-cdn`,
 3. installerer `e2e/node_modules` hvis de mangler,
-4. starter emulatorerne og kører `npx playwright test` inde i dem.
+4. starter emulatorerne og kører `node e2e/run-playwright.mjs` (Playwright) inde i dem.
 
 En kørsel tager ca. 2 minutter (heraf ca. 1 minut er web-builden).
 
@@ -150,10 +150,12 @@ Med `E2E_FIXED=1 tool/e2e.sh` køres de uden forventet fejl.
 - Storage-emulatorens URL'er (`http://localhost:9199/...`) opfylder ikke regler,
   der kræver `https://firebasestorage.googleapis.com/...` (fx opslagstavlens
   fotosedler). Fremtidige foto-tests skal tage højde for det.
-- Konsollen kan indeholde støj: 4 `pageerror` med "Failed to load font with
-  url …" kommer fra google_fonts, der henter skrifttyper fra fonts.gstatic.com
-  ved kørsel — det afviser harness'en med vilje. Præcis disse filtreres fra i
-  `helpers/fixtures.ts`; appens skrifttyper er uændrede.
+- Konsol-loggen (vedhæftes kun ved en fejlende test) indeholder altid 4
+  `pageerror` med teksten "Error" pr. sideindlæsning. De kommer fra
+  google_fonts, der henter skrifttyper fra fonts.gstatic.com ved kørsel – det
+  afviser harness'en med vilje. De er harmløse, men kan ikke filtreres sikkert
+  fra, fordi den egentlige besked ("Failed to load font with url …") ikke
+  findes i JavaScript-fejlen. Appens skrifttyper er uændrede.
 - Emulatorerne efterlader `firestore-debug.log` og andre `*-debug.log` i `e2e/`
   (git-ignorerede).
 - Tests kører efter hinanden (1 worker) fordi de deler emulatorerne.

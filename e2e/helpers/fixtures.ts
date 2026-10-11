@@ -43,10 +43,11 @@ export const test = base.extend<{ consoleLog: ConsoleEntry[]; app: void }>({
   consoleLog: async ({ page }, use, testInfo) => {
     const entries: ConsoleEntry[] = [];
     page.on('console', (m) => entries.push({ type: m.type(), text: m.text() }));
+    // Bemærk: 4 pageerrors med teksten "Error" pr. sideindlæsning er kendt støj
+    // fra google_fonts (skrifttyper fra fonts.gstatic.com afvises af
+    // routeNetwork). Dart-beskeden findes ikke i JS-fejlen, så de kan ikke
+    // filtreres sikkert fra – se docs/E2E.md.
     page.on('pageerror', (e) => {
-      // google_fonts henter skrifttyper fra fonts.gstatic.com ved kørsel; det
-      // afvises af routeNetwork, og fejlen er kendt støj (se docs/E2E.md).
-      if (/Failed to load font with url/.test(String(e.message ?? e))) return;
       entries.push({ type: 'pageerror', text: String(e) });
     });
     await use(entries);
