@@ -1,0 +1,14 @@
+{
+  "name": "skafferiet-e2e",
+  "private": true,
+  "description": "End-to-end-tests af Skafferiet (Flutter web) mod Firebase-emulatorerne.",
+  "scripts": {
+    "test": "firebase emulators:exec --config ../firebase.json --only auth,firestore,storage --project demo-skafferiet \"node run-playwright.mjs\""
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.20.5",
+    "firebase": "12.19.0",
+    "firebase-tools": "^14.0.0"
+  }
+}

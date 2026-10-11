@@ -49,3 +49,8 @@ android/app/google-services.json
 
 # Firestore rules tests (rules_test/)
 rules_test/node_modules/
+
+# E2E (e2e/)
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
