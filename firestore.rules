@@ -405,6 +405,14 @@ service cloud.firestore {
                 d.get('nutritionFromIngredients', null) is bool);
       }
 
+      // Fremgangsmåde: missing (old recipes) or a list of at most 50 steps.
+      // Rules cannot loop over a list, so the 1000-character limit per step
+      // is enforced by the app only (see maxRecipeStepLength).
+      function validInstructions(d) {
+        return !('instructions' in d) ||
+               (d.instructions is list && d.instructions.size() <= 50);
+      }
+
       function isGlobal() {
         return resource.data.get('householdId', null) == null;
       }
@@ -423,12 +431,17 @@ service cloud.firestore {
 
       allow create: if isSignedIn() &&
                        validNutrition(request.resource.data) &&
+                       validInstructions(request.resource.data) &&
                        request.resource.data.createdBy == request.auth.uid &&
                        isMember(request.resource.data.get('householdId', null));
 
       // Owner and household never change after creation.
+      // Trinene tjekkes kun når de ændres, så en ældre opskrift med ugyldige
+      // trin ikke blokerer andre rettelser (fx et nyt billede).
       allow update: if isSignedIn() &&
                        validNutrition(request.resource.data) &&
+                       (!changedKeys().hasAny(['instructions']) ||
+                        validInstructions(request.resource.data)) &&
                        !changedKeys().hasAny(['householdId', 'createdBy']) &&
                        (
                          (!isGlobal() && isMember(resource.data.householdId)) ||

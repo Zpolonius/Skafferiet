@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -193,6 +194,10 @@ class RecipeDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 )),
+                if (recipe.instructions.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  RecipeInstructions(steps: recipe.instructions),
+                ],
                 const SizedBox(height: 100),
               ]),
             ),
@@ -301,6 +306,93 @@ class _NutritionSummary extends StatelessWidget {
               : 'Pr. portion',
           style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
         ),
+      ],
+    );
+  }
+}
+
+/// Fremgangsmåden som nummererede trin. Tryk på et trin for at markere det
+/// som udført mens man laver mad — det huskes kun lokalt og gemmes ikke.
+class RecipeInstructions extends StatefulWidget {
+  final List<String> steps;
+  const RecipeInstructions({super.key, required this.steps});
+
+  @override
+  State<RecipeInstructions> createState() => _RecipeInstructionsState();
+}
+
+class _RecipeInstructionsState extends State<RecipeInstructions> {
+  final Set<int> _done = {};
+
+  @override
+  void didUpdateWidget(RecipeInstructions old) {
+    super.didUpdateWidget(old);
+    if (!listEquals(old.steps, widget.steps)) _done.clear();
+  }
+
+  void _toggle(int i) => setState(() => _done.contains(i) ? _done.remove(i) : _done.add(i));
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fremgangsmåde', style: text.headlineLarge),
+        const SizedBox(height: 16),
+        for (var i = 0; i < widget.steps.length; i++)
+          Semantics(
+            container: true,
+            button: true,
+            excludeSemantics: true,
+            label: 'Trin ${i + 1}: ${widget.steps[i]}',
+            value: _done.contains(i) ? 'udført' : null,
+            hint: _done.contains(i) ? 'Tryk for at fjerne markeringen' : 'Tryk for at markere som udført',
+            onTap: () => _toggle(i),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _toggle(i),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: _done.contains(i) ? colors.surfaceContainerHigh : colors.primaryContainer,
+                        child: _done.contains(i)
+                            ? Icon(Icons.check, size: 16, color: colors.onSurfaceVariant)
+                            : Text(
+                                '${i + 1}',
+                                style: text.labelSmall?.copyWith(
+                                  color: colors.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            widget.steps[i],
+                            style: text.bodyMedium?.copyWith(
+                              decoration: _done.contains(i) ? TextDecoration.lineThrough : null,
+                              color: _done.contains(i) ? colors.onSurfaceVariant : colors.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

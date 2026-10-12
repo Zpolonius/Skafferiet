@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/recipe.dart';
 import '../../core/services/nutrition_calculator.dart';
 import '../../shared/utils/number_format.dart';
+import '../../core/theme/theme_context.dart';
 import 'ingredient_sheet.dart';
 
 /// "400 g", "1,5 dl" eller bare "fed" hvis der ikke er en mængde.
@@ -379,6 +380,212 @@ class _InfoBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Fremgangsmåde ─────────────────────────────────────────────────────────────
+
+/// Grænser for fremgangsmåden. Antallet håndhæves også af `firestore.rules`;
+/// tegn pr. trin kan reglerne ikke tjekke (de kan ikke løbe en liste igennem),
+/// så det holdes kun her i appen.
+const int maxRecipeSteps = 50;
+const int maxRecipeStepLength = 1000;
+
+/// Trimmer trinene og fjerner tomme, så kun rigtige trin gemmes.
+List<String> cleanInstructions(Iterable<String> steps) =>
+    steps.map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+
+class _StepEntry {
+  final int id;
+  final TextEditingController controller;
+  final bool autofocus;
+  _StepEntry(this.id, String text, {this.autofocus = false})
+      : controller = TextEditingController(text: text);
+}
+
+/// Nummererede trin som kan rettes, slettes og flyttes (træk i håndtaget eller
+/// med "Flyt op"/"Flyt ned"). Fælles for opret- og redigeringsskærmen.
+/// `onChanged` får de rå tekster; kald [cleanInstructions] ved gem.
+class RecipeStepsEditor extends StatefulWidget {
+  final List<String> initialSteps;
+  final ValueChanged<List<String>> onChanged;
+
+  const RecipeStepsEditor(
+      {super.key, this.initialSteps = const [], required this.onChanged});
+
+  @override
+  State<RecipeStepsEditor> createState() => _RecipeStepsEditorState();
+}
+
+class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
+  late final List<_StepEntry> _entries;
+  int _nextId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries = [for (final s in widget.initialSteps) _StepEntry(_nextId++, s)];
+  }
+
+  @override
+  void dispose() {
+    for (final e in _entries) {
+      e.controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _notify() =>
+      widget.onChanged(_entries.map((e) => e.controller.text).toList());
+
+  void _add() {
+    if (_entries.length >= maxRecipeSteps) return;
+    setState(() => _entries.add(_StepEntry(_nextId++, '', autofocus: true)));
+    _notify();
+  }
+
+  void _remove(int index) {
+    final removed = _entries.removeAt(index);
+    setState(() {});
+    // Controlleren bruges stadig af det felt der er ved at forsvinde.
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => removed.controller.dispose());
+    _notify();
+  }
+
+  void _move(int from, int to) {
+    if (to < 0 || to >= _entries.length || from == to) return;
+    setState(() => _entries.insert(to, _entries.removeAt(from)));
+    _notify();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final atLimit = _entries.length >= maxRecipeSteps;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: _entries.length,
+          onReorder: (oldIndex, newIndex) {
+            if (newIndex > oldIndex) newIndex -= 1;
+            _move(oldIndex, newIndex);
+          },
+          itemBuilder: (context, i) {
+            final entry = _entries[i];
+            return Padding(
+              key: ValueKey(entry.id),
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(12, 12, 4, 0),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                // Eget semantik-kort: ellers flettes kortet (inkl. knapperne) ind i
+                // tekstfeltets node, og feltet dækker knapperne for skærmlæsere/web.
+                child: Semantics(
+                  container: true,
+                  explicitChildNodes: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: TextField(
+                          controller: entry.controller,
+                          autofocus: entry.autofocus,
+                          maxLength: maxRecipeStepLength,
+                          minLines: 1,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.sentences,
+                          // Plads under feltet, så tastaturet ikke dækker det.
+                          scrollPadding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 160),
+                          buildCounter: (context,
+                                  {required currentLength,
+                                  required isFocused,
+                                  maxLength}) =>
+                              currentLength >= 900
+                                  ? Text('$currentLength/$maxLength')
+                                  : null,
+                          decoration: InputDecoration(
+                              labelText: 'Trin ${i + 1}',
+                              hintText: 'Beskriv trinnet'),
+                          onChanged: (_) => _notify(),
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            tooltip: 'Flyt op',
+                            constraints: const BoxConstraints(
+                                minWidth: 48, minHeight: 48),
+                            icon: const Icon(Icons.keyboard_arrow_up),
+                            onPressed: i == 0 ? null : () => _move(i, i - 1),
+                          ),
+                          IconButton(
+                            tooltip: 'Flyt ned',
+                            constraints: const BoxConstraints(
+                                minWidth: 48, minHeight: 48),
+                            icon: const Icon(Icons.keyboard_arrow_down),
+                            onPressed: i == _entries.length - 1
+                                ? null
+                                : () => _move(i, i + 1),
+                          ),
+                          IconButton(
+                            tooltip: 'Slet trin',
+                            constraints: const BoxConstraints(
+                                minWidth: 48, minHeight: 48),
+                            icon:
+                                Icon(Icons.delete_outline, color: colors.error),
+                            onPressed: () => _remove(i),
+                          ),
+                          ReorderableDragStartListener(
+                            index: i,
+                            child: Tooltip(
+                              message: 'Træk for at flytte',
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Icon(Icons.drag_indicator,
+                                    color: colors.onSurfaceVariant),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: atLimit ? null : _add,
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            icon: const Icon(Icons.add),
+            label: const Text('Tilføj trin'),
+          ),
+        ),
+        if (atLimit)
+          Text(
+            'Du kan højst have $maxRecipeSteps trin',
+            style: context.text.bodySmall
+                ?.copyWith(color: colors.onSurfaceVariant),
+          ),
+      ],
     );
   }
 }

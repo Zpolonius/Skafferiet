@@ -22,6 +22,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   final _nutrition = NutritionFormControllers();
   late RecipeCategory _selectedCategory;
   late List<Ingredient> _ingredients;
+  late List<String> _steps;
   int? _servings;
   String? _imageUrl;
   bool _isUploadingImage = false;
@@ -34,6 +35,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     _timeController = TextEditingController(text: widget.recipe.time);
     _selectedCategory = widget.recipe.category;
     _ingredients = List.from(widget.recipe.ingredients);
+    _steps = List.from(widget.recipe.instructions);
     _servings = widget.recipe.servings;
     _imageUrl = widget.recipe.imageUrl;
     _nutrition.loadFrom(widget.recipe);
@@ -155,6 +157,12 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
               onChanged: (list) => setState(() => _ingredients = list),
             ),
             const SizedBox(height: 32),
+            _buildSectionTitle('Fremgangsmåde'),
+            RecipeStepsEditor(
+              initialSteps: _steps,
+              onChanged: (steps) => _steps = steps,
+            ),
+            const SizedBox(height: 32),
             _buildSectionTitle('Næring pr. portion'),
             NutritionFields(
               controllers: _nutrition,
@@ -202,7 +210,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       time: _timeController.text,
       category: _selectedCategory,
       ingredients: _ingredients,
-      instructions: old.instructions,
+      instructions: cleanInstructions(_steps),
       householdId: old.householdId,
       createdBy: old.createdBy,
       servings: _servings,
