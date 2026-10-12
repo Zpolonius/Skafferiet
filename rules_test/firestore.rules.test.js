@@ -17,7 +17,7 @@ const {
 const {
   doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query,
   where, or, orderBy, limit, writeBatch, arrayUnion, arrayRemove, deleteField, serverTimestamp,
-  Timestamp,
+  Timestamp, increment,
 } = require('firebase/firestore');
 
 let env;
@@ -418,6 +418,7 @@ describe('slet konto', () => {
       await setDoc(doc(s, 'households/HH_E/grocery_list/e1'), { name: 'Æg' });
       await setDoc(doc(s, 'households/HH_E/meal_plans/2026-09-28'), { days: {} });
       await setDoc(doc(s, 'households/HH_E/recurring_items/m1'), { name: 'Mælk' });
+      await setDoc(doc(s, 'households/HH_E/item_history/mælk'), { name: 'Mælk' });
       await setDoc(doc(s, 'households/HH_E/board_notes/n1'), {
         type: 'text', authorId: 'zed', createdAt: 1, isPinned: false, text: 'Hej',
       });
@@ -443,6 +444,7 @@ describe('slet konto', () => {
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/grocery_list')));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/meal_plans')));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/recurring_items')));
+    await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/item_history')));
     await assertSucceeds(deleteMatching(s, collection(s, 'households/HH_E/board_notes')));
     await assertSucceeds(deleteMatching(s, query(collection(s, 'recipes'),
       where('householdId', '==', 'HH_E'))));
@@ -666,6 +668,101 @@ describe('fast genkøb', () => {
     await assertSucceeds(setDoc(doc(db('carol'), 'households/SK-CAROL'), {
       name: 'Carols', members: ['carol'], admin: 'carol', shoppingWeekday: 5,
     }));
+  });
+});
+
+// ── Varehistorik (#28) ────────────────────────────────────────────────────────
+// Spejler ItemHistoryWriter (set + merge + increment i samme batch som varen),
+// ItemHistoryRepository.fetch/remove og kontosletningen.
+
+describe('varehistorik', () => {
+  const entry = (over = {}) => ({
+    name: 'Hakket oksekød', category: 'Kød', unit: 'g', quantity: '500',
+    useCount: 1, lastUsed: serverTimestamp(), ...over,
+  });
+  const hist = (uid, key = 'hakket oksekød') => doc(db(uid), `households/HH_A/item_history/${key}`);
+
+  test('medlemmer kan oprette, læse og slette historikposter', async () => {
+    await assertSucceeds(setDoc(hist('bob'), entry()));
+    await assertSucceeds(getDoc(hist('alice')));
+    await assertSucceeds(getDocs(query(collection(db('alice'), 'households/HH_A/item_history'),
+      orderBy('lastUsed', 'desc'), limit(500))));
+    await assertSucceeds(deleteDoc(hist('alice')));
+  });
+
+  test('en vare med og uden enhed og mængde (null) accepteres', async () => {
+    await assertSucceeds(setDoc(hist('bob', 'salt'), entry({ name: 'Salt', unit: null, quantity: null })));
+    await assertSucceeds(setDoc(hist('bob', 'peber'), (({ unit, quantity, ...r }) => r)(entry({ name: 'Peber' }))));
+  });
+
+  test('set med merge og increment tæller op, også i et batch med varen', async () => {
+    const s = db('bob');
+    for (let i = 0; i < 2; i++) {
+      const batch = writeBatch(s);
+      batch.set(doc(s, `households/HH_A/grocery_list/n${i}`), { name: 'Hakket oksekød' });
+      batch.set(doc(s, 'households/HH_A/item_history/hakket oksekød'),
+        { ...entry(), useCount: increment(1) }, { merge: true });
+      await assertSucceeds(batch.commit());
+    }
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const d = await getDoc(doc(ctx.firestore(), 'households/HH_A/item_history/hakket oksekød'));
+      if (d.data().useCount !== 2) throw new Error(`useCount ${d.data().useCount}`);
+    });
+  });
+
+  test('en post med seneste stavemåde kan overskrives af et medlem', async () => {
+    await assertSucceeds(setDoc(hist('bob'), entry()));
+    await assertSucceeds(setDoc(hist('alice'), entry({ name: 'Hakket Oksekød', useCount: increment(1) }), { merge: true }));
+  });
+
+  test('eve kan hverken læse, skrive eller slette Familien A\'s historik', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'households/HH_A/item_history/smør'), { name: 'Smør', category: 'Mejeri', useCount: 1 });
+    });
+    await assertFails(getDoc(hist('eve', 'smør')));
+    await assertFails(getDocs(collection(db('eve'), 'households/HH_A/item_history')));
+    await assertFails(setDoc(hist('eve', 'x'), entry()));
+    await assertFails(deleteDoc(hist('eve', 'smør')));
+  });
+
+  test('ugyldige felter afvises', async () => {
+    const bad = [
+      entry({ name: '' }),
+      entry({ name: 'x'.repeat(81) }),
+      entry({ name: 5 }),
+      entry({ category: '' }),
+      entry({ category: 'x'.repeat(41) }),
+      entry({ unit: 'x'.repeat(21) }),
+      entry({ unit: 3 }),
+      entry({ quantity: '12345678901' }),
+      entry({ quantity: 5 }),
+      entry({ useCount: -1 }),
+      entry({ useCount: '1' }),
+      entry({ useCount: 1.5 }),
+      entry({ lastUsed: Date.now() }),
+      entry({ lastUsed: '2026-10-12' }),
+      entry({ extra: 'felt' }),
+      (({ lastUsed, ...r }) => r)(entry()),
+      (({ name, ...r }) => r)(entry()),
+    ];
+    for (const [i, data] of bad.entries()) {
+      await assertFails(setDoc(hist('bob', `bad${i}`), data));
+    }
+  });
+
+  test('grænseværdier accepteres', async () => {
+    await assertSucceeds(setDoc(hist('bob', 'max'), entry({
+      name: 'x'.repeat(80), category: 'y'.repeat(40), unit: 'u'.repeat(20), quantity: 'q'.repeat(10),
+    })));
+  });
+
+  test('et medlem der er fjernet fra husstanden mister adgangen', async () => {
+    await assertSucceeds(setDoc(hist('bob'), entry()));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'households/HH_A'), { members: ['alice'] });
+    });
+    await assertFails(getDoc(hist('bob')));
+    await assertFails(setDoc(hist('bob'), entry()));
   });
 });
 

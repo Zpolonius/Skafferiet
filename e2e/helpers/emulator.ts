@@ -273,3 +273,27 @@ export async function readMealSlot(
   const str = (v: any): string | null => (v && 'stringValue' in v ? v.stringValue : null);
   return { recipeId: str(fields.recipeId), directEntry: str(fields.directEntry) };
 }
+
+function fromFsValue(v: any): unknown {
+  if (!v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('timestampValue' in v) return v.timestampValue;
+  return null;
+}
+
+/**
+ * Læser alle dokumenter i en collection direkte fra Firestore (omgår
+ * reglerne), som { id, felter på øverste niveau }. Understøtter strenge,
+ * tal, booleans og tidsstempler.
+ */
+export async function readCollection(path: string): Promise<Array<Record<string, unknown>>> {
+  const res = await fetch(`${DOCS}/${path}?pageSize=300`, { headers: OWNER });
+  const body: any = await (await ok(res, `Læsning af ${path}`)).json();
+  return (body.documents ?? []).map((d: any) => ({
+    id: String(d.name).split('/').pop(),
+    ...Object.fromEntries(Object.entries(d.fields ?? {}).map(([k, v]) => [k, fromFsValue(v)])),
+  }));
+}

@@ -131,6 +131,7 @@ class AccountDeletionService {
     await _deleteAll(householdRef.collection('grocery_list'));
     await _deleteAll(householdRef.collection('meal_plans'));
     await _deleteAll(householdRef.collection('recurring_items'));
+    await _deleteAll(householdRef.collection('item_history'));
     await _deleteAll(
       householdRef.collection('board_notes'),
       // Uden ejerrettigheder må man kun slette sine egne sedler (firestore.rules).

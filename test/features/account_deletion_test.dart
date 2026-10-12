@@ -74,6 +74,7 @@ void main() {
       await db.doc('households/HH/grocery_list/g1').set({'name': 'Mælk'});
       await db.doc('households/HH/meal_plans/w1').set({'days': {}});
       await db.doc('households/HH/recurring_items/m1').set({'name': 'Mælk'});
+      await db.doc('households/HH/item_history/mælk').set({'name': 'Mælk'});
       await db.doc('households/HH/board_notes/n1').set({'type': 'text', 'authorId': 'zed'});
       await db.doc('recipes/mine').set({'householdId': 'HH', 'createdBy': 'me'});
       await db.doc('recipes/byFormerMember').set({'householdId': 'HH', 'createdBy': 'zed'});
@@ -93,6 +94,7 @@ void main() {
       expect(await exists('households/HH/grocery_list/g1'), false);
       expect(await exists('households/HH/meal_plans/w1'), false);
       expect(await exists('households/HH/recurring_items/m1'), false);
+      expect(await exists('households/HH/item_history/mælk'), false);
       expect(await exists('households/HH/board_notes/n1'), false);
       expect(await exists('recipes/mine'), false);
       expect(await exists('recipes/byFormerMember'), false);
