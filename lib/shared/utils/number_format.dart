@@ -19,6 +19,10 @@ String formatDanishNumber(double value, {int maxDecimals = 1}) {
   return text.replaceAll('.', ',');
 }
 
+/// Mængden som gemmes på en indkøbsvare: 500.0 → "500", 1.5 → "1,5",
+/// 0.125 → "0,125". Giver aldrig et overflødigt ".0".
+String formatQuantity(double value) => formatDanishNumber(value, maxDecimals: 3);
+
 /// Tillader kun cifre og ét decimaltegn (komma eller punktum) i tal-felter.
 final List<TextInputFormatter> decimalInputFormatters = [
   FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*$')),

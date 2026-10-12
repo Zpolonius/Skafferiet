@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../shared/utils/number_format.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
 import '../../core/services/item_history_writer.dart';
@@ -262,7 +263,7 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
             batch.set(docRef, {
               'name': ing.name,
               'category': ing.category,
-              'quantity': ing.quantity.toString(),
+              'quantity': formatQuantity(ing.quantity),
               'unit': ing.unit,
               'source': 'meal_plan',
               'isChecked': false,
@@ -275,7 +276,7 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
               name: ing.name,
               category: ing.category,
               unit: ing.unit,
-              quantity: ing.quantity.toString(),
+              quantity: formatQuantity(ing.quantity),
             );
             count++;
           }

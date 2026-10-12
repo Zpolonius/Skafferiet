@@ -213,7 +213,7 @@ class RecipeDetailScreen extends ConsumerWidget {
           id: const Uuid().v4(),
           name: ing.name,
           category: ing.category,
-          quantity: ing.quantity.toString(),
+          quantity: formatQuantity(ing.quantity),
           unit: ing.unit,
           source: 'recipe',
           createdAt: DateTime.now(),

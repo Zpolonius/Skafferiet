@@ -10,6 +10,7 @@ import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_grocery_item_dialog.dart';
 import 'grocery_provider.dart';
+import 'quick_add_field.dart';
 import 'recurring/recurring_item_sheet.dart';
 import 'recurring/recurring_items_provider.dart';
 import '../../core/theme/theme_context.dart';
@@ -162,8 +163,19 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
+                        // Offstage i stedet for at fjerne feltet, så en halvskrevet
+                        // vare ikke går tabt når man sorterer listen. ExcludeFocus
+                        // tager fokus (og tastaturet) fra det skjulte felt, så
+                        // Enter ikke kan tilføje en vare man ikke kan se.
+                        Offstage(
+                          offstage: _isReorderMode,
+                          child: ExcludeFocus(
+                            excluding: _isReorderMode,
+                            child: const QuickAddField(
+                                key: ValueKey('quick_add_field')),
+                          ),
+                        ),
                         if (itemsList.isNotEmpty && !_isReorderMode) ...[
-                          _SearchBar(),
                           const SizedBox(height: 12),
                           _CategoryFilterRow(
                             categories: uniqueCategories,
@@ -180,10 +192,13 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                                 Icon(Icons.drag_indicator,
                                     size: 16, color: context.colors.outline),
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Hold og træk for at ændre rækkefølge',
-                                  style: TextStyle(
-                                      fontSize: 12, color: context.colors.outline),
+                                Expanded(
+                                  child: Text(
+                                    'Hold og træk for at ændre rækkefølge',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: context.colors.outline),
+                                  ),
                                 ),
                               ],
                             ),
@@ -399,24 +414,6 @@ class _FilterChip extends StatelessWidget {
               fontSize: 13,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Søg i din indkøbsliste...',
-        prefixIcon: Icon(Icons.search, color: context.colors.outline),
-        filled: true,
-        fillColor: context.colors.surfaceContainerLowest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
         ),
       ),
     );
