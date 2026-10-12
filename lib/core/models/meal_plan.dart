@@ -5,11 +5,24 @@ class MealSlot {
   final Recipe? recipe;
   final String? directEntry; // For "Almonds & Apple Slices" style entries
 
-  MealSlot({this.recipe, this.directEntry});
+  /// Id of the linked recipe as stored in Firestore (set even when the recipe
+  /// itself could not be resolved).
+  final String? recipeId;
+
+  /// True when [recipeId] points to a recipe that no longer exists (only
+  /// decided once recipes have loaded).
+  final bool missingRecipe;
+
+  MealSlot({
+    this.recipe,
+    this.directEntry,
+    String? recipeId,
+    this.missingRecipe = false,
+  }) : recipeId = recipeId ?? recipe?.id;
 
   Map<String, dynamic> toMap() {
     return {
-      'recipeId': recipe?.id,
+      'recipeId': recipeId,
       'directEntry': directEntry,
     };
   }
@@ -18,9 +31,12 @@ class MealSlot {
     Recipe? recipe,
     String? directEntry,
   }) {
+    // En ny opskrift erstatter både id og "mangler"-markeringen.
     return MealSlot(
       recipe: recipe ?? this.recipe,
       directEntry: directEntry ?? this.directEntry,
+      recipeId: recipe?.id ?? recipeId,
+      missingRecipe: recipe == null && missingRecipe,
     );
   }
 }
@@ -83,12 +99,16 @@ class DailyPlan {
 
   bool get isEmpty =>
       breakfast.recipe == null &&
+      !breakfast.missingRecipe &&
       breakfast.directEntry == null &&
       lunch.recipe == null &&
+      !lunch.missingRecipe &&
       lunch.directEntry == null &&
       dinner.recipe == null &&
+      !dinner.missingRecipe &&
       dinner.directEntry == null &&
       snack.recipe == null &&
+      !snack.missingRecipe &&
       snack.directEntry == null;
 }
 

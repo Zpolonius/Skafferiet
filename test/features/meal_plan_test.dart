@@ -59,7 +59,8 @@ void main() {
       when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
       when(() => mockHouseholdDoc.collection('meal_plans')).thenReturn(mockMealPlansCollection);
       when(() => mockMealPlansCollection.doc(any())).thenReturn(mockMealPlanDoc);
-      when(() => mockMealPlanDoc.get()).thenAnswer((_) async => mockMealPlanSnapshot);
+      when(() => mockMealPlanDoc.snapshots())
+          .thenAnswer((_) => Stream.value(mockMealPlanSnapshot));
       when(() => mockMealPlanSnapshot.exists).thenReturn(false);
 
       when(() => mockMealPlanDoc.set(any(), any())).thenAnswer((_) async {});
@@ -85,6 +86,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(recipesProvider.future);
       await container.read(mealPlanProvider.future);
 
       final notifier = container.read(mealPlanProvider.notifier);

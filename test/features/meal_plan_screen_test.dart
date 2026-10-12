@@ -11,6 +11,7 @@ import 'package:skafferiet/features/auth/auth_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_screen.dart';
 import 'package:skafferiet/features/profile/household_provider.dart';
+import 'package:skafferiet/features/recipes/recipes_provider.dart';
 
 class _User extends Mock implements User {}
 
@@ -22,9 +23,9 @@ class _Household extends StateNotifier<HouseholdState> with Mock implements Hous
   _Household() : super(HouseholdState(householdId: 'h1'));
 }
 
-class _Plan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
+class _Plan extends StreamNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async {
+  Stream<WeeklyMealPlan> build() async* {
     final lasagne = Recipe(
       id: 'r1',
       title: 'Lasagne',
@@ -32,7 +33,7 @@ class _Plan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanN
       time: '45 min',
       category: RecipeCategory.aftensmad,
     );
-    return WeeklyMealPlan(
+    yield WeeklyMealPlan(
       id: 'w',
       weekStart: DateTime(2026, 9, 28),
       days: {
@@ -46,6 +47,31 @@ class _Plan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanN
       },
     );
   }
+}
+
+class _MissingRecipePlan extends StreamNotifier<WeeklyMealPlan>
+    with Mock
+    implements MealPlanNotifier {
+  @override
+  Stream<WeeklyMealPlan> build() => Stream.value(WeeklyMealPlan(
+        id: 'w',
+        weekStart: DateTime(2026, 9, 28),
+        days: {
+          'Mandag': DailyPlan(
+            breakfast: MealSlot(),
+            lunch: MealSlot(),
+            dinner: MealSlot(recipeId: 'gone', missingRecipe: true),
+            snack: MealSlot(),
+          ),
+        },
+      ));
+}
+
+class _NoRecipes extends StreamNotifier<List<Recipe>>
+    with Mock
+    implements RecipesNotifier {
+  @override
+  Stream<List<Recipe>> build() => Stream.value(const []);
 }
 
 void main() {
@@ -79,4 +105,33 @@ void main() {
       expect(find.textContaining('kcal'), findsWidgets);
     });
   }
+
+  testWidgets('slot med slettet opskrift viser tekst og kan stadig redigeres',
+      (tester) async {
+    final user = _User();
+    when(() => user.displayName).thenReturn('Mette');
+    when(() => user.photoURL).thenReturn(null);
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authProvider.overrideWith((ref) => _Auth(AuthState(user: user))),
+        mealPlanProvider.overrideWith(() => _MissingRecipePlan()),
+        recipesProvider.overrideWith(() => _NoRecipes()),
+        householdProvider.overrideWith((ref) => _Household()),
+        selectedDayProvider.overrideWith((ref) => 'Mandag'),
+      ],
+      child: MaterialApp(theme: AppTheme.lightTheme, home: const MealPlanScreen()),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Opskriften findes ikke længere'), findsOneWidget);
+
+    await tester.tap(find.text('Opskriften findes ikke længere'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Gem måltid'), findsOneWidget);
+  });
 }

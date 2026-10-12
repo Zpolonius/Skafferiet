@@ -37,6 +37,7 @@ class MealPlanScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: mealPlan.when(
+          skipLoadingOnReload: true,
           data: (plan) {
             final dailyPlan = plan.days[selectedDay] ?? DailyPlan.empty();
             final calories = dailyPlan.totalCaloriesFor(mealTypes);
@@ -397,7 +398,9 @@ class _MealSection extends StatelessWidget {
               ? _FilledSlotCard(recipe: slot.recipe!)
               : slot.directEntry != null
                   ? _DirectEntryCard(text: slot.directEntry!)
-                  : _EmptySlotCard(title: title),
+                  : slot.missingRecipe
+                      ? const _MissingRecipeCard()
+                      : _EmptySlotCard(title: title),
         ),
       ],
     );
@@ -461,6 +464,38 @@ class _FilledSlotCard extends StatelessWidget {
             ),
           ),
           Icon(Icons.chevron_right, color: context.colors.outline),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissingRecipeCard extends StatelessWidget {
+  const _MissingRecipeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.link_off, color: context.colors.outline),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Opskriften findes ikke længere',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: context.colors.outline),
+            ),
+          ),
         ],
       ),
     );

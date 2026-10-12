@@ -70,14 +70,15 @@ class _LoadedGroceryNotifier extends StreamNotifier<List<GroceryItem>> with Mock
   ));
 }
 
-class _EmptyMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
+class _EmptyMealPlanNotifier extends StreamNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async => WeeklyMealPlan(id: 'empty', weekStart: DateTime(2026, 5, 5), days: {});
+  Stream<WeeklyMealPlan> build() => Stream.value(WeeklyMealPlan(id: 'empty', weekStart: DateTime(2026, 5, 5), days: {}));
 }
 
-class _LoadedMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
+class _LoadedMealPlanNotifier extends StreamNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async => WeeklyMealPlan(
+  Stream<WeeklyMealPlan> build() async* {
+    yield WeeklyMealPlan(
     id: 'week1',
     weekStart: DateTime(2026, 5, 5),
     days: {
@@ -102,6 +103,7 @@ class _LoadedMealPlanNotifier extends AsyncNotifier<WeeklyMealPlan> with Mock im
       ),
     },
   );
+  }
 }
 
 // ── Helper ─────────────────────────────────────────────────────────────────────

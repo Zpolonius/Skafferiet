@@ -421,8 +421,8 @@ class _EmptyGrocery extends StreamNotifier<List<GroceryItem>>
   Stream<List<GroceryItem>> build() => const Stream.empty();
 }
 
-class _EmptyMealPlan extends AsyncNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
+class _EmptyMealPlan extends StreamNotifier<WeeklyMealPlan> with Mock implements MealPlanNotifier {
   @override
-  Future<WeeklyMealPlan> build() async =>
-      WeeklyMealPlan(id: 'empty', weekStart: DateTime(2026, 5, 4), days: {});
+  Stream<WeeklyMealPlan> build() =>
+      Stream.value(WeeklyMealPlan(id: 'empty', weekStart: DateTime(2026, 5, 4), days: {}));
 }

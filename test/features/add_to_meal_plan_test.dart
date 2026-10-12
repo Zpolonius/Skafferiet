@@ -26,8 +26,8 @@ class _MockMealPlanNotifier extends MealPlanNotifier {
   Recipe? capturedRecipe;
 
   @override
-  Future<WeeklyMealPlan> build() async =>
-      WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {});
+  Stream<WeeklyMealPlan> build() =>
+      Stream.value(WeeklyMealPlan(id: 'test', weekStart: DateTime.now(), days: {}));
 
   @override
   Future<void> updateSlot(
