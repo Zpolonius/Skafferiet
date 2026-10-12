@@ -147,6 +147,8 @@ export type SeedRecipe = {
   createdBy: string;
   category?: 'morgenmad' | 'frokost' | 'aftensmad' | 'snack';
   calories?: number;
+  /** Ingrediensnavne (resten af felterne udfyldes med gyldige standardværdier). */
+  ingredients?: string[];
 };
 
 /** Skriver `recipes/{id}` med felter der er gyldige iflg. firestore.rules. */
@@ -156,7 +158,7 @@ export async function seedRecipe(r: SeedRecipe): Promise<void> {
     category: `RecipeCategory.${r.category ?? 'aftensmad'}`,
     calories: r.calories ?? 450,
     time: '30 min',
-    ingredients: [],
+    ingredients: (r.ingredients ?? []).map((name) => ({ name, quantity: 1, unit: 'stk', category: 'Andet' })),
     instructions: ['Lav maden.'],
     householdId: r.householdId,
     createdBy: r.createdBy,

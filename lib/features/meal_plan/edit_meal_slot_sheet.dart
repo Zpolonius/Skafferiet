@@ -403,6 +403,10 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
         enabled: !_busy,
         currentRecipeId: _live.recipeId,
         onPick: (recipe) => _replaceWith(recipe: recipe),
+        onNoMatch: (query) => setState(() {
+          _textController.text = query;
+          _ownMeal = true;
+        }),
       ),
     ];
   }

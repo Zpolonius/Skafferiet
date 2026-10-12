@@ -539,7 +539,16 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         const Text('Tryk på en opskrift for at lægge den i madplanen',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 8),
-        RecipePicker(enabled: !_saving, onPick: _saveRecipe),
+        RecipePicker(
+          enabled: !_saving,
+          onPick: _saveRecipe,
+          // Dag og måltid er allerede valgt; kun fanen og titlen skiftes.
+          onNoMatch: (query) => setState(() {
+            _titleController.text = query;
+            _tabChosen = true;
+            _activeTab = 1;
+          }),
+        ),
         if (_error != null) ...[
           const SizedBox(height: 12),
           Semantics(
