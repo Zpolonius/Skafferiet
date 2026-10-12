@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/meal_plan.dart';
+import '../../core/models/meal_type.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../grocery/grocery_provider.dart';
 import '../profile/household_provider.dart';
@@ -12,6 +13,7 @@ import 'meal_plan_provider.dart';
 
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'add_custom_meal_sheet.dart';
+import 'edit_meal_slot_sheet.dart';
 import 'meal_types_sheet.dart';
 import '../../core/theme/theme_context.dart';
 
@@ -28,7 +30,7 @@ class MealPlanScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showAppBottomSheet(
           context: context,
-          builder: (context) => const AddCustomMealSheet(),
+          builder: (context) => AddCustomMealSheet(initialDay: selectedDay),
         ),
         label: const Text('Tilføj måltid'),
         icon: const Icon(Icons.add),
@@ -158,7 +160,7 @@ class MealPlanScreen extends ConsumerWidget {
                           title: type.label,
                           icon: type.icon,
                           slot: dailyPlan.slot(type),
-                          onTap: () => _showEditSlot(context, selectedDay, type.label, dailyPlan.slot(type)),
+                          onTap: () => _showEditSlot(context, selectedDay, type, dailyPlan.slot(type)),
                         ),
                       const SizedBox(height: 100),
                     ]),
@@ -174,10 +176,17 @@ class MealPlanScreen extends ConsumerWidget {
     );
   }
 
-  void _showEditSlot(BuildContext context, String day, String type, MealSlot slot) {
+  /// Et udfyldt måltid (opskrift, eget måltid eller slettet opskrift) åbner
+  /// redigeringsarket; et tomt åbner "Tilføj måltid" på den dag og det måltid.
+  void _showEditSlot(BuildContext context, String day, MealType type, MealSlot slot) {
+    // recipeId er sat for både opskrifter, slettede opskrifter og opskrifter
+    // der ikke er indlæst endnu.
+    final filled = slot.recipeId != null || slot.directEntry != null;
     showAppBottomSheet(
       context: context,
-      builder: (context) => AddCustomMealSheet(initialDay: day, initialCategory: type),
+      builder: (context) => filled
+          ? EditMealSlotSheet(day: day, mealType: type, slot: slot)
+          : AddCustomMealSheet(initialDay: day, initialCategory: type.label),
     );
   }
 
@@ -400,7 +409,9 @@ class _MealSection extends StatelessWidget {
                   ? _DirectEntryCard(text: slot.directEntry!)
                   : slot.missingRecipe
                       ? const _MissingRecipeCard()
-                      : _EmptySlotCard(title: title),
+                      : slot.recipeId != null
+                          ? const _PendingRecipeCard()
+                          : _EmptySlotCard(title: title),
         ),
       ],
     );
@@ -490,6 +501,41 @@ class _MissingRecipeCard extends StatelessWidget {
           Expanded(
             child: Text(
               'Opskriften findes ikke længere',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: context.colors.outline),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Opskrift med id, men opskrifterne er ikke indlæst endnu (eller kunne ikke
+/// hentes). Viser aldrig "Tilføj …", da pladsen ikke er tom.
+class _PendingRecipeCard extends ConsumerWidget {
+  const _PendingRecipeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final failed = ref.watch(recipesProvider.select((r) => r.hasError));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.restaurant_menu_outlined, color: context.colors.outline),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              failed ? 'Opskriften kunne ikke hentes' : 'Henter opskrift…',
               style: Theme.of(context)
                   .textTheme
                   .bodyLarge

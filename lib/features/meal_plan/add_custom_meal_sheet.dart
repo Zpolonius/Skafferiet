@@ -6,6 +6,8 @@ import '../recipes/recipes_provider.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import '../profile/household_provider.dart';
 import 'meal_plan_provider.dart';
+import 'recipe_picker.dart';
+import 'slot_write.dart';
 import '../../core/theme/theme_context.dart';
 
 class AddCustomMealSheet extends ConsumerStatefulWidget {
@@ -23,7 +25,7 @@ class AddCustomMealSheet extends ConsumerStatefulWidget {
 }
 
 class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
-  int _activeTab = 1; // 0: Søg opskrifter, 1: Eget måltid
+  int _activeTab = 1; // 0: Søg opskrifter, 1: Eget måltid (sættes i initState)
   
   // Form fields for "Eget måltid"
   final _titleController = TextEditingController();
@@ -41,6 +43,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     {'name': '', 'amount': ''},
   ];
   bool _saveAsRecipe = false;
+  bool _saving = false;
+  bool _tabChosen = false;
+  String? _error;
   
   // Date selection
   late DateTime _selectedDate;
@@ -49,6 +54,15 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   @override
   void initState() {
     super.initState();
+    // Har husstanden opskrifter, er det oftest dem man vil vælge imellem.
+    // (Opskrifterne er normalt allerede indlæst; ellers skiftes når de er det,
+    // medmindre brugeren selv har valgt fane eller skrevet noget.)
+    ref.listenManual(recipesProvider, (_, next) {
+      final hasRecipes = next.valueOrNull?.isNotEmpty ?? false;
+      if (hasRecipes && !_tabChosen && _titleController.text.isEmpty && _activeTab != 0) {
+        setState(() => _activeTab = 0);
+      }
+    }, fireImmediately: true);
     final offset = ref.read(weekOffsetProvider);
     _weekDates = _generateWeekDates(offset);
     
@@ -109,13 +123,14 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
             child: Row(
               children: [
                 IconButton(
+                  tooltip: 'Luk',
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(Icons.close, color: context.colors.primary),
                 ),
                 Expanded(
                   child: Center(
                     child: Text(
-                      'Tilføj eget måltid',
+                      _activeTab == 0 ? 'Tilføj måltid' : 'Tilføj eget måltid',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -149,12 +164,17 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              // Fanen 'Søg opskrifter' har ingen bundknap, så tastaturets højde
+              // lægges til her; ellers dækker det filteret og listen.
+              padding: EdgeInsets.fromLTRB(
+                  20, 0, 20, _activeTab == 0 ? sheetBottomInset(context) : 0),
               child: _activeTab == 1 ? _buildCustomMealForm() : _buildRecipeSearch(),
             ),
           ),
           
-          // Bottom Button — ekstra plads til hjem-stregen i bunden
+          // Bottom Button — ekstra plads til hjem-stregen i bunden.
+          // Fanen 'Søg opskrifter' gemmer ved tryk på en opskrift.
+          if (_activeTab == 1)
           Padding(
             padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + sheetBottomInset(context)),
             child: Column(
@@ -200,9 +220,23 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   Widget _buildTab(int index, String label) {
     final isActive = _activeTab == index;
     return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _activeTab = index),
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        excludeSemantics: true,
+        label: label,
+        onTap: () => setState(() {
+          _tabChosen = true;
+          _activeTab = index;
+        }),
+        child: GestureDetector(
+        onTap: () => setState(() {
+          _tabChosen = true;
+          _activeTab = index;
+        }),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isActive ? context.colors.surfaceContainerLowest : Colors.transparent,
@@ -219,6 +253,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );
@@ -275,28 +310,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
         const SizedBox(height: 24),
         const Text('Kategori', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          children: ref
-              .watch(householdProvider.select((h) => h.mealTypes))
-              .map((t) => t.recipeCategory)
-              .map((cat) {
-            final isSelected = _selectedCategory == cat;
-            return ChoiceChip(
-              label: Text(cat.name),
-              selected: isSelected,
-              onSelected: (v) => setState(() => _selectedCategory = cat),
-              selectedColor: context.colors.primary,
-              labelStyle: TextStyle(
-                color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-            );
-          }).toList(),
-        ),
+        _buildCategoryChips(),
         
         const SizedBox(height: 24),
         const Text('Personer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -387,6 +401,31 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     );
   }
 
+  Widget _buildCategoryChips() {
+    return Wrap(
+          spacing: 8,
+          children: ref
+              .watch(householdProvider.select((h) => h.mealTypes))
+              .map((t) => t.recipeCategory)
+              .map((cat) {
+            final isSelected = _selectedCategory == cat;
+            return ChoiceChip(
+              label: Text(cat.name),
+              selected: isSelected,
+              onSelected: (v) => setState(() => _selectedCategory = cat),
+              selectedColor: context.colors.primary,
+              labelStyle: TextStyle(
+                color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            );
+          }).toList(),
+        );
+  }
+
   Widget _buildCounterBtn(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -440,7 +479,11 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     final isSelected = DateUtils.isSameDay(_selectedDate, date);
     final days = ['SØN', 'MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR'];
     
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      container: true,
+      child: GestureDetector(
       onTap: () => setState(() => _selectedDate = date),
       child: Container(
         width: 65,
@@ -473,11 +516,77 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _buildRecipeSearch() {
-    return const Center(child: Text('Her kommer søgning efter opskrifter...'));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Text('Vælg dag', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: _weekDates.map((date) => _buildDateCard(date)).toList()),
+        ),
+        const SizedBox(height: 24),
+        const Text('Måltid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 12),
+        _buildCategoryChips(),
+        const SizedBox(height: 24),
+        const Text('Tryk på en opskrift for at lægge den i madplanen',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 8),
+        RecipePicker(enabled: !_saving, onPick: _saveRecipe),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Semantics(
+            liveRegion: true,
+            child: Text(_error!, style: TextStyle(color: context.colors.error)),
+          ),
+        ],
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  String get _slotKey => MealType.fromCategory(_selectedCategory)!.key;
+
+  /// Lægger en valgt opskrift på den valgte dag og det valgte måltid.
+  Future<void> _saveRecipe(Recipe recipe) async {
+    if (_saving) return;
+    final notifier = ref.read(mealPlanProvider.notifier);
+    final navigator = Navigator.of(context);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = context.colors.error;
+    try {
+      // Venter kun kort på serveren; offline lukkes arket og skrivningen
+      // synkroniseres senere (en sen fejl meldes på messengeren).
+      await awaitSlotWrite(
+        notifier.updateSlot(_getDayName(_selectedDate), _slotKey, recipe: recipe),
+        onLateError: (_) => messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: const Text('Opskriften kunne ikke gemmes i madplanen.'),
+            backgroundColor: errorColor,
+            behavior: SnackBarBehavior.floating,
+          )),
+      );
+      if (mounted) navigator.pop();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = 'Kunne ikke gemme opskriften. Tjek din forbindelse og prøv igen.';
+        });
+      }
+    }
   }
 
   void _saveMeal() async {
@@ -488,14 +597,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
 
     final dayName = _getDayName(_selectedDate);
     
-    // Map RecipeCategory to Slot name
-    String slotName;
-    switch (_selectedCategory) {
-      case RecipeCategory.morgenmad: slotName = 'breakfast'; break;
-      case RecipeCategory.frokost: slotName = 'lunch'; break;
-      case RecipeCategory.aftensmad: slotName = 'dinner'; break;
-      case RecipeCategory.snack: slotName = 'snack'; break;
-    }
+    final slotName = _slotKey;
     
     if (_activeTab == 1) {
       // Gem som "Eget måltid"

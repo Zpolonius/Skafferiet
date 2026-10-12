@@ -251,3 +251,25 @@ export async function updateMealSlot(
     'Opdatering af måltid',
   );
 }
+
+/**
+ * Læser ét måltid direkte fra Firestore (omgår reglerne). Returnerer null for
+ * felter der ikke er sat, og `undefined` hvis dokumentet/dagen/måltidet ikke
+ * findes.
+ */
+export async function readMealSlot(
+  householdId: string,
+  day: string,
+  slot: SlotKey,
+  date: Date = new Date(),
+): Promise<{ recipeId: string | null; directEntry: string | null } | undefined> {
+  const res = await fetch(`${DOCS}/households/${householdId}/meal_plans/${weekId(date)}`, {
+    headers: OWNER,
+  });
+  if (res.status === 404) return undefined;
+  const doc: any = await (await ok(res, 'Læsning af madplan')).json();
+  const fields = doc.fields?.days?.mapValue?.fields?.[day]?.mapValue?.fields?.[slot]?.mapValue?.fields;
+  if (!fields) return undefined;
+  const str = (v: any): string | null => (v && 'stringValue' in v ? v.stringValue : null);
+  return { recipeId: str(fields.recipeId), directEntry: str(fields.directEntry) };
+}
