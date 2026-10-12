@@ -21,9 +21,7 @@ async function pinClock(page: import('@playwright/test').Page): Promise<{ now: D
 }
 
 test.describe('madplan', () => {
-  // NB: På ikke-rettet kode fejler genindlæsningstesten allerede ved det første
-  // view (før reload), fordi opskriften aldrig slås op. Selve reload-trinnet
-  // afprøves derfor først på rettet kode (E2E_FIXED=1).
+  // Regressionstests for #24 (rettet i PR #38).
   test('opskrift i madplanen overlever genindlæsning (#24)', async ({ page }) => {
     const { now, weekday } = await pinClock(page);
     const user = await seedHousehold();
@@ -39,10 +37,6 @@ test.describe('madplan', () => {
     await openTab(page, 'Madplan');
     await selectPlanDay(page, weekday, now);
 
-    // Fjernes når #24 (PR #38) er merget. Først herfra er en fejl "forventet":
-    // fejl i login/opstart/forudsætninger tæller stadig som rigtige fejl.
-    // (E2E_FIXED=1 kører testen uden forventet fejl.)
-    test.fail(process.env.E2E_FIXED !== '1', 'Kendt fejl #24: madplanen slår opskrifter op for tidligt');
     await expect(flt(page, 'Lasagne e2e')).toBeVisible();
 
     // Genindlæsning svarer til at lukke og åbne appen igen (login ligger i IndexedDB).
@@ -63,8 +57,6 @@ test.describe('madplan', () => {
     await selectPlanDay(page, weekday, now);
     await expect(flt(page, 'Aftensmad fra start')).toBeVisible();
 
-    // Fjernes når #24 (PR #38) er merget. Først herfra er en fejl "forventet".
-    test.fail(process.env.E2E_FIXED !== '1', 'Kendt fejl #24: madplanen bruger .get() og lytter ikke live');
     // En anden enhed ændrer frokosten, mens siden er åben.
     await updateMealSlot(user.householdId, weekday, 'lunch', { directEntry: 'Frokost fra anden enhed' }, now);
     await expect(flt(page, 'Frokost fra anden enhed')).toBeVisible({ timeout: 10_000 });

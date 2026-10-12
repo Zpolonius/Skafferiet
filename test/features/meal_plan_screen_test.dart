@@ -53,6 +53,9 @@ class _MissingRecipePlan extends StreamNotifier<WeeklyMealPlan>
     with Mock
     implements MealPlanNotifier {
   @override
+  String currentWeekId() => '2026-09-28';
+
+  @override
   Stream<WeeklyMealPlan> build() => Stream.value(WeeklyMealPlan(
         id: 'w',
         weekStart: DateTime(2026, 9, 28),
@@ -106,7 +109,7 @@ void main() {
     });
   }
 
-  testWidgets('slot med slettet opskrift viser tekst og kan stadig redigeres',
+  testWidgets('slot med slettet opskrift viser tekst og åbner redigeringsarket',
       (tester) async {
     final user = _User();
     when(() => user.displayName).thenReturn('Mette');
@@ -132,6 +135,6 @@ void main() {
     await tester.tap(find.text('Opskriften findes ikke længere'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Gem måltid'), findsOneWidget);
+    expect(find.text('Fjern fra madplanen'), findsOneWidget);
   });
 }

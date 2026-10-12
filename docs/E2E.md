@@ -119,12 +119,15 @@ testes, skal gå gennem appen, så reglerne også afprøves.
 
 ## Kendte fejl markeret med `test.fail`
 
-To tests i `tests/meal-plan.spec.ts` (genindlæsning og live-opdatering af
-madplanen) afdækker fejl #24 og er markeret som forventet fejlende, indtil
-rettelsen (PR #38) er merget — de står som "bestået" i rapporten, så længe fejlen
-findes. Når den er rettet, vil Playwright melde at de "uventet består": fjern
-da `test.fail(...)`-linjen og kommentaren `Fjernes når #24 (PR #38) er merget`.
-Med `E2E_FIXED=1 tool/e2e.sh` køres de uden forventet fejl.
+En test, der afdækker en kendt, endnu ikke rettet fejl, kan markeres som
+forventet fejlende. Kald `test.fail(true, 'Kendt fejl #<nr>: …')` **lige før**
+den assertion, der fejler – ikke øverst i testen – så fejl i login, opstart og
+forudsætninger stadig tæller som rigtige fejl. Skriv en kommentar
+`Fjernes når #<nr> er merget`. Når rettelsen er merget, melder Playwright, at
+testen "uventet består"; fjern da markeringen.
+
+Eksempel: de to #24-tests i `tests/meal-plan.spec.ts` var markeret sådan, indtil
+PR #38 blev merget.
 
 ## Begrænsninger
 
