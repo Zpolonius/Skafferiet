@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/recipe.dart';
 import '../../core/theme/theme_context.dart';
+import '../recipes/recipe_search.dart';
 import '../recipes/recipes_provider.dart';
 
 /// Filtrerbar liste over husstandens opskrifter. Bruges både når man skifter
@@ -14,11 +15,16 @@ class RecipePicker extends ConsumerStatefulWidget {
   /// Opskriften der allerede står i måltidet (får et flueben).
   final String? currentRecipeId;
 
+  /// Kaldes med den trimmede søgetekst når ingen opskrift matcher; så vises
+  /// knappen "Skriv som eget måltid". Uden den vises ingen knap.
+  final ValueChanged<String>? onNoMatch;
+
   const RecipePicker({
     super.key,
     required this.onPick,
     this.enabled = true,
     this.currentRecipeId,
+    this.onNoMatch,
   });
 
   @override
@@ -67,21 +73,36 @@ class _RecipePickerState extends ConsumerState<RecipePicker> {
               ),
             ),
             data: (all) {
-              final query = _filterController.text.trim().toLowerCase();
-              final recipes = all
-                  .where((r) => r.title.toLowerCase().contains(query))
-                  .toList()
-                ..sort((a, b) =>
-                    a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+              final query = _filterController.text;
+              final recipes = searchRecipes(all, query);
               if (recipes.isEmpty) {
+                final noMatch = widget.onNoMatch;
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(
-                    all.isEmpty
-                        ? 'Du har ingen opskrifter endnu'
-                        : 'Ingen opskrifter matcher',
-                    style: context.text.bodyMedium
-                        ?.copyWith(color: colors.outline),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        all.isEmpty
+                            ? 'Du har ingen opskrifter endnu'
+                            : 'Ingen opskrifter matcher',
+                        style: context.text.bodyMedium
+                            ?.copyWith(color: colors.outline),
+                      ),
+                      if (all.isNotEmpty && noMatch != null) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48)),
+                          onPressed: widget.enabled
+                              ? () => noMatch(query.trim())
+                              : null,
+                          icon: const Icon(Icons.edit_note),
+                          label: const Text('Skriv som eget måltid'),
+                        ),
+                      ],
+                    ],
                   ),
                 );
               }
@@ -90,6 +111,9 @@ class _RecipePickerState extends ConsumerState<RecipePicker> {
                 itemCount: recipes.length,
                 itemBuilder: (context, i) {
                   final recipe = recipes[i];
+                  final via = titleMatchesRecipeSearch(recipe, query)
+                      ? const <String>[]
+                      : matchingIngredientNames(recipe, query);
                   return ListTile(
                     minTileHeight: 56,
                     contentPadding: EdgeInsets.zero,
@@ -97,7 +121,18 @@ class _RecipePickerState extends ConsumerState<RecipePicker> {
                     leading: RecipeThumb(imageUrl: recipe.imageUrl),
                     title: Text(recipe.title,
                         maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text('${recipe.calories} kcal • ${recipe.time}'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${recipe.calories} kcal • ${recipe.time}'),
+                        if (via.isNotEmpty)
+                          Text(
+                            'Indeholder: ${via.take(3).join(', ')}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
                     trailing: recipe.id == widget.currentRecipeId
                         ? Icon(Icons.check,
                             color: colors.primary, semanticLabel: 'Nuværende')

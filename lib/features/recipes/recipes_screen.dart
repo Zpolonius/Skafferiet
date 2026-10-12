@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'recipe_search.dart';
 import 'recipes_provider.dart';
 import '../../core/models/recipe.dart';
 import '../../shared/widgets/empty_state_widget.dart';
@@ -102,7 +103,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
             recipes.when(
               data: (recipeList) {
                 final results = recipeList.where((r) {
-                  final matchesQuery = r.title.toLowerCase().contains(searchQuery.toLowerCase());
+                  final matchesQuery = matchesRecipeSearch(r, searchQuery);
                   final matchesCategory = selectedCategory == null || r.category == selectedCategory;
                   return matchesQuery && matchesCategory;
                 }).toList();
