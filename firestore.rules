@@ -220,6 +220,43 @@ service cloud.firestore {
         allow read, write: if isMember(householdId);
       }
 
+      // ── Item history (forslag i "Tilføj vare") ─────────────────────────────
+      // One doc per item the household has used, keyed by the normalised name.
+      // Kept apart from grocery_list so it survives clearing the list. Members
+      // only; limits match grocery/recurring items (see ItemHistoryLimits).
+      match /item_history/{key} {
+        function optHistString(d, key, max) {
+          return d.get(key, null) == null ||
+                 (d.get(key, null) is string && d.get(key, null).size() <= max);
+        }
+
+        // Historikken skrives i samme batch som selve varen, så en afvist
+        // historikpost ville også tage varen med sig. Derfor intet loft på
+        // useCount, og ved update tjekkes kun de felter skrivningen ændrer –
+        // et gammelt ekstra felt må ikke blokere for at tilføje varen.
+        function historyKeys() {
+          return ['name', 'category', 'unit', 'quantity', 'useCount', 'lastUsed'];
+        }
+
+        function validHistoryFields(d) {
+          return d.name is string && d.name.size() >= 1 && d.name.size() <= 80 &&
+                 d.category is string && d.category.size() >= 1 && d.category.size() <= 40 &&
+                 optHistString(d, 'unit', 20) &&
+                 optHistString(d, 'quantity', 10) &&
+                 d.useCount is int && d.useCount >= 0 &&
+                 d.lastUsed is timestamp;
+        }
+
+        allow read, delete: if isMember(householdId);
+        allow create: if isMember(householdId) &&
+                         request.resource.data.keys().hasOnly(historyKeys()) &&
+                         validHistoryFields(request.resource.data);
+        allow update: if isMember(householdId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(historyKeys()) &&
+                         validHistoryFields(request.resource.data);
+      }
+
       // ── Recurring items (fast genkøb) ─────────────────────────────────────
       // Members only. Every field is validated so a bad client can't store
       // huge strings or dates the app can't read.

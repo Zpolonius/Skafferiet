@@ -28,6 +28,7 @@ void main() {
   setUpAll(() {
     // Mocktail kræver fallback-værdier for typer brugt med any()
     registerFallbackValue(MockDocumentReference());
+    registerFallbackValue(SetOptions(merge: true));
   });
 
   group('GroceryListNotifier Tests', () {
@@ -166,7 +167,15 @@ void main() {
       when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
       when(() => mockHouseholdDoc.collection('grocery_list')).thenReturn(mockGroceryCollection);
       when(() => mockGroceryCollection.doc('test-item-id')).thenReturn(mockItemDoc);
-      when(() => mockItemDoc.update(any())).thenAnswer((_) async {});
+      final mockHistoryCollection = MockCollectionReference();
+      final mockHistoryDoc = MockDocumentReference();
+      when(() => mockHouseholdDoc.collection('item_history')).thenReturn(mockHistoryCollection);
+      when(() => mockHistoryCollection.doc('letmælk')).thenReturn(mockHistoryDoc);
+      final mockBatch = MockWriteBatch();
+      when(() => mockFirestore.batch()).thenReturn(mockBatch);
+      when(() => mockBatch.update(any(), any())).thenReturn(null);
+      when(() => mockBatch.set(any(), any(), any())).thenReturn(null);
+      when(() => mockBatch.commit()).thenAnswer((_) async {});
 
       final container = ProviderContainer(
         overrides: [
@@ -194,12 +203,15 @@ void main() {
 
       // Kun de redigerbare felter må sendes – isChecked og sortOrder må ikke
       // overskrives, da en anden i husstanden kan have ændret dem imens.
-      verify(() => mockItemDoc.update({
+      verify(() => mockBatch.update(mockItemDoc, {
             'name': 'Letmælk',
             'quantity': '2',
             'unit': 'l',
             'category': 'Mejeri',
           })).called(1);
+      // ...og varen noteres i varehistorikken i samme batch.
+      verify(() => mockBatch.set<Map<String, dynamic>>(mockHistoryDoc, any(), any())).called(1);
+      verify(() => mockBatch.commit()).called(1);
     });
 
     test('updateItem gør ingenting når householdId er null', () async {

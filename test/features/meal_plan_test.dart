@@ -43,6 +43,8 @@ void main() {
     late MockCollectionReference mockGroceryCollection;
     late MockDocumentReference mockGroceryDoc;
     late MockWriteBatch mockBatch;
+    late MockCollectionReference mockHistoryCollection;
+    late MockDocumentReference mockHistoryDoc;
 
     setUp(() {
       mockFirestore = MockFirestore();
@@ -54,6 +56,8 @@ void main() {
       mockGroceryCollection = MockCollectionReference();
       mockGroceryDoc = MockDocumentReference();
       mockBatch = MockWriteBatch();
+      mockHistoryCollection = MockCollectionReference();
+      mockHistoryDoc = MockDocumentReference();
 
       when(() => mockFirestore.collection('households')).thenReturn(mockHouseholdsCollection);
       when(() => mockHouseholdsCollection.doc(any())).thenReturn(mockHouseholdDoc);
@@ -69,8 +73,12 @@ void main() {
       when(() => mockGroceryCollection.doc(any())).thenReturn(mockGroceryDoc);
       when(() => mockGroceryCollection.doc()).thenReturn(mockGroceryDoc);
 
+      when(() => mockHouseholdDoc.collection('item_history')).thenReturn(mockHistoryCollection);
+      when(() => mockHistoryCollection.doc(any())).thenReturn(mockHistoryDoc);
+
       when(() => mockFirestore.batch()).thenReturn(mockBatch);
       when(() => mockBatch.set(any(), any())).thenReturn(null);
+      when(() => mockBatch.set(any(), any(), any())).thenReturn(null);
       when(() => mockBatch.commit()).thenAnswer((_) async {});
     });
 
@@ -148,6 +156,8 @@ void main() {
 
       expect(count, 2);
       verify(() => mockBatch.set<Map<String, dynamic>>(any(), any())).called(2);
+      // Varehistorikken skrives i samme batch (én post pr. ingrediens).
+      verify(() => mockBatch.set<Map<String, dynamic>>(mockHistoryDoc, any(), any())).called(2);
       verify(() => mockBatch.commit()).called(1);
     });
   });

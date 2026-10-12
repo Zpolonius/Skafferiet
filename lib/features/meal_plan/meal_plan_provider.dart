@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
+import '../../core/services/item_history_writer.dart';
 import '../recipes/recipes_provider.dart';
 
 import '../profile/household_provider.dart';
@@ -267,6 +268,15 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
               'isChecked': false,
               'createdAt': DateTime.now().millisecondsSinceEpoch,
             });
+            ItemHistoryWriter.addToBatch(
+              batch,
+              _firestore,
+              householdId,
+              name: ing.name,
+              category: ing.category,
+              unit: ing.unit,
+              quantity: ing.quantity.toString(),
+            );
             count++;
           }
         }

@@ -34,6 +34,10 @@ const privacyPolicySections = <PolicySection>[
     '• Husstand: navn, medlemmer, antal voksne og børn, madpræferencer og indkøbsdag.',
     '• Indhold du opretter: opskrifter (også billeder og næringsindhold), '
         'indkøbsliste (også faste genkøb) og madplaner.',
+    '• Varehistorik: de varer I har brugt på indkøbslisten (navn, kategori, '
+        'enhed, mængde og hvor ofte og hvornår de sidst er brugt), så appen kan '
+        'foreslå dem igen. Historikken bliver i husstanden, også når varer '
+        'fjernes fra indkøbslisten, og du kan fjerne et forslag i appen.',
     '• Invitationer: e-mailen på den, du inviterer, og dit navn som afsender.',
     'Vi bruger ikke reklamer, analyseværktøjer eller sporing på tværs af apps.',
   ]),
@@ -58,7 +62,7 @@ const privacyPolicySections = <PolicySection>[
         'kontoen i appen under Profil → Slet konto. Så slettes din profil, '
         'dit profilbillede og invitationer til og fra dig med det samme.',
     'Er du det eneste medlem af din husstand, slettes hele husstanden med '
-        'opskrifter, indkøbsliste og madplaner. Er der andre medlemmer, '
+        'opskrifter, indkøbsliste, varehistorik og madplaner. Er der andre medlemmer, '
         'bliver de opskrifter, du har lavet, i husstanden, så de andre ikke '
         'mister dem.',
   ]),

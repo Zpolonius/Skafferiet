@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
+import '../../core/services/item_history_writer.dart';
 import '../profile/household_provider.dart';
 
 class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
@@ -59,15 +60,30 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
         .delete();
   }
 
+  /// Lægger varen på listen og noterer den i varehistorikken i samme batch.
   Future<void> addItem(GroceryItem item) async {
     final householdId = ref.read(householdProvider).householdId;
     if (householdId == null) return;
 
-    await _firestore
-        .collection('households')
-        .doc(householdId)
-        .collection('grocery_list')
-        .add(item.toMap());
+    final batch = _firestore.batch();
+    batch.set(
+      _firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('grocery_list')
+          .doc(),
+      item.toMap(),
+    );
+    ItemHistoryWriter.addToBatch(
+      batch,
+      _firestore,
+      householdId,
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      quantity: item.quantity,
+    );
+    await batch.commit();
   }
 
   Future<void> updateQuantity(String id, String newQuantity) async {
@@ -95,17 +111,30 @@ class GroceryListNotifier extends StreamNotifier<List<GroceryItem>> {
     final householdId = ref.read(householdProvider).householdId;
     if (householdId == null) return;
 
-    await _firestore
-        .collection('households')
-        .doc(householdId)
-        .collection('grocery_list')
-        .doc(id)
-        .update({
-      'name': name,
-      'quantity': quantity,
-      'unit': unit,
-      'category': category,
-    });
+    final batch = _firestore.batch();
+    batch.update(
+      _firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('grocery_list')
+          .doc(id),
+      {
+        'name': name,
+        'quantity': quantity,
+        'unit': unit,
+        'category': category,
+      },
+    );
+    ItemHistoryWriter.addToBatch(
+      batch,
+      _firestore,
+      householdId,
+      name: name,
+      category: category,
+      unit: unit,
+      quantity: quantity,
+    );
+    await batch.commit();
   }
 
   Future<void> clearCheckedItems() async {

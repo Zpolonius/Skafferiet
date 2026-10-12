@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
+import '../../core/models/item_history.dart';
 import '../../core/models/recurring_item.dart';
 import 'grocery_defaults.dart';
 import 'grocery_provider.dart';
+import 'item_history_provider.dart';
 
 /// Sentinel for "ingen enhed" – en DropdownMenuItem kan ikke have `null` som
 /// en valgbar værdi, der kan skelnes fra "intet valgt".
@@ -159,8 +161,11 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
 
     // Den valgte kategori tilføjes altid, så dropdown'en ikke crasher hvis en
     // anden i husstanden fjerner den sidste vare i kategorien imens.
+    final history =
+        ref.watch(itemHistoryProvider).valueOrNull ?? const <ItemHistoryEntry>[];
     final allCategories = {
       ...defaultGroceryCategories,
+      ...customCategoriesFrom(history, defaultGroceryCategories),
       ...existingCategories,
       _selectedCategory,
     }.toList();

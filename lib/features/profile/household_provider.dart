@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
+import '../../core/services/item_history_writer.dart';
 
 /// Tegn i koder: uden 0/O og 1/I, så de er nemme at læse op og skrive af.
 const _codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -720,6 +721,15 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
             'isChecked': false,
             'createdAt': DateTime.now().millisecondsSinceEpoch,
           });
+          ItemHistoryWriter.addToBatch(
+            batch,
+            _firestore,
+            hId,
+            name: ing.name,
+            category: ing.category,
+            unit: ing.unit,
+            quantity: ing.quantity.toString(),
+          );
         }
         await batch.commit();
       } else if (customMeal != null && customMeal.trim().isNotEmpty) {
@@ -739,15 +749,29 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           }
         }, SetOptions(merge: true));
 
-        await _firestore.collection('households').doc(hId).collection('grocery_list').add({
-          'name': customMeal.trim(),
-          'category': 'Måltider',
-          'quantity': '1',
-          'unit': 'stk',
-          'source': 'meal_plan',
-          'isChecked': false,
-          'createdAt': DateTime.now().millisecondsSinceEpoch,
-        });
+        final mealBatch = _firestore.batch();
+        mealBatch.set(
+          _firestore.collection('households').doc(hId).collection('grocery_list').doc(),
+          {
+            'name': customMeal.trim(),
+            'category': 'Måltider',
+            'quantity': '1',
+            'unit': 'stk',
+            'source': 'meal_plan',
+            'isChecked': false,
+            'createdAt': DateTime.now().millisecondsSinceEpoch,
+          },
+        );
+        ItemHistoryWriter.addToBatch(
+          mealBatch,
+          _firestore,
+          hId,
+          name: customMeal.trim(),
+          category: 'Måltider',
+          unit: 'stk',
+          quantity: '1',
+        );
+        await mealBatch.commit();
       }
 
       state = state.copyWith(

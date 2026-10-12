@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/models/grocery_item.dart';
 import '../../../core/models/recurring_item.dart';
+import '../../../core/services/item_history_writer.dart';
 import '../../../core/services/recurring_schedule.dart';
 
 /// Al adgang til databasen for faste varer. Logikken i
@@ -167,6 +168,15 @@ class FirestoreRecurringItemsRepository implements RecurringItemsRepository {
       if (decision.addToList) {
         final grocery = item.toGroceryItem(item.nextDate, now);
         tx.set(_groceries(householdId).doc(grocery.id), grocery.toMap());
+        ItemHistoryWriter.addToTransaction(
+          tx,
+          _firestore,
+          householdId,
+          name: grocery.name,
+          category: grocery.category,
+          unit: grocery.unit,
+          quantity: grocery.quantity,
+        );
         updates['lastGroceryItemId'] = grocery.id;
       }
       tx.update(ref, updates);
