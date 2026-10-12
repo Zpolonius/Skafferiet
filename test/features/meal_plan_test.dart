@@ -122,6 +122,7 @@ void main() {
         ingredients: [
           Ingredient(name: 'Pasta', quantity: 200, unit: 'g', category: 'Kolonial'),
           Ingredient(name: 'Hakket oksekød', quantity: 400, unit: 'g', category: 'Kød'),
+          Ingredient(name: 'Fløde', quantity: 1.5, unit: 'dl', category: 'Mejeri'),
         ],
       );
 
@@ -154,10 +155,19 @@ void main() {
       final mealNotifier = container.read(mealPlanProvider.notifier);
       final count = await mealNotifier.transferToShoppingList();
 
-      expect(count, 2);
-      verify(() => mockBatch.set<Map<String, dynamic>>(any(), any())).called(2);
+      expect(count, 3);
+      final listData = verify(() => mockBatch.set<Map<String, dynamic>>(any(), captureAny()))
+          .captured
+          .cast<Map<String, dynamic>>();
+      expect(listData, hasLength(3));
+      // Mængder gemmes uden ".0": 200.0 -> "200", 1.5 -> "1,5".
+      expect(listData.map((d) => d['quantity']), ['200', '400', '1,5']);
       // Varehistorikken skrives i samme batch (én post pr. ingrediens).
-      verify(() => mockBatch.set<Map<String, dynamic>>(mockHistoryDoc, any(), any())).called(2);
+      final historyData =
+          verify(() => mockBatch.set<Map<String, dynamic>>(mockHistoryDoc, captureAny(), any()))
+              .captured
+              .cast<Map<String, dynamic>>();
+      expect(historyData.map((d) => d['quantity']), ['200', '400', '1,5']);
       verify(() => mockBatch.commit()).called(1);
     });
   });

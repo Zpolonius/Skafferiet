@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../shared/utils/number_format.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
 import '../../core/services/item_history_writer.dart';
@@ -715,7 +716,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           batch.set(itemRef, {
             'name': ing.name,
             'category': ing.category,
-            'quantity': ing.quantity.toString(),
+            'quantity': formatQuantity(ing.quantity),
             'unit': ing.unit,
             'source': 'meal_plan',
             'isChecked': false,
@@ -728,7 +729,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
             name: ing.name,
             category: ing.category,
             unit: ing.unit,
-            quantity: ing.quantity.toString(),
+            quantity: formatQuantity(ing.quantity),
           );
         }
         await batch.commit();

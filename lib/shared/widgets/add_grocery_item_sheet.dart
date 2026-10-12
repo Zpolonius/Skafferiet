@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/item_history.dart';
+import '../../core/models/quick_add.dart';
 import '../../core/models/recurrence.dart';
 import '../../core/models/recurring_item.dart';
 import '../../core/services/recurring_schedule.dart';
@@ -17,11 +18,24 @@ import '../../features/profile/household_provider.dart';
 import '../utils/danish_dates.dart';
 import '../utils/image_upload_service.dart';
 import 'app_bottom_sheet.dart';
+import 'item_suggestion_list.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/theme_context.dart';
 
 class AddGroceryItemSheet extends ConsumerStatefulWidget {
-  const AddGroceryItemSheet({super.key});
+  /// Udfylder navn (og evt. mængde/enhed) på forhånd, fx fra hurtig-tilføj.
+  final String? initialName;
+  final String? initialQuantity;
+  final String? initialUnit;
+  final String? initialCategory;
+
+  const AddGroceryItemSheet({
+    super.key,
+    this.initialName,
+    this.initialQuantity,
+    this.initialUnit,
+    this.initialCategory,
+  });
 
   @override
   ConsumerState<AddGroceryItemSheet> createState() =>
@@ -29,12 +43,14 @@ class AddGroceryItemSheet extends ConsumerStatefulWidget {
 }
 
 class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
-  final _nameController = TextEditingController();
-  final _quantityController = TextEditingController(text: '1');
+  late final _nameController =
+      TextEditingController(text: widget.initialName);
+  late final _quantityController =
+      TextEditingController(text: widget.initialQuantity ?? '1');
   final _customCategoryController = TextEditingController();
 
-  String _selectedCategory = 'Grønt';
-  String _selectedUnit = 'stk';
+  late String _selectedCategory = widget.initialCategory ?? 'Grønt';
+  late String _selectedUnit = widget.initialUnit ?? 'stk';
   bool _isAddingCustomCategory = false;
   String? _imageUrl;
   bool _isUploadingImage = false;
@@ -71,7 +87,8 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
   }
 
   Future<void> _submit() async {
-    final name = _nameController.text.trim();
+    final name = canonicalItemName(_nameController.text,
+        ref.read(itemHistoryProvider).valueOrNull ?? const []);
     final quantity = _quantityController.text.trim();
     final category = _selectedCategory.trim();
     if (name.isEmpty) return;
@@ -93,7 +110,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
               imageUrl: _imageUrl,
             ),
           );
-      Navigator.pop(context);
+      Navigator.pop(context, true);
       return;
     }
 
@@ -148,7 +165,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
       final first =
           addToListDate(_recurrence.firstDate(today, shoppingWeekday: weekday));
       final messenger = ScaffoldMessenger.of(context);
-      Navigator.pop(context);
+      Navigator.pop(context, true);
       messenger.showSnackBar(SnackBar(
         content: Text(
           '$name er gemt som fast vare – første gang på listen: '
@@ -293,7 +310,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
             ),
             if (suggestions.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _SuggestionList(
+              ItemSuggestionList(
                 suggestions: suggestions,
                 onPick: _applySuggestion,
                 onRemove: (e) =>
@@ -433,86 +450,6 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Forslag fra husstandens varehistorik under navnefeltet. Hver række er mindst
-/// 48 dp høj og har en separat "Fjern forslag"-knap, så en stavefejl kan
-/// fjernes for altid.
-class _SuggestionList extends StatelessWidget {
-  final List<ItemHistoryEntry> suggestions;
-  final ValueChanged<ItemHistoryEntry> onPick;
-  final ValueChanged<ItemHistoryEntry> onRemove;
-
-  const _SuggestionList({
-    required this.suggestions,
-    required this.onPick,
-    required this.onRemove,
-  });
-
-  String _details(ItemHistoryEntry e) {
-    final amount = [e.quantity, e.unit].whereType<String>().join(' ');
-    return [e.category, if (amount.isNotEmpty) amount].join(' · ');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          for (final e in suggestions)
-            Row(
-              key: ValueKey('suggestion_${e.key}'),
-              children: [
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    label: 'Brug tidligere vare: ${e.name}, ${_details(e)}',
-                    excludeSemantics: true,
-                    child: InkWell(
-                      onTap: () => onPick(e),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 48),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(e.name, style: context.text.bodyLarge),
-                                Text(
-                                  _details(e),
-                                  style: context.text.bodySmall?.copyWith(
-                                      color: context.colors.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => onRemove(e),
-                  icon: const Icon(Icons.close, size: 20),
-                  tooltip: 'Fjern forslag',
-                  constraints:
-                      const BoxConstraints(minWidth: 48, minHeight: 48),
-                ),
-              ],
-            ),
-        ],
       ),
     );
   }
