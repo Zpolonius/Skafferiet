@@ -149,12 +149,21 @@ export type SeedRecipe = {
   calories?: number;
   /** Ingrediensnavne (resten af felterne udfyldes med gyldige standardværdier). */
   ingredients?: string[];
+  /** Delt med alle brugere (fanen Fællesskab). Standard: kun husstanden. */
+  visibility?: 'household' | 'public';
+  /** Skaberens fornavn (kun på delte opskrifter). */
+  authorName?: string;
+  createdAt?: Date;
 };
 
 /** Skriver `recipes/{id}` med felter der er gyldige iflg. firestore.rules. */
 export async function seedRecipe(r: SeedRecipe): Promise<void> {
   await setDoc(`recipes/${r.id}`, {
     title: r.title,
+    titleLower: r.title.toLowerCase(),
+    visibility: r.visibility ?? 'household',
+    ...(r.authorName ? { authorName: r.authorName } : {}),
+    createdAt: r.createdAt ?? new Date(),
     category: `RecipeCategory.${r.category ?? 'aftensmad'}`,
     calories: r.calories ?? 450,
     time: '30 min',

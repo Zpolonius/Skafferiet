@@ -413,13 +413,80 @@ service cloud.firestore {
                (d.instructions is list && d.instructions.size() <= 50);
       }
 
+      // Deling (#51): visibility er 'household' (standard, også når feltet
+      // mangler) eller 'public' (synlig for alle loggede brugere).
+      function validVisibility(d) {
+        return d.get('visibility', 'household') in ['household', 'public'];
+      }
+
+      function isPublic() {
+        return resource.data.get('visibility', 'household') == 'public';
+      }
+
+      // Skaberens fornavn på en delt opskrift: tekst på 1-40 tegn, som ikke
+      // kan udgive sig for appen eller dens moderatorer.
+      function validAuthorName(d) {
+        return !('authorName' in d) ||
+               (d.authorName is string && d.authorName.size() >= 1 && d.authorName.size() <= 40 &&
+                !d.authorName.lower().matches('.*(skafferiet|support|admin|moderator).*'));
+      }
+
+      // Søgenøglen skal være titlen med små bogstaver, så ingen kan få en
+      // opskrift til at dukke op i andres søgninger under et andet navn.
+      // Reglernes lower() ændrer kun ASCII-bogstaver (Æ, Ø, Å forbliver store),
+      // mens appen skriver titlen med små bogstaver for alle sprog. Derfor kræves
+      // præcis lighed kun for titler af ren ASCII; indeholder titlen andre tegn,
+      // kræves samme længde. Appen filtrerer desuden selv søgetræf på titlen.
+      function validTitleLower(d) {
+        return !('titleLower' in d) ||
+               (d.titleLower is string && d.get('title', null) is string &&
+                (d.title.matches('.*[^ -~].*')
+                  ? d.titleLower.size() == d.title.size()
+                  : d.titleLower == d.title.lower()));
+      }
+
+      // ID på den opskrift, en kopi er lavet ud fra.
+      function validCopiedFrom(d) {
+        return !('copiedFrom' in d) ||
+               (d.copiedFrom is string && d.copiedFrom.size() >= 1 && d.copiedFrom.size() <= 128);
+      }
+
+      function validSharing(d) {
+        return validVisibility(d) && validAuthorName(d) && validCopiedFrom(d) && validTitleLower(d);
+      }
+
+      // Kun skaberen må dele en opskrift med alle (og sætte sit navn på den).
+      // At holde op med at dele er altid tilladt for husstanden.
+      function publishAllowed() {
+        return resource.data.get('createdBy', null) == request.auth.uid ||
+               (
+                 (!changedKeys().hasAny(['visibility']) ||
+                  request.resource.data.get('visibility', 'household') != 'public') &&
+                 (!changedKeys().hasAny(['authorName']) ||
+                  !('authorName' in request.resource.data))
+               );
+      }
+
+      // En skaber, der har forladt husstanden, må stadig holde op med at dele:
+      // præcis visibility -> 'household' og authorName fjernet, intet andet.
+      function formerCreatorUnshare() {
+        return isPublic() &&
+               resource.data.get('createdBy', null) == request.auth.uid &&
+               changedKeys().hasOnly(['visibility', 'authorName']) &&
+               request.resource.data.get('visibility', null) == 'household' &&
+               !('authorName' in request.resource.data);
+      }
+
       function isGlobal() {
         return resource.data.get('householdId', null) == null;
       }
 
       // Written against the user's own householdId so the app's
       // "householdId == X OR householdId == null" query can be proven safe.
+      // Shared recipes (visibility == 'public') are readable by every signed-in
+      // user; the Fællesskab query always filters on visibility == 'public'.
       allow read: if isSignedIn() && (
+        resource.data.get('visibility', 'household') == 'public' ||
         !('householdId' in resource.data) ||
         resource.data.householdId == null ||
         (
@@ -432,26 +499,41 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
                        validNutrition(request.resource.data) &&
                        validInstructions(request.resource.data) &&
+                       validSharing(request.resource.data) &&
                        request.resource.data.createdBy == request.auth.uid &&
                        isMember(request.resource.data.get('householdId', null));
 
       // Owner and household never change after creation.
       // Trinene tjekkes kun når de ændres, så en ældre opskrift med ugyldige
       // trin ikke blokerer andre rettelser (fx et nyt billede).
-      allow update: if isSignedIn() &&
-                       validNutrition(request.resource.data) &&
-                       (!changedKeys().hasAny(['instructions']) ||
-                        validInstructions(request.resource.data)) &&
-                       !changedKeys().hasAny(['householdId', 'createdBy']) &&
+      allow update: if isSignedIn() && (
                        (
-                         (!isGlobal() && isMember(resource.data.householdId)) ||
-                         (isGlobal() && resource.data.get('createdBy', null) == request.auth.uid)
-                       );
+                         validNutrition(request.resource.data) &&
+                         (!changedKeys().hasAny(['instructions']) ||
+                          validInstructions(request.resource.data)) &&
+                         (!changedKeys().hasAny(['visibility']) || validVisibility(request.resource.data)) &&
+                         (!changedKeys().hasAny(['authorName']) || validAuthorName(request.resource.data)) &&
+                         (!changedKeys().hasAny(['copiedFrom']) || validCopiedFrom(request.resource.data)) &&
+                         (!changedKeys().hasAny(['title', 'titleLower']) ||
+                          validTitleLower(request.resource.data)) &&
+                         publishAllowed() &&
+                         !changedKeys().hasAny(['householdId', 'createdBy']) &&
+                         (
+                           (!isGlobal() && isMember(resource.data.householdId)) ||
+                           (isGlobal() && resource.data.get('createdBy', null) == request.auth.uid)
+                         )
+                       ) ||
+                       formerCreatorUnshare()
+                     );
 
       // The creator may delete while still a member. The household admin may
       // also delete — needed to clean up when the last member deletes their
       // account and the recipes were made by people who have since left.
+      // The creator may always delete a recipe they shared, even after leaving
+      // the household, so account deletion can remove it. Nobody else outside
+      // the household can edit or delete a shared recipe.
       allow delete: if isSignedIn() && (
+                       (isPublic() && resource.data.get('createdBy', null) == request.auth.uid) ||
                        (resource.data.get('createdBy', null) == request.auth.uid &&
                         (isGlobal() || isMember(resource.data.householdId))) ||
                        (!isGlobal() &&

@@ -26,6 +26,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   String? _imageUrl;
   bool _isUploadingImage = false;
   bool _showErrors = false;
+  bool _shared = false;
 
   @override
   void dispose() {
@@ -88,6 +89,12 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                   onSelected: (val) => setState(() => _selectedCategory = cat),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Deling'),
+            ShareRecipeSwitch(
+              value: _shared,
+              onChanged: (v) => setState(() => _shared = v),
             ),
             const SizedBox(height: 32),
             _buildSectionTitle('Ingredienser'),
@@ -200,6 +207,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       carbs: nutrition.carbs,
       fat: nutrition.fat,
       nutritionFromIngredients: nutrition.fromIngredients,
+      visibility: _shared ? RecipeVisibility.public : RecipeVisibility.household,
     );
     
     try {

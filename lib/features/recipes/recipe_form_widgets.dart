@@ -589,3 +589,83 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
     );
   }
 }
+
+// ── Deling ────────────────────────────────────────────────────────────────────
+
+/// Valg om opskriften kun er for husstanden (standard) eller deles med alle
+/// brugere af appen, med en forklaring af hvad det betyder.
+class ShareRecipeSwitch extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  /// Falsk når brugeren ikke selv har lavet opskriften: kun skaberen må dele
+  /// den med alle, men enhver i husstanden kan holde op med at dele den.
+  final bool canShare;
+
+  const ShareRecipeSwitch({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.canShare = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.text;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MergeSemantics(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Del med alle brugere',
+                      style: text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Switch(
+                    key: const Key('share-recipe-switch'),
+                    value: value,
+                    onChanged: (value || canShare) ? onChanged : null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text(
+              !canShare && !value
+                  ? 'Kun den, der har lavet opskriften, kan dele den med alle'
+                  : !canShare
+                  ? 'Delt med alle brugere af den, der har lavet opskriften, under '
+                      'skaberens fornavn. Du kan slå deling fra for jeres husstand, men '
+                      'kun skaberen kan dele den igen.'
+                  : value
+                  ? 'Alle brugere af appen kan se, søge i og gemme en kopi af opskriften: '
+                      'titel, billede, ingredienser, fremgangsmåde, næring og dit fornavn. '
+                      'Kun jeres husstand kan redigere eller slette den. Du kan slå deling '
+                      'fra igen når som helst. Et billedlink, som andre allerede har åbnet, '
+                      'kan dog stadig virke bagefter.'
+                  : 'Slået fra: kun din husstand kan se opskriften. Slå til for at dele den '
+                      'med alle brugere af appen. Så kan de se titel, billede, ingredienser, '
+                      'fremgangsmåde, næring og dit fornavn. Du kan altid slå deling fra igen, '
+                      'men et billedlink, som andre allerede har åbnet, kan stadig virke.',
+              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

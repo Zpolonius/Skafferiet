@@ -13,7 +13,7 @@ const SDK_DIR = join(__dirname, '..', 'node_modules', 'firebase');
  *  - Alt andet end localhost afvises med det samme (skrifttyper, billeder fra
  *    nettet m.m.), så ingen test hænger på et udefrakommende kald.
  */
-async function routeNetwork(page: Page): Promise<void> {
+export async function routeNetwork(page: Page): Promise<void> {
   // Ét handler for alle eksterne værter (Playwright kører routes i omvendt
   // registreringsrækkefølge, så to overlappende routes ville tage hinanden).
   await page.context().route(

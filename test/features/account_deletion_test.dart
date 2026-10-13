@@ -179,6 +179,70 @@ void main() {
     });
   });
 
+  group('delte opskrifter (#51)', () {
+    Future<void> seedRecipes() async {
+      await db.doc('recipes/minePublic').set({
+        'householdId': 'HH', 'createdBy': 'me', 'visibility': 'public', 'authorName': 'Mig',
+      });
+      await db.doc('recipes/minePrivate').set({
+        'householdId': 'HH', 'createdBy': 'me', 'visibility': 'household',
+      });
+      await db.doc('recipes/partnerPublic').set({
+        'householdId': 'HH', 'createdBy': 'partner', 'visibility': 'public', 'authorName': 'Partner',
+      });
+      // En anden husstands kopi af min delte opskrift er et eget dokument.
+      await db.doc('recipes/copyElsewhere').set({
+        'householdId': 'HH_OTHER', 'createdBy': 'x', 'visibility': 'household',
+        'copiedFrom': 'minePublic',
+      });
+      await db.doc('recipes/otherPublic').set({
+        'householdId': 'HH_OTHER', 'createdBy': 'x', 'visibility': 'public',
+      });
+    }
+
+    test('med andre i husstanden: egne delte slettes, resten bliver', () async {
+      await seedProfile(householdId: 'HH');
+      await db.doc('households/HH').set({
+        'name': 'Fælles', 'members': ['me', 'partner'], 'admin': 'me',
+      });
+      await seedRecipes();
+
+      await service.deleteAccount(password: 'hemmelig');
+
+      expect(await exists('recipes/minePublic'), false);
+      expect(await exists('recipes/minePrivate'), true,
+          reason: 'husstands-opskrifter bliver hos de andre');
+      expect(await exists('recipes/partnerPublic'), true);
+      expect(await exists('recipes/copyElsewhere'), true);
+      expect(await exists('recipes/otherPublic'), true);
+    });
+
+    test('eneste medlem: egne delte slettes, andres kopier bliver', () async {
+      await seedProfile(householdId: 'HH');
+      await db.doc('households/HH').set({'name': 'Mit', 'members': ['me'], 'admin': 'me'});
+      await seedRecipes();
+
+      await service.deleteAccount(password: 'hemmelig');
+
+      expect(await exists('recipes/minePublic'), false);
+      expect(await exists('recipes/minePrivate'), false);
+      expect(await exists('recipes/partnerPublic'), false,
+          reason: 'hele husstanden slettes');
+      expect(await exists('recipes/copyElsewhere'), true);
+      expect(await exists('recipes/otherPublic'), true);
+    });
+
+    test('uden husstand slettes egne delte opskrifter også', () async {
+      await seedProfile();
+      await seedRecipes();
+
+      await service.deleteAccount(password: 'hemmelig');
+
+      expect(await exists('recipes/minePublic'), false);
+      expect(await exists('recipes/copyElsewhere'), true);
+    });
+  });
+
   test('eneste medlem uden ejerrettigheder sletter kun egne opskrifter', () async {
     // Ældre husstande har intet 'admin'-felt; reglerne tillader så kun at
     // slette egne opskrifter, og husstanden kan ikke slettes.

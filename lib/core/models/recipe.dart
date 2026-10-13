@@ -1,5 +1,20 @@
 enum RecipeCategory { morgenmad, frokost, aftensmad, snack }
 
+/// Hvem der kan se en opskrift. Manglende felt i databasen = [household].
+enum RecipeVisibility {
+  /// Kun husstanden (standard).
+  household,
+
+  /// Alle brugere af appen (fanen Fællesskab).
+  public;
+
+  /// Værdien der gemmes i Firestore.
+  String get key => name;
+
+  static RecipeVisibility parse(Object? raw) =>
+      raw == 'public' ? RecipeVisibility.public : RecipeVisibility.household;
+}
+
 /// Næringsværdier. Bruges både pr. 100 g/ml på en ingrediens og som
 /// beregnet total for en hel opskrift.
 class Nutrition {
@@ -138,6 +153,16 @@ class Recipe {
   /// (brugeren har ikke selv skrevet tallene).
   final bool nutritionFromIngredients;
 
+  /// Om opskriften kun er for husstanden eller delt med alle brugere.
+  final RecipeVisibility visibility;
+
+  /// Skaberens fornavn. Gemmes kun på delte opskrifter, så andre husstande kan
+  /// se hvem der har lavet den uden at læse brugerprofiler.
+  final String? authorName;
+
+  /// ID på den delte opskrift, denne er en kopi af (kun på kopier).
+  final String? copiedFrom;
+
   Recipe({
     required this.id,
     required this.title,
@@ -154,7 +179,12 @@ class Recipe {
     this.carbs,
     this.fat,
     this.nutritionFromIngredients = false,
+    this.visibility = RecipeVisibility.household,
+    this.authorName,
+    this.copiedFrom,
   });
+
+  bool get isShared => visibility == RecipeVisibility.public;
 
   bool get hasNutrition => calories > 0 || protein != null || carbs != null || fat != null;
 
@@ -174,6 +204,9 @@ class Recipe {
     double? carbs,
     double? fat,
     bool? nutritionFromIngredients,
+    RecipeVisibility? visibility,
+    String? authorName,
+    String? copiedFrom,
   }) {
     return Recipe(
       id: id ?? this.id,
@@ -191,6 +224,9 @@ class Recipe {
       carbs: carbs ?? this.carbs,
       fat: fat ?? this.fat,
       nutritionFromIngredients: nutritionFromIngredients ?? this.nutritionFromIngredients,
+      visibility: visibility ?? this.visibility,
+      authorName: authorName ?? this.authorName,
+      copiedFrom: copiedFrom ?? this.copiedFrom,
     );
   }
 }

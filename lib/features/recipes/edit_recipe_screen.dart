@@ -27,6 +27,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   String? _imageUrl;
   bool _isUploadingImage = false;
   bool _showErrors = false;
+  bool _shared = false;
 
   @override
   void initState() {
@@ -38,7 +39,16 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     _steps = List.from(widget.recipe.instructions);
     _servings = widget.recipe.servings;
     _imageUrl = widget.recipe.imageUrl;
+    _shared = widget.recipe.isShared;
     _nutrition.loadFrom(widget.recipe);
+  }
+
+  /// Kun skaberen må dele en opskrift med alle. Ukendt skaber eller bruger
+  /// (ældre opskrifter) regnes som skaberen; reglerne afgør resten.
+  bool get _canShare {
+    final uid = ref.read(currentUserIdProvider);
+    final creator = widget.recipe.createdBy;
+    return uid == null || creator == null || creator == uid;
   }
 
   @override
@@ -150,6 +160,13 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Deling'),
+            ShareRecipeSwitch(
+              canShare: _canShare,
+              value: _shared,
+              onChanged: (v) => setState(() => _shared = v),
+            ),
             const SizedBox(height: 32),
             _buildSectionTitle('Ingredienser'),
             IngredientListEditor(
@@ -218,6 +235,9 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       carbs: nutrition.carbs,
       fat: nutrition.fat,
       nutritionFromIngredients: nutrition.fromIngredients,
+      visibility: _shared ? RecipeVisibility.public : RecipeVisibility.household,
+      authorName: old.authorName,
+      copiedFrom: old.copiedFrom,
     );
     
     try {

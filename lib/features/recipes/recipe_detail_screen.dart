@@ -2,9 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
+import '../profile/household_provider.dart';
+import '../recipes/community_recipes_provider.dart';
 import '../recipes/recipes_provider.dart';
 import '../grocery/grocery_provider.dart';
 import '../../core/models/recipe.dart';
+import '../../core/services/recipe_sharing.dart';
 import '../../core/models/grocery_item.dart';
 import '../../shared/widgets/add_to_meal_plan_sheet.dart';
 import 'package:uuid/uuid.dart';
@@ -25,8 +29,27 @@ class RecipeDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: recipes.when(
         data: (recipeList) {
-          final recipe = recipeList.firstWhere((r) => r.id == recipeId);
-          return CustomScrollView(
+          final own = recipeList.where((r) => r.id == recipeId);
+          if (own.isNotEmpty) {
+            return _content(context, ref, own.first, recipeList, foreign: false);
+          }
+          // Ikke i husstandens egen liste: en delt opskrift fra Fællesskab.
+          return _SharedRecipeLoader(
+            recipeId: recipeId,
+            builder: (recipe, foreign, createdByMe) => _content(
+                context, ref, recipe, recipeList,
+                foreign: foreign, createdByMe: createdByMe),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Fejl: $err')),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context, WidgetRef ref, Recipe recipe, List<Recipe> ownRecipes,
+      {required bool foreign, bool createdByMe = false}) {
+    return CustomScrollView(
             slivers: [
               // Header with Image
           SliverAppBar(
@@ -54,19 +77,21 @@ class RecipeDetailScreen extends ConsumerWidget {
               ),
             ),
             actions: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  backgroundColor: context.colors.surfaceContainerLowest.withValues(alpha: 0.9),
-                  child: IconButton(
-                    icon: Icon(Icons.edit, color: context.colors.onSurface),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => EditRecipeScreen(recipe: recipe)),
+              if (!foreign)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: CircleAvatar(
+                    backgroundColor: context.colors.surfaceContainerLowest.withValues(alpha: 0.9),
+                    child: IconButton(
+                      icon: Icon(Icons.edit, color: context.colors.onSurface),
+                      tooltip: 'Rediger opskrift',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => EditRecipeScreen(recipe: recipe)),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
           
@@ -97,6 +122,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    if (recipe.isShared && !foreign) const SharedBadge(),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -123,6 +149,10 @@ class RecipeDetailScreen extends ConsumerWidget {
                   recipe.title,
                   style: Theme.of(context).textTheme.displayLarge,
                 ),
+                if (foreign) ...[
+                  const SizedBox(height: 8),
+                  AuthorLabel(name: recipe.authorName),
+                ],
                 if (recipe.hasNutrition) ...[
                   const SizedBox(height: 20),
                   _NutritionSummary(recipe: recipe),
@@ -130,6 +160,28 @@ class RecipeDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 
                 // Action Buttons
+                if (foreign) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: createdByMe
+                        // Skaberen har forladt husstanden: kan stadig stoppe delingen.
+                        ? OutlinedButton.icon(
+                            key: const Key('stop-sharing-recipe'),
+                            onPressed: () => _confirmStopSharing(context, ref, recipe),
+                            icon: const Icon(Icons.public_off_outlined),
+                            label: const Text('Stop med at dele'),
+                            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                          )
+                        : OutlinedButton.icon(
+                            key: const Key('save-shared-recipe'),
+                            onPressed: () => _saveCopy(context, ref, recipe, ownRecipes),
+                            icon: const Icon(Icons.bookmark_add_outlined),
+                            label: const Text('Gem i vores opskrifter'),
+                            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Row(
                   children: [
                     Expanded(
@@ -145,7 +197,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: () => _showAddToMealPlan(context, recipe),
+                        onPressed: () => _showAddToMealPlan(context, ref, recipe, foreign: foreign),
                         icon: const Icon(Icons.calendar_today),
                         label: const Text('Til madplan'),
                         style: FilledButton.styleFrom(
@@ -203,13 +255,8 @@ class RecipeDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
-      );
-    },
-    loading: () => const Center(child: CircularProgressIndicator()),
-    error: (err, stack) => Center(child: Text('Fejl: $err')),
-    ),
-  );
-}
+    );
+  }
 
   void _addIngredientsToList(BuildContext context, WidgetRef ref, dynamic recipe) {
     for (final ing in recipe.ingredients) {
@@ -235,10 +282,199 @@ class RecipeDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddToMealPlan(BuildContext context, Recipe recipe) {
+  void _showAddToMealPlan(BuildContext context, WidgetRef ref, Recipe recipe,
+      {required bool foreign}) {
     showAppBottomSheet(
       context: context,
-      builder: (context) => AddToMealPlanSheet(recipe: recipe),
+      builder: (context) => AddToMealPlanSheet(
+        recipe: recipe,
+        // En delt opskrift gemmes først som kopi i husstanden, så madplanen
+        // aldrig peger på en anden husstands opskrift.
+        resolveRecipe: foreign
+            ? (r) => ref.read(recipesProvider.notifier).copyToHousehold(r)
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _confirmStopSharing(BuildContext context, WidgetRef ref, Recipe recipe) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final colors = context.colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Stop med at dele?'),
+        content: const Text(
+          'Opskriften bliver skjult for andre brugere, og dit fornavn fjernes fra den. '
+          'Kopier, andre allerede har gemt, bliver hos dem.',
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuller'),
+          ),
+          FilledButton(
+            key: const Key('confirm-stop-sharing'),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Stop med at dele'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(recipesProvider.notifier).stopSharing(recipe.id);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Opskriften deles ikke længere'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      // Opskriften tilhører en anden husstand og kan ikke længere læses.
+      if (navigator.canPop()) navigator.pop();
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Kunne ikke stoppe delingen: $e'),
+          backgroundColor: colors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveCopy(
+      BuildContext context, WidgetRef ref, Recipe recipe, List<Recipe> ownRecipes) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.maybeOf(context);
+    final colors = context.colors;
+    final alreadySaved = ownRecipes.any((r) => r.copiedFrom == recipe.id);
+    try {
+      final copy = await ref.read(recipesProvider.notifier).copyToHousehold(recipe);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(alreadySaved
+              ? 'Opskriften er allerede gemt i jeres opskrifter'
+              : 'Gemt i jeres opskrifter'),
+          behavior: SnackBarBehavior.floating,
+          action: router == null
+              ? null
+              : SnackBarAction(
+                  label: 'Åbn',
+                  onPressed: () => router.push('/recipes/${copy.id}'),
+                ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Kunne ikke gemme opskriften: $e'),
+          backgroundColor: colors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}
+
+/// Henter en opskrift der ikke ligger i husstandens egen liste (en delt
+/// opskrift fra Fællesskab) og viser den med [builder]. `foreign` er sand, når
+/// opskriften tilhører en anden husstand.
+class _SharedRecipeLoader extends ConsumerWidget {
+  final String recipeId;
+  final Widget Function(Recipe recipe, bool foreign, bool createdByMe) builder;
+
+  const _SharedRecipeLoader({required this.recipeId, required this.builder});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fetched = ref.watch(recipeByIdProvider(recipeId));
+    return fetched.when(
+      data: (recipe) {
+        if (recipe == null) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: const Center(child: Text('Opskriften findes ikke længere')),
+          );
+        }
+        final mine = ref.read(householdProvider).householdId;
+        final uid = ref.read(currentUserIdProvider);
+        return builder(
+          recipe,
+          recipe.householdId != null && recipe.householdId != mine,
+          uid != null && recipe.createdBy == uid,
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Fejl: $err')),
+    );
+  }
+}
+
+/// Mærket "Delt" på en af husstandens egne opskrifter, der er delt med alle.
+class SharedBadge extends StatelessWidget {
+  const SharedBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Delt med alle brugere',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: context.colors.secondaryContainer,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.public, size: 14, color: context.colors.onSecondaryContainer),
+            const SizedBox(width: 4),
+            Text(
+              'Delt',
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSecondaryContainer,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "af Fornavn" på en opskrift fra Fællesskab.
+class AuthorLabel extends StatelessWidget {
+  final String? name;
+  const AuthorLabel({super.key, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final who = (name == null || name!.trim().isEmpty) ? unknownAuthorName : name!;
+    return Semantics(
+      label: 'Delt af $who',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person_outline, size: 18, color: context.colors.outline),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              'af $who',
+              overflow: TextOverflow.ellipsis,
+              style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

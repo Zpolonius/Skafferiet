@@ -10,7 +10,12 @@ import '../../core/theme/theme_context.dart';
 class AddToMealPlanSheet extends ConsumerStatefulWidget {
   final Recipe recipe;
 
-  const AddToMealPlanSheet({super.key, required this.recipe});
+  /// Kaldes lige før opskriften sættes i madplanen, og den opskrift der
+  /// returneres bruges. Bruges til at gemme en kopi af en delt opskrift først,
+  /// så madplanen aldrig peger på en anden husstands opskrift.
+  final Future<Recipe> Function(Recipe recipe)? resolveRecipe;
+
+  const AddToMealPlanSheet({super.key, required this.recipe, this.resolveRecipe});
 
   @override
   ConsumerState<AddToMealPlanSheet> createState() => _AddToMealPlanSheetState();
@@ -108,10 +113,11 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
             onPressed: (selectedDay != null && selectedSlot != null)
                 ? () async {
                     try {
+                      final recipe = await widget.resolveRecipe?.call(widget.recipe) ?? widget.recipe;
                       await ref.read(mealPlanProvider.notifier).updateSlot(
                         selectedDay!,
                         selectedSlot!.key,
-                        recipe: widget.recipe,
+                        recipe: recipe,
                       );
                       if (context.mounted) {
                         Navigator.pop(context);

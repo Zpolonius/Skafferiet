@@ -22,8 +22,9 @@ class AccountDeletionException implements Exception {
 /// 1. Bekræft adgangskoden. Firebase kræver et frisk login for at slette en
 ///    konto, og det sikrer, at det er ejeren selv, der sletter.
 /// 2. Ryd op i husstanden, mens brugeren stadig er medlem — bagefter nægter
-///    sikkerhedsreglerne adgang. Er brugeren eneste medlem, slettes hele
-///    husstanden; ellers meldes brugeren ud, og ejerskabet gives videre.
+///    sikkerhedsreglerne adgang. Brugerens delte opskrifter slettes først,
+///    uanset husstand. Er brugeren eneste medlem, slettes hele husstanden; ellers meldes
+///    brugeren ud, og ejerskabet gives videre.
 /// 3. Slet invitationer til brugeren, profilbillede og profil.
 /// 4. Slet selve login-kontoen til sidst.
 ///
@@ -85,6 +86,10 @@ class AccountDeletionService {
       );
 
   Future<void> _cleanUpHousehold(String uid) async {
+    // Først, og uanset husstand: reglerne lader skaberen slette sine delte
+    // opskrifter, også efter at have forladt husstanden.
+    await _deleteSharedRecipes(uid);
+
     final userDoc = await _firestore.collection('users').doc(uid).get();
     final householdId = userDoc.data()?['householdId'] as String?;
     if (householdId == null) return;
@@ -154,6 +159,17 @@ class AccountDeletionService {
         'members': FieldValue.arrayRemove([uid])
       });
     }
+  }
+
+  /// Brugerens egne delte opskrifter (synlige for alle brugere, med brugerens
+  /// fornavn) slettes sammen med kontoen, uanset om andre bliver i husstanden.
+  /// Opskrifter der kun er for husstanden følger husstandens regler, og kopier
+  /// andre husstande har gemt er deres egne dokumenter og bliver liggende.
+  Future<void> _deleteSharedRecipes(String uid) async {
+    await _deleteAll(_firestore
+        .collection('recipes')
+        .where('createdBy', isEqualTo: uid)
+        .where('visibility', isEqualTo: 'public'));
   }
 
   Future<void> _deleteInvitationsTo(String email) async {

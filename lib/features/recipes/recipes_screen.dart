@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'community_recipes_provider.dart';
+import 'recipe_detail_screen.dart' show SharedBadge;
 import 'recipe_search.dart';
 import 'recipes_provider.dart';
+import '../../core/services/recipe_sharing.dart';
 import '../../core/models/recipe.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../core/theme/theme_context.dart';
 
+
+/// Hvilken liste fanen viser: husstandens egne opskrifter eller Fællesskab.
+enum RecipeScope { ours, community }
 
 class RecipesScreen extends ConsumerStatefulWidget {
   const RecipesScreen({super.key});
@@ -22,6 +28,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   final FocusNode _searchFocus = FocusNode();
   String searchQuery = '';
   RecipeCategory? selectedCategory;
+  RecipeScope _scope = RecipeScope.ours;
 
   @override
   void initState() {
@@ -47,8 +54,149 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
     });
   }
 
+  void _setScope(RecipeScope scope) {
+    if (scope == _scope) return;
+    setState(() => _scope = scope);
+    if (scope == RecipeScope.community && searchQuery.trim().isNotEmpty) {
+      // Listen oprettes først, når Fællesskab bygges; søg bagefter.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scope == RecipeScope.community) {
+          ref.read(communityRecipesProvider.notifier).search(searchQuery);
+        }
+      });
+    }
+  }
+
+  /// Delte opskrifter fra andre husstande: den viste liste er den hentede side
+  /// (eller serverens træffere på titel-præfikset), sammen med de allerede
+  /// hentede opskrifter, der matcher søgningen (titel eller ingrediens).
+  List<Recipe> _communityResults(CommunityState s) {
+    final q = searchQuery.trim();
+    final List<Recipe> base;
+    if (q.isEmpty) {
+      base = s.browse;
+    } else {
+      final seen = <String>{};
+      base = [
+        if (s.query == q.toLowerCase()) ...s.searchHits,
+        ...s.browse.where((r) => matchesRecipeSearch(r, q)),
+      ].where((r) => seen.add(r.id)).toList();
+    }
+    return base
+        .where((r) => selectedCategory == null || r.category == selectedCategory)
+        .toList();
+  }
+
+  List<Widget> _communitySlivers(BuildContext context) {
+    final s = ref.watch(communityRecipesProvider);
+    final notifier = ref.read(communityRecipesProvider.notifier);
+    final results = _communityResults(s);
+    final filtering = searchQuery.trim().isNotEmpty || selectedCategory != null;
+
+    if (results.isEmpty) {
+      if (s.isLoading) {
+        return const [
+          SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator())),
+        ];
+      }
+      if (s.error != null) {
+        return [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyStateWidget(
+              icon: Icons.cloud_off_outlined,
+              title: 'Kunne ikke hente delte opskrifter',
+              message: 'Tjek din internetforbindelse og prøv igen.',
+              actionLabel: 'Prøv igen',
+              onAction: notifier.reload,
+            ),
+          ),
+        ];
+      }
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptyStateWidget(
+            icon: filtering ? Icons.search_off : Icons.public_outlined,
+            title: filtering ? 'Ingen opskrifter fundet' : 'Ingen delte opskrifter endnu',
+            message: filtering
+                ? 'Prøv at søge efter noget andet eller nulstil filteret.'
+                : 'Når andre deler en opskrift med alle brugere, dukker den op her.',
+            actionLabel: s.hasMore ? 'Vis flere' : (filtering ? 'Nulstil søgning og filter' : null),
+            onAction: s.hasMore
+                ? notifier.loadMore
+                : (filtering
+                    ? () {
+                        setState(() {
+                          searchQuery = '';
+                          selectedCategory = null;
+                          _searchController.clear();
+                        });
+                        notifier.search('');
+                      }
+                    : null),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 1,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final recipe = results[index];
+              return GestureDetector(
+                onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
+                child: _RecipeCard(recipe: recipe, showAuthor: true),
+              );
+            },
+            childCount: results.length,
+          ),
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            children: [
+              if (s.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Kunne ikke hente flere opskrifter',
+                    style: context.text.bodySmall?.copyWith(color: context.colors.error),
+                  ),
+                ),
+              if (s.isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              else if (s.hasMore)
+                OutlinedButton(
+                  key: const Key('community-load-more'),
+                  onPressed: notifier.loadMore,
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(160, 48)),
+                  child: const Text('Vis flere'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final community = _scope == RecipeScope.community;
     final recipes = ref.watch(recipesProvider);
     ref.listen(focusRecipeSearchProvider, (_, requested) {
       if (requested) _focusSearchIfRequested();
@@ -67,28 +215,44 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Image.asset('assets/images/logo.png', height: 32),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Opskrifter',
-                              style: context.text.headlineLarge?.copyWith(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: context.colors.primaryContainer,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Image.asset('assets/images/logo.png', height: 32),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  'Opskrifter',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.text.headlineLarge?.copyWith(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: context.colors.primaryContainer,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const ProfileAvatar(),
                       ],
                     ),
                     const SizedBox(height: 16),
+                    _ScopeSwitch(
+                      selected: _scope,
+                      onChanged: _setScope,
+                    ),
+                    const SizedBox(height: 16),
                     _SearchBar(
                       controller: _searchController,
                       focusNode: _searchFocus,
-                      onChanged: (val) => setState(() => searchQuery = val),
+                      hint: community
+                          ? 'Søg i delte opskrifter...'
+                          : 'Søg i opskrifter, ingredienser...',
+                      onChanged: (val) {
+                        setState(() => searchQuery = val);
+                        if (community) ref.read(communityRecipesProvider.notifier).search(val);
+                      },
                     ),
                     const SizedBox(height: 16),
                     _CategoryFilter(
@@ -100,7 +264,10 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                 ),
               ),
             ),
-            recipes.when(
+            if (community)
+              ..._communitySlivers(context)
+            else
+              recipes.when(
               data: (recipeList) {
                 final results = recipeList.where((r) {
                   final matchesQuery = matchesRecipeSearch(r, searchQuery);
@@ -181,12 +348,43 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   }
 }
 
+class _ScopeSwitch extends StatelessWidget {
+  final RecipeScope selected;
+  final ValueChanged<RecipeScope> onChanged;
+
+  const _ScopeSwitch({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: SegmentedButton<RecipeScope>(
+        key: const Key('recipe-scope'),
+        showSelectedIcon: false,
+        style: const ButtonStyle(minimumSize: WidgetStatePropertyAll(Size(0, 48))),
+        segments: const [
+          ButtonSegment(value: RecipeScope.ours, label: Text('Vores')),
+          ButtonSegment(value: RecipeScope.community, label: Text('Fællesskab')),
+        ],
+        selected: {selected},
+        onSelectionChanged: (set) => onChanged(set.first),
+      ),
+    );
+  }
+}
+
 class _SearchBar extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final ValueChanged<String> onChanged;
+  final String hint;
 
-  const _SearchBar({this.controller, this.focusNode, required this.onChanged});
+  const _SearchBar({
+    this.controller,
+    this.focusNode,
+    required this.onChanged,
+    this.hint = 'Søg i opskrifter, ingredienser...',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +395,7 @@ class _SearchBar extends StatelessWidget {
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: 'Søg i opskrifter, ingredienser...',
+        hintText: hint,
         prefixIcon: Icon(Icons.search, color: context.colors.outline),
       ),
     );
@@ -284,7 +482,10 @@ class _RecipeCard extends StatelessWidget {
   final Recipe recipe;
   final bool isFeatured;
 
-  const _RecipeCard({required this.recipe, this.isFeatured = false});
+  /// Fællesskab: vis "af" og forfatterens fornavn i stedet for et "Delt"-mærke.
+  final bool showAuthor;
+
+  const _RecipeCard({required this.recipe, this.isFeatured = false, this.showAuthor = false});
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +523,8 @@ class _RecipeCard extends StatelessWidget {
               ),
             ),
           ),
+          if (recipe.isShared && !showAuthor)
+            const Positioned(top: 12, left: 12, child: SharedBadge()),
           Positioned(
             bottom: 12,
             left: 12,
@@ -357,6 +560,19 @@ class _RecipeCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                if (showAuthor)
+                  Semantics(
+                    label: 'Delt af ${_author(recipe)}',
+                    excludeSemantics: true,
+                    child: Text(
+                      'af ${_author(recipe)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodySmall?.copyWith(
+                        color: context.colors.surfaceContainerLowest.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -366,3 +582,7 @@ class _RecipeCard extends StatelessWidget {
   }
 }
 
+String _author(Recipe r) {
+  final name = r.authorName?.trim() ?? '';
+  return name.isEmpty ? unknownAuthorName : name;
+}

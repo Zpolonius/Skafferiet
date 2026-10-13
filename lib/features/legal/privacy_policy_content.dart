@@ -39,6 +39,8 @@ const privacyPolicySections = <PolicySection>[
         'foreslå dem igen. Historikken bliver i husstanden, også når varer '
         'fjernes fra indkøbslisten, og du kan fjerne et forslag i appen.',
     '• Invitationer: e-mailen på den, du inviterer, og dit navn som afsender.',
+    '• Delte opskrifter: vælger du at dele en opskrift med alle brugere, '
+        'gemmes dit fornavn på opskriften.',
     'Vi bruger ikke reklamer, analyseværktøjer eller sporing på tværs af apps.',
   ]),
   PolicySection('Hvorfor', [
@@ -52,6 +54,16 @@ const privacyPolicySections = <PolicySection>[
     '• Medlemmer af din husstand kan se dit navn, dit profilbillede og det '
         'indhold, I deler.',
     '• Når du inviterer nogen, kan de se dit navn og husstandens navn.',
+    '• Deler du en opskrift med alle brugere, kan alle andre brugere af appen '
+        'se og søge i den: titel, billede, ingredienser, fremgangsmåde, '
+        'næringsindhold og dit fornavn. Det er frivilligt og slået fra som '
+        'standard, og kun den enkelte opskrift deles. Kun den, der har lavet '
+        'opskriften, kan dele den. Du kan slå deling fra igen når som helst under '
+        'Rediger opskrift, så er den kun synlig for din husstand. Har du forladt '
+        'husstanden, finder du opskriften under Fællesskab og vælger Stop med at dele. Andre kan gemme en kopi af en delt opskrift i deres egen '
+        'husstand. Kopien er deres egen og bliver, selvom du fjerner delingen. '
+        'Et billedlink, som andre allerede har åbnet, kan stadig virke, efter at '
+        'du har slået deling fra.',
     '• Google Firebase opbevarer data og står for login på vores vegne. Google '
         'kan behandle data uden for EU; det sker på grundlag af '
         'EU-Kommissionens standardkontraktbestemmelser.',
@@ -64,7 +76,10 @@ const privacyPolicySections = <PolicySection>[
     'Er du det eneste medlem af din husstand, slettes hele husstanden med '
         'opskrifter, indkøbsliste, varehistorik og madplaner. Er der andre medlemmer, '
         'bliver de opskrifter, du har lavet, i husstanden, så de andre ikke '
-        'mister dem.',
+        'mister dem. Opskrifter, du har delt med alle brugere, slettes dog '
+        'altid sammen med din konto. Så forsvinder de for alle, også fra din '
+        'husstands madplaner. Kopier, som andre har gemt i deres egen '
+        'husstand, bliver hos dem.',
   ]),
   PolicySection('Dine rettigheder', [
     'Du har ret til at få indsigt i, rettet og slettet dine oplysninger, til '
