@@ -397,6 +397,38 @@ describe('normal brug', () => {
     await assertSucceeds(deleteDoc(doc(db('alice'), 'recipes/r2')));
   });
 
+  describe('opskrifters fremgangsmåde (instructions)', () => {
+    const recipe = (extra) => ({
+      title: 'Suppe', householdId: 'HH_A', createdBy: 'alice', calories: 200,
+      createdAt: serverTimestamp(), ...extra,
+    });
+    const steps = (n) => Array.from({ length: n }, (_, i) => `Trin ${i + 1}`);
+
+    test('højst 50 trin ved oprettelse', async () => {
+      await assertSucceeds(setDoc(doc(db('alice'), 'recipes/s50'), recipe({ instructions: steps(50) })));
+      await assertSucceeds(setDoc(doc(db('alice'), 'recipes/s0'), recipe({ instructions: [] })));
+      await assertFails(setDoc(doc(db('alice'), 'recipes/s51'), recipe({ instructions: steps(51) })));
+    });
+
+    test('instructions skal være en liste', async () => {
+      await assertFails(setDoc(doc(db('alice'), 'recipes/sx'), recipe({ instructions: 'Rør rundt' })));
+      await assertFails(setDoc(doc(db('alice'), 'recipes/sy'), recipe({ instructions: { a: 'b' } })));
+      await assertFails(setDoc(doc(db('alice'), 'recipes/sz'), recipe({ instructions: null })));
+    });
+
+    test('opskrifter uden feltet (gamle) kan stadig oprettes og rettes', async () => {
+      await assertSucceeds(setDoc(doc(db('alice'), 'recipes/old'), recipe({})));
+      await assertSucceeds(updateDoc(doc(db('bob'), 'recipes/old'), { title: 'Ny titel' }));
+    });
+
+    test('højst 50 trin ved opdatering', async () => {
+      await assertSucceeds(setDoc(doc(db('alice'), 'recipes/upd'), recipe({ instructions: steps(2) })));
+      await assertSucceeds(updateDoc(doc(db('bob'), 'recipes/upd'), { instructions: steps(50) }));
+      await assertFails(updateDoc(doc(db('bob'), 'recipes/upd'), { instructions: steps(51) }));
+      await assertFails(updateDoc(doc(db('bob'), 'recipes/upd'), { instructions: 'tekst' }));
+    });
+  });
+
   test('medlemmer kan bruge indkøbslisten', async () => {
     await assertSucceeds(setDoc(doc(db('bob'), 'households/HH_A/grocery_list/g2'), { name: 'Brød' }));
     await assertSucceeds(getDocs(collection(db('alice'), 'households/HH_A/grocery_list')));

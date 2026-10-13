@@ -21,6 +21,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   final _nutrition = NutritionFormControllers();
   RecipeCategory _selectedCategory = RecipeCategory.aftensmad;
   List<Ingredient> _ingredients = [];
+  List<String> _steps = [];
   int? _servings;
   String? _imageUrl;
   bool _isUploadingImage = false;
@@ -93,6 +94,12 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             IngredientListEditor(
               ingredients: _ingredients,
               onChanged: (list) => setState(() => _ingredients = list),
+            ),
+            const SizedBox(height: 32),
+            _buildSectionTitle('Fremgangsmåde'),
+            RecipeStepsEditor(
+              initialSteps: _steps,
+              onChanged: (steps) => _steps = steps,
             ),
             const SizedBox(height: 32),
             _buildSectionTitle('Næring pr. portion'),
@@ -187,6 +194,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       time: _timeController.text,
       category: _selectedCategory,
       ingredients: _ingredients,
+      instructions: cleanInstructions(_steps),
       servings: _servings,
       protein: nutrition.protein,
       carbs: nutrition.carbs,

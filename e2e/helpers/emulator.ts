@@ -283,13 +283,17 @@ function fromFsValue(v: any): unknown {
   if ('doubleValue' in v) return v.doubleValue;
   if ('booleanValue' in v) return v.booleanValue;
   if ('timestampValue' in v) return v.timestampValue;
+  if ('arrayValue' in v) return (v.arrayValue.values ?? []).map(fromFsValue);
+  if ('mapValue' in v) {
+    return Object.fromEntries(Object.entries(v.mapValue.fields ?? {}).map(([k, x]) => [k, fromFsValue(x)]));
+  }
   return null;
 }
 
 /**
  * Læser alle dokumenter i en collection direkte fra Firestore (omgår
  * reglerne), som { id, felter på øverste niveau }. Understøtter strenge,
- * tal, booleans og tidsstempler.
+ * tal, booleans, tidsstempler, lister og maps.
  */
 export async function readCollection(path: string): Promise<Array<Record<string, unknown>>> {
   const res = await fetch(`${DOCS}/${path}?pageSize=300`, { headers: OWNER });
