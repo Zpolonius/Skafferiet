@@ -41,6 +41,15 @@ const privacyPolicySections = <PolicySection>[
     '• Invitationer: e-mailen på den, du inviterer, og dit navn som afsender.',
     '• Delte opskrifter: vælger du at dele en opskrift med alle brugere, '
         'gemmes dit fornavn på opskriften.',
+    '• Rapporter: rapporterer du en delt opskrift, gemmer vi hvilken opskrift, '
+        'årsagen du valgte, din eventuelle kommentar, tidspunktet og dit '
+        'bruger-ID. Kun appens administrator kan læse rapporter; ingen andre '
+        'brugere kan, heller ikke den, der har lavet opskriften. Rapporterer du '
+        'den samme opskrift igen, erstatter den nye rapport den gamle.',
+    '• Blokeringer: blokerer du en bruger, gemmer vi kun på din egen profil '
+        'hvem det er (bruger-ID og fornavn), så opskrifter fra vedkommende kan '
+        'skjules for dig. Blokeringen kan kun ses af dig, ikke af din husstand eller '
+        'den blokerede, og du kan fjerne den under Profil → Blokerede brugere.',
     'Vi bruger ikke reklamer, analyseværktøjer eller sporing på tværs af apps.',
   ]),
   PolicySection('Hvorfor', [
@@ -63,7 +72,9 @@ const privacyPolicySections = <PolicySection>[
         'husstanden, finder du opskriften under Fællesskab og vælger Stop med at dele. Andre kan gemme en kopi af en delt opskrift i deres egen '
         'husstand. Kopien er deres egen og bliver, selvom du fjerner delingen. '
         'Et billedlink, som andre allerede har åbnet, kan stadig virke, efter at '
-        'du har slået deling fra.',
+        'du har slået deling fra. Fjerner en moderator en opskrift fra '
+        'Fællesskab efter en rapport, kan kun din husstand se den, og den '
+        'behandles derefter som husstandens egne opskrifter.',
     '• Google Firebase opbevarer data og står for login på vores vegne. Google '
         'kan behandle data uden for EU; det sker på grundlag af '
         'EU-Kommissionens standardkontraktbestemmelser.',
@@ -80,6 +91,8 @@ const privacyPolicySections = <PolicySection>[
         'altid sammen med din konto. Så forsvinder de for alle, også fra din '
         'husstands madplaner. Kopier, som andre har gemt i deres egen '
         'husstand, bliver hos dem.',
+    'Dine rapporter og dine blokeringer slettes altid sammen med din konto, '
+        'uanset om du er alene i husstanden eller ej.',
   ]),
   PolicySection('Dine rettigheder', [
     'Du har ret til at få indsigt i, rettet og slettet dine oplysninger, til '

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import '../moderation/moderation_provider.dart';
+import '../moderation/report_recipe_sheet.dart';
 import '../profile/household_provider.dart';
 import '../recipes/community_recipes_provider.dart';
 import '../recipes/recipes_provider.dart';
@@ -77,6 +79,39 @@ class RecipeDetailScreen extends ConsumerWidget {
               ),
             ),
             actions: [
+              // Rapportér / blokér: kun på andre husstandes opskrifter (#52).
+              if (foreign && !createdByMe)
+                Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  // 48 x 48 dp trykflade.
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.colors.surfaceContainerLowest.withValues(alpha: 0.9),
+                    ),
+                    child: PopupMenuButton<_RecipeMenuAction>(
+                      tooltip: 'Flere valg',
+                      icon: Icon(Icons.more_vert, color: context.colors.onSurface),
+                      onSelected: (action) => switch (action) {
+                        _RecipeMenuAction.report => _report(context, ref, recipe),
+                        _RecipeMenuAction.block => _confirmBlock(context, ref, recipe),
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: _RecipeMenuAction.report,
+                          child: Text('Rapportér opskrift'),
+                        ),
+                        if (recipe.createdBy != null)
+                          PopupMenuItem(
+                            value: _RecipeMenuAction.block,
+                            child: Text('Blokér ${_authorLabel(recipe)}'),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               if (!foreign)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -123,6 +158,7 @@ class RecipeDetailScreen extends ConsumerWidget {
                       ),
                     ),
                     if (recipe.isShared && !foreign) const SharedBadge(),
+                    if (recipe.isHidden && !foreign) const RemovedBadge(),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -297,6 +333,78 @@ class RecipeDetailScreen extends ConsumerWidget {
     );
   }
 
+  /// Forfatterens fornavn til menu og dialog.
+  static String _authorLabel(Recipe recipe) => authorFirstName(recipe.authorName);
+
+  Future<void> _report(BuildContext context, WidgetRef ref, Recipe recipe) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final sent = await showReportRecipeSheet(context, recipeId: recipe.id);
+    if (sent != true) return;
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Tak – vi kigger på det'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    // Opskriften er nu skjult for den, der rapporterede.
+    if (navigator.canPop()) navigator.pop();
+  }
+
+  Future<void> _confirmBlock(BuildContext context, WidgetRef ref, Recipe recipe) async {
+    final authorUid = recipe.createdBy;
+    if (authorUid == null) return;
+    final who = _authorLabel(recipe);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final colors = context.colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Blokér $who?'),
+        content: Text(
+          'Alle opskrifter fra $who skjules for dig i Fællesskab og søgning. '
+          'Du kan fortryde under Profil → Blokerede brugere. Opskrifter, I '
+          'allerede har gemt, bliver hos jer.',
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuller'),
+          ),
+          FilledButton(
+            key: const Key('confirm-block-author'),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Blokér'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref
+          .read(moderationServiceProvider)
+          .blockAuthor(authorUid: authorUid, name: recipe.authorName);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$who er blokeret. Fortryd under Profil → Blokerede brugere.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      if (navigator.canPop()) navigator.pop();
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Kunne ikke blokere. Prøv igen.'),
+          backgroundColor: colors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _confirmStopSharing(BuildContext context, WidgetRef ref, Recipe recipe) async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -410,6 +518,41 @@ class _SharedRecipeLoader extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Fejl: $err')),
+    );
+  }
+}
+
+enum _RecipeMenuAction { report, block }
+
+/// Mærket "Fjernet fra Fællesskab" på husstandens egen opskrift, som en
+/// moderator har fjernet (#52).
+class RemovedBadge extends StatelessWidget {
+  const RemovedBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: context.colors.errorContainer,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.visibility_off_outlined, size: 14, color: context.colors.onErrorContainer),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              'Fjernet fra Fællesskab af en moderator',
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onErrorContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

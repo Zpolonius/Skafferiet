@@ -19,6 +19,7 @@ import 'features/profile/help_screen.dart';
 import 'features/profile/household_screen.dart';
 import 'features/profile/preferences_screen.dart';
 import 'features/legal/privacy_policy_screen.dart';
+import 'features/moderation/blocked_users_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -162,6 +163,10 @@ class _MyAppState extends ConsumerState<MyApp> {
             GoRoute(
               path: 'preferences',
               builder: (context, state) => const PreferencesScreen(),
+            ),
+            GoRoute(
+              path: 'blocked-users',
+              builder: (context, state) => const BlockedUsersScreen(),
             ),
             GoRoute(
               path: 'help',

@@ -602,11 +602,16 @@ class ShareRecipeSwitch extends StatelessWidget {
   /// den med alle, men enhver i husstanden kan holde op med at dele den.
   final bool canShare;
 
+  /// Opskriften er fjernet fra Fællesskab af en moderator (#52): kontakten er
+  /// slået fra, og den kan ikke deles igen.
+  final bool removed;
+
   const ShareRecipeSwitch({
     super.key,
     required this.value,
     required this.onChanged,
     this.canShare = true,
+    this.removed = false,
   });
 
   @override
@@ -636,7 +641,7 @@ class ShareRecipeSwitch extends StatelessWidget {
                   Switch(
                     key: const Key('share-recipe-switch'),
                     value: value,
-                    onChanged: (value || canShare) ? onChanged : null,
+                    onChanged: removed ? null : ((value || canShare) ? onChanged : null),
                   ),
                 ],
               ),
@@ -645,7 +650,10 @@ class ShareRecipeSwitch extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Text(
-              !canShare && !value
+              removed
+                  ? 'Opskriften er fjernet fra Fællesskab af en moderator og kan ikke '
+                      'deles igen. Den er stadig i jeres husstands opskrifter.'
+                  : !canShare && !value
                   ? 'Kun den, der har lavet opskriften, kan dele den med alle'
                   : !canShare
                   ? 'Delt med alle brugere af den, der har lavet opskriften, under '

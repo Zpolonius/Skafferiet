@@ -6,13 +6,21 @@ enum RecipeVisibility {
   household,
 
   /// Alle brugere af appen (fanen Fællesskab).
-  public;
+  public,
+
+  /// Fjernet fra Fællesskab af en moderator (#52). Sættes kun i Firebase-
+  /// konsollen; husstanden kan stadig se og redigere opskriften, men ikke dele
+  /// den igen. Skjult for alle andre.
+  hidden;
 
   /// Værdien der gemmes i Firestore.
   String get key => name;
 
-  static RecipeVisibility parse(Object? raw) =>
-      raw == 'public' ? RecipeVisibility.public : RecipeVisibility.household;
+  static RecipeVisibility parse(Object? raw) => switch (raw) {
+        'public' => RecipeVisibility.public,
+        'hidden' => RecipeVisibility.hidden,
+        _ => RecipeVisibility.household,
+      };
 }
 
 /// Næringsværdier. Bruges både pr. 100 g/ml på en ingrediens og som
@@ -185,6 +193,9 @@ class Recipe {
   });
 
   bool get isShared => visibility == RecipeVisibility.public;
+
+  /// Fjernet fra Fællesskab af en moderator.
+  bool get isHidden => visibility == RecipeVisibility.hidden;
 
   bool get hasNutrition => calories > 0 || protein != null || carbs != null || fat != null;
 

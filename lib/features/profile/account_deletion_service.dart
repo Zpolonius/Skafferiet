@@ -21,12 +21,14 @@ class AccountDeletionException implements Exception {
 /// Rækkefølgen er vigtig:
 /// 1. Bekræft adgangskoden. Firebase kræver et frisk login for at slette en
 ///    konto, og det sikrer, at det er ejeren selv, der sletter.
-/// 2. Ryd op i husstanden, mens brugeren stadig er medlem — bagefter nægter
+/// 2. Slet brugerens rapporter og blokeringer (de hører til brugeren, ikke
+///    til husstanden, så det sker i alle tilfælde).
+/// 3. Ryd op i husstanden, mens brugeren stadig er medlem — bagefter nægter
 ///    sikkerhedsreglerne adgang. Brugerens delte opskrifter slettes først,
 ///    uanset husstand. Er brugeren eneste medlem, slettes hele husstanden; ellers meldes
 ///    brugeren ud, og ejerskabet gives videre.
-/// 3. Slet invitationer til brugeren, profilbillede og profil.
-/// 4. Slet selve login-kontoen til sidst.
+/// 4. Slet invitationer til brugeren, profilbillede og profil.
+/// 5. Slet selve login-kontoen til sidst.
 ///
 /// Fejler et trin, kan det hele køres igen: hvert trin tåler, at det allerede
 /// er gjort.
@@ -56,6 +58,7 @@ class AccountDeletionService {
     await _reauthenticate(user, email, password);
 
     try {
+      await _deleteModerationData(user.uid);
       await _cleanUpHousehold(user.uid);
       await _deleteInvitationsTo(email);
       await _deleteProfilePhoto(user.uid);
@@ -170,6 +173,13 @@ class AccountDeletionService {
         .collection('recipes')
         .where('createdBy', isEqualTo: uid)
         .where('visibility', isEqualTo: 'public'));
+  }
+
+  /// Rapporter brugeren har sendt (de bærer brugerens ID) og listen over
+  /// blokerede forfattere (#52).
+  Future<void> _deleteModerationData(String uid) async {
+    await _deleteAll(_firestore.collection('reports').where('reportedBy', isEqualTo: uid));
+    await _deleteAll(_firestore.collection('users').doc(uid).collection('blocked_authors'));
   }
 
   Future<void> _deleteInvitationsTo(String email) async {

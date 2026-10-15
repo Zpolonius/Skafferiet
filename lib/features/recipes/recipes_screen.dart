@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'community_recipes_provider.dart';
+import '../moderation/moderation_provider.dart';
 import 'recipe_detail_screen.dart' show SharedBadge;
 import 'recipe_search.dart';
 import 'recipes_provider.dart';
@@ -82,9 +83,12 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
         ...s.browse.where((r) => matchesRecipeSearch(r, q)),
       ].where((r) => seen.add(r.id)).toList();
     }
-    return base
-        .where((r) => selectedCategory == null || r.category == selectedCategory)
-        .toList();
+    // Rapporterede opskrifter og blokerede forfattere skjules (#52).
+    return withoutModerated(
+      base,
+      reportedIds: ref.watch(reportedRecipeIdsProvider).valueOrNull ?? const {},
+      blockedAuthorIds: ref.watch(blockedAuthorIdsProvider),
+    ).where((r) => selectedCategory == null || r.category == selectedCategory).toList();
   }
 
   List<Widget> _communitySlivers(BuildContext context) {

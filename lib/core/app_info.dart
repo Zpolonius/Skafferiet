@@ -10,5 +10,5 @@ abstract final class AppInfo {
   static const contactEmail = 'UDFYLD-KONTAKT-EMAIL';
 
   /// Hvornår privatlivspolitikken sidst blev ændret.
-  static const privacyPolicyUpdated = '13. oktober 2026';
+  static const privacyPolicyUpdated = '15. oktober 2026';
 }

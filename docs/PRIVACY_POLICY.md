@@ -14,6 +14,8 @@ Skafferiet er dataansvarlig for de oplysninger, der behandles i Skafferiet. Du k
 - Varehistorik: de varer I har brugt på indkøbslisten (navn, kategori, enhed, mængde og hvor ofte og hvornår de sidst er brugt), så appen kan foreslå dem igen. Historikken bliver i husstanden, også når varer fjernes fra indkøbslisten, og du kan fjerne et forslag i appen.
 - Invitationer: e-mailen på den, du inviterer, og dit navn som afsender.
 - Delte opskrifter: vælger du at dele en opskrift med alle brugere, gemmes dit fornavn på opskriften.
+- Rapporter: rapporterer du en delt opskrift, gemmer vi hvilken opskrift, årsagen du valgte, din eventuelle kommentar, tidspunktet og dit bruger-ID. Kun appens administrator kan læse rapporter; ingen andre brugere kan, heller ikke den, der har lavet opskriften. Rapporterer du den samme opskrift igen, erstatter den nye rapport den gamle.
+- Blokeringer: blokerer du en bruger, gemmer vi kun på din egen profil hvem det er (bruger-ID og fornavn), så opskrifter fra vedkommende kan skjules for dig. Blokeringen kan kun ses af dig, ikke af din husstand eller den blokerede, og du kan fjerne den under Profil → Blokerede brugere.
 
 Vi bruger ikke reklamer, analyseværktøjer eller sporing på tværs af apps.
 
@@ -25,7 +27,7 @@ Oplysningerne bruges kun til at levere appen: så du kan logge ind, og så din h
 
 - Medlemmer af din husstand kan se dit navn, dit profilbillede og det indhold, I deler.
 - Når du inviterer nogen, kan de se dit navn og husstandens navn.
-- Deler du en opskrift med alle brugere, kan alle andre brugere af appen se og søge i den: titel, billede, ingredienser, fremgangsmåde, næringsindhold og dit fornavn. Det er frivilligt og slået fra som standard, og kun den enkelte opskrift deles. Kun den, der har lavet opskriften, kan dele den. Du kan slå deling fra igen når som helst under Rediger opskrift, så er den kun synlig for din husstand. Har du forladt husstanden, finder du opskriften under Fællesskab og vælger Stop med at dele. Andre kan gemme en kopi af en delt opskrift i deres egen husstand. Kopien er deres egen og bliver, selvom du fjerner delingen. Et billedlink, som andre allerede har åbnet, kan stadig virke, efter at du har slået deling fra.
+- Deler du en opskrift med alle brugere, kan alle andre brugere af appen se og søge i den: titel, billede, ingredienser, fremgangsmåde, næringsindhold og dit fornavn. Det er frivilligt og slået fra som standard, og kun den enkelte opskrift deles. Kun den, der har lavet opskriften, kan dele den. Du kan slå deling fra igen når som helst under Rediger opskrift, så er den kun synlig for din husstand. Har du forladt husstanden, finder du opskriften under Fællesskab og vælger Stop med at dele. Andre kan gemme en kopi af en delt opskrift i deres egen husstand. Kopien er deres egen og bliver, selvom du fjerner delingen. Et billedlink, som andre allerede har åbnet, kan stadig virke, efter at du har slået deling fra. Fjerner en moderator en opskrift fra Fællesskab efter en rapport, kan kun din husstand se den, og den behandles derefter som husstandens egne opskrifter.
 - Google Firebase opbevarer data og står for login på vores vegne. Google kan behandle data uden for EU; det sker på grundlag af EU-Kommissionens standardkontraktbestemmelser.
 
 Vi sælger eller deler aldrig dine oplysninger med andre.
@@ -36,6 +38,8 @@ Vi gemmer dine oplysninger, så længe du har en konto. Du kan slette kontoen i 
 
 Er du det eneste medlem af din husstand, slettes hele husstanden med opskrifter, indkøbsliste, varehistorik og madplaner. Er der andre medlemmer, bliver de opskrifter, du har lavet, i husstanden, så de andre ikke mister dem. Opskrifter, du har delt med alle brugere, slettes dog altid sammen med din konto. Så forsvinder de for alle, også fra din husstands madplaner. Kopier, som andre har gemt i deres egen husstand, bliver hos dem.
 
+Dine rapporter og dine blokeringer slettes altid sammen med din konto, uanset om du er alene i husstanden eller ej.
+
 ## Dine rettigheder
 
 Du har ret til at få indsigt i, rettet og slettet dine oplysninger, til at få dem udleveret (dataportabilitet) og til at gøre indsigelse. Skriv til UDFYLD-KONTAKT-EMAIL.
@@ -44,4 +48,4 @@ Du kan klage til Datatilsynet (datatilsynet.dk).
 
 ## Ændringer
 
-Sidst opdateret 13. oktober 2026. Ændrer vi politikken, kan du altid se den nyeste udgave i appen.
+Sidst opdateret 15. oktober 2026. Ændrer vi politikken, kan du altid se den nyeste udgave i appen.
