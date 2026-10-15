@@ -150,7 +150,7 @@ export type SeedRecipe = {
   /** Ingrediensnavne (resten af felterne udfyldes med gyldige standardværdier). */
   ingredients?: string[];
   /** Delt med alle brugere (fanen Fællesskab). Standard: kun husstanden. */
-  visibility?: 'household' | 'public';
+  visibility?: 'household' | 'public' | 'hidden';
   /** Skaberens fornavn (kun på delte opskrifter). */
   authorName?: string;
   createdAt?: Date;

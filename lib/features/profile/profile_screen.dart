@@ -89,6 +89,11 @@ class ProfileScreen extends ConsumerWidget {
                         onTap: hasHousehold ? () => context.push('/profile/preferences') : null,
                       ),
                       SettingsTile(
+                        icon: Icons.block_outlined,
+                        title: 'Blokerede brugere',
+                        onTap: () => context.push('/profile/blocked-users'),
+                      ),
+                      SettingsTile(
                         icon: Icons.help_outline,
                         title: 'Hjælp & Support',
                         onTap: () => context.push('/profile/help'),

@@ -102,6 +102,23 @@ service cloud.firestore {
                        (!changedKeys().hasAny(['householdId']) || validHouseholdRef());
 
       allow delete: if isOwner();
+
+      // Brugere, ejeren har blokeret (#52): kun ejeren kan se og ændre dem.
+      // Ligger i en undersamling og ikke på profilen, fordi husstandens
+      // medlemmer kan læse profilen, og ingen skal kunne se hvem du har blokeret.
+      match /blocked_authors/{authorUid} {
+        function validBlock() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['name', 'blockedAt']) &&
+                 d.name is string && d.name.size() >= 1 && d.name.size() <= 40 &&
+                 d.blockedAt == request.time &&
+                 authorUid is string && authorUid.size() >= 1 && authorUid.size() <= 128 &&
+                 authorUid != uid;
+        }
+
+        allow get, list, delete: if isOwner();
+        allow create, update: if isOwner() && validBlock();
+      }
     }
 
     // ── Households ────────────────────────────────────────────────────────────
@@ -415,8 +432,19 @@ service cloud.firestore {
 
       // Deling (#51): visibility er 'household' (standard, også når feltet
       // mangler) eller 'public' (synlig for alle loggede brugere).
+      // 'hidden' (#52) sættes kun af en administrator i Firebase-konsollen
+      // (admin-SDK'et ignorerer reglerne): klienter må hverken sætte eller
+      // ændre den. Derfor er den ikke med her.
       function validVisibility(d) {
         return d.get('visibility', 'household') in ['household', 'public'];
+      }
+
+      // En fjernet opskrift (visibility 'hidden') er låst: husstanden kan stadig
+      // læse og redigere indholdet, men hverken dele den igen, gøre den privat
+      // eller på anden måde ændre visibility.
+      function visibilityUnlocked() {
+        return resource.data.get('visibility', 'household') != 'hidden' ||
+               !changedKeys().hasAny(['visibility']);
       }
 
       function isPublic() {
@@ -517,6 +545,7 @@ service cloud.firestore {
                          (!changedKeys().hasAny(['title', 'titleLower']) ||
                           validTitleLower(request.resource.data)) &&
                          publishAllowed() &&
+                         visibilityUnlocked() &&
                          !changedKeys().hasAny(['householdId', 'createdBy']) &&
                          (
                            (!isGlobal() && isMember(resource.data.householdId)) ||
@@ -540,6 +569,43 @@ service cloud.firestore {
                         exists(householdPath(resource.data.householdId)) &&
                         get(householdPath(resource.data.householdId)).data.get('admin', null) == request.auth.uid)
                      );
+    }
+
+    // ── Reports (#52) ─────────────────────────────────────────────────────────
+    // Rapporter af delte opskrifter, reports/{recipeId}_{uid}: højst én pr.
+    // bruger pr. opskrift, og en ny rapport overskriver den gamle. Man kan
+    // oprette, overskrive, læse og slette sin egen, men aldrig læse andres.
+    // Administratoren gennemgår dem i Firebase-konsollen.
+    match /reports/{reportId} {
+      function reportedRecipe(d) {
+        return get(/databases/$(database)/documents/recipes/$(d.recipeId));
+      }
+
+      // Opskriften skal findes, være delt og tilhøre en anden husstand end ens egen.
+      function reportableRecipe(d) {
+        return d.recipeId is string && d.recipeId.size() >= 1 && d.recipeId.size() <= 128 &&
+               exists(/databases/$(database)/documents/recipes/$(d.recipeId)) &&
+               reportedRecipe(d).data.get('visibility', 'household') == 'public' &&
+               (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+                reportedRecipe(d).data.get('householdId', null) !=
+                  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('householdId', null));
+      }
+
+      function validReport() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['recipeId', 'reportedBy', 'reason', 'comment', 'createdAt']) &&
+               d.keys().hasAll(['recipeId', 'reportedBy', 'reason', 'comment', 'createdAt']) &&
+               reportId == d.recipeId + '_' + request.auth.uid &&
+               d.reportedBy == request.auth.uid &&
+               d.reason in ['offensive', 'spam', 'wrong_info', 'copyright', 'other'] &&
+               d.comment is string && d.comment.size() <= 500 &&
+               d.createdAt == request.time &&
+               reportableRecipe(d);
+      }
+
+      allow get, list: if isSignedIn() && resource.data.get('reportedBy', null) == request.auth.uid;
+      allow create, update: if isSignedIn() && validReport();
+      allow delete: if isSignedIn() && resource.data.get('reportedBy', null) == request.auth.uid;
     }
 
     // ── Invitations ───────────────────────────────────────────────────────────

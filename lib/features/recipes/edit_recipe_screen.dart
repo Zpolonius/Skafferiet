@@ -164,6 +164,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
             _buildSectionTitle('Deling'),
             ShareRecipeSwitch(
               canShare: _canShare,
+              removed: widget.recipe.isHidden,
               value: _shared,
               onChanged: (v) => setState(() => _shared = v),
             ),
@@ -235,7 +236,10 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       carbs: nutrition.carbs,
       fat: nutrition.fat,
       nutritionFromIngredients: nutrition.fromIngredients,
-      visibility: _shared ? RecipeVisibility.public : RecipeVisibility.household,
+      // En fjernet opskrift er låst: visibility sendes uændret (reglerne).
+      visibility: widget.recipe.isHidden
+          ? RecipeVisibility.hidden
+          : (_shared ? RecipeVisibility.public : RecipeVisibility.household),
       authorName: old.authorName,
       copiedFrom: old.copiedFrom,
     );
