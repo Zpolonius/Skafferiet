@@ -200,10 +200,14 @@ void main() {
       ));
 
       await tapVisible(tester, find.byKey(const Key('share-recipe-switch')));
+      expect(find.textContaining('søge i'), findsNothing,
+          reason: 'forklaringen er foldet sammen, til man trykker Læs mere');
+      await tapVisible(tester, find.text('Læs mere'));
+      expect(find.text('Vis mindre'), findsOneWidget);
       final text = tester
           .widgetList<Text>(find.byType(Text))
           .map((t) => t.data ?? '')
-          .firstWhere((t) => t.contains('Alle brugere af appen kan se'));
+          .firstWhere((t) => t.contains('alle brugere af appen se, søge i'));
       for (final word in [
         'titel',
         'billede',
