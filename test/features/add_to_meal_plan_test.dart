@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:skafferiet/core/models/recipe.dart';
 import 'package:skafferiet/core/models/meal_plan.dart';
 import 'package:skafferiet/core/models/meal_type.dart';
+import 'package:skafferiet/features/grocery/recurring/recurring_items_provider.dart'
+    show clockProvider;
 import 'package:skafferiet/features/profile/household_provider.dart';
 import 'package:skafferiet/features/meal_plan/meal_plan_provider.dart';
 import 'package:skafferiet/shared/widgets/add_to_meal_plan_sheet.dart';
@@ -21,6 +25,8 @@ class _MockHouseholdNotifier extends StateNotifier<HouseholdState>
 class _MockMealPlanNotifier extends MealPlanNotifier {
   _MockMealPlanNotifier() : super(firestore: MockFirestore());
 
+  String? capturedWeekId;
+  int calls = 0;
   String? capturedDay;
   String? capturedSlot;
   Recipe? capturedRecipe;
@@ -35,7 +41,10 @@ class _MockMealPlanNotifier extends MealPlanNotifier {
     String slotType, {
     Recipe? recipe,
     String? directEntry,
+    String? weekId,
   }) async {
+    capturedWeekId = weekId;
+    calls++;
     capturedDay = day;
     capturedSlot = slotType;
     capturedRecipe = recipe;
@@ -200,6 +209,166 @@ void main() {
       expect(find.text('Aftensmad'), findsOneWidget);
       expect(find.text('Frokost'), findsNothing);
       expect(find.text('Snack'), findsNothing);
+    });
+  });
+
+  group('AddToMealPlanSheet – uge (#60)', () {
+    // 2026-10-15 er en torsdag; ugen er 12.-18. okt. (uge 42).
+    final now = DateTime(2026, 10, 15, 18, 17);
+
+    Future<ProviderContainer> pumpSheet(
+      WidgetTester tester,
+      _MockMealPlanNotifier notifier, {
+      int offset = 0,
+      Future<Recipe> Function(Recipe)? resolve,
+    }) async {
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          mealPlanProvider.overrideWith(() => notifier),
+          _householdOverride(MealType.values),
+          clockProvider.overrideWithValue(() => now),
+          weekOffsetProvider.overrideWith((ref) => offset),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: AddToMealPlanSheet(recipe: _testRecipe, resolveRecipe: resolve),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      return ProviderScope.containerOf(tester.element(find.byType(AddToMealPlanSheet)));
+    }
+
+    Future<void> choose(WidgetTester tester, String day, String meal) async {
+      await tester.tap(find.text(day));
+      await tester.pump();
+      await tester.tap(find.text(meal));
+      await tester.pump();
+    }
+
+    testWidgets('viser ugenummer, datoer og badge for den viste uge', (tester) async {
+      await pumpSheet(tester, _MockMealPlanNotifier());
+      expect(find.text('Uge 42 · 12.–18. okt.'), findsOneWidget);
+      expect(find.text('Denne uge'), findsOneWidget);
+    });
+
+    testWidgets('starter på den uge madplanen viser (weekOffsetProvider)', (tester) async {
+      final notifier = _MockMealPlanNotifier();
+      await pumpSheet(tester, notifier, offset: 1);
+      expect(find.text('Uge 43 · 19.–25. okt.'), findsOneWidget);
+      expect(find.text('Næste uge'), findsWidgets);
+
+      await choose(tester, 'Tirsdag', 'Aftensmad');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      expect(notifier.capturedWeekId, '2026-10-19');
+    });
+
+    testWidgets('pile skifter uge, gemmer i den uge og lader madplanens uge være',
+        (tester) async {
+      final notifier = _MockMealPlanNotifier();
+      final container = await pumpSheet(tester, notifier);
+      for (final tip in ['Forrige uge', 'Næste uge']) {
+        final size = tester.getSize(find.byTooltip(tip));
+        expect(size.width, greaterThanOrEqualTo(48), reason: tip);
+        expect(size.height, greaterThanOrEqualTo(48), reason: tip);
+      }
+      await tester.tap(find.byTooltip('Næste uge'));
+      await tester.pumpAndSettle();
+      expect(find.text('Uge 43 · 19.–25. okt.'), findsOneWidget);
+
+      await choose(tester, 'Tirsdag', 'Aftensmad');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+
+      expect(notifier.capturedWeekId, '2026-10-19');
+      expect(container.read(weekOffsetProvider), 0);
+    });
+
+    testWidgets('forrige uge to gange giver mandagen to uger tilbage', (tester) async {
+      final notifier = _MockMealPlanNotifier();
+      await pumpSheet(tester, notifier);
+      await tester.tap(find.byTooltip('Forrige uge'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Forrige uge'));
+      await tester.pumpAndSettle();
+      expect(find.text('Uge 40 · 28. sep.–4. okt.'), findsOneWidget);
+      await choose(tester, 'Mandag', 'Frokost');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      expect(notifier.capturedWeekId, '2026-09-28');
+    });
+
+    testWidgets('bekræftelsen nævner dag og uge', (tester) async {
+      await pumpSheet(tester, _MockMealPlanNotifier());
+      await tester.tap(find.byTooltip('Næste uge'));
+      await tester.pumpAndSettle();
+      await choose(tester, 'Tirsdag', 'Aftensmad');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Spaghetti Bolognese tilføjet til tirsdag i uge 43 (Aftensmad)'),
+          findsOneWidget);
+    });
+
+    testWidgets('dobbelttryk på Bekræft skriver kun én gang', (tester) async {
+      final gate = Completer<Recipe>();
+      final notifier = _MockMealPlanNotifier();
+      await pumpSheet(tester, notifier, resolve: (_) => gate.future);
+      await choose(tester, 'Tirsdag', 'Aftensmad');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
+      await tester.tap(find.byType(FilledButton), warnIfMissed: false);
+      gate.complete(_testRecipe);
+      await tester.pumpAndSettle();
+      expect(notifier.calls, 1);
+    });
+
+    testWidgets('viser fremdrift mens der gemmes og snackbar også hvis arket er lukket',
+        (tester) async {
+      final gate = Completer<Recipe>();
+      await tester.binding.setSurfaceSize(phoneSize);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          mealPlanProvider.overrideWith(() => _MockMealPlanNotifier()),
+          _householdOverride(MealType.values),
+          clockProvider.overrideWithValue(() => now),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    body: AddToMealPlanSheet(recipe: _testRecipe, resolveRecipe: (_) => gate.future),
+                  ),
+                )),
+                child: const Text('Åbn'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Åbn'));
+      await tester.pumpAndSettle();
+      await choose(tester, 'Tirsdag', 'Aftensmad');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Bekræft'), findsNothing);
+      // Arket lukkes (X) mens der gemmes.
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+      expect(find.byType(AddToMealPlanSheet), findsNothing);
+      gate.complete(_testRecipe);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('tilføjet til tirsdag'), findsOneWidget);
     });
   });
 }

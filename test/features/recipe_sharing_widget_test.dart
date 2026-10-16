@@ -69,7 +69,7 @@ class _MealPlan extends MealPlanNotifier {
 
   @override
   Future<void> updateSlot(String day, String slotType,
-      {Recipe? recipe, String? directEntry}) async {
+      {Recipe? recipe, String? directEntry, String? weekId}) async {
     capturedRecipe = recipe;
   }
 }
