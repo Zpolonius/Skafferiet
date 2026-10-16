@@ -6,6 +6,9 @@ import '../../shared/utils/number_format.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/recipe.dart';
 import '../../core/services/item_history_writer.dart';
+import '../../core/services/week_copy.dart';
+import '../../core/services/week_dates.dart';
+import '../grocery/recurring/recurring_items_provider.dart' show clockProvider;
 import '../recipes/recipes_provider.dart';
 
 import '../profile/household_provider.dart';
@@ -29,7 +32,76 @@ bool _isUnavailable(Object error) =>
         ? error.code == 'unavailable'
         : error.toString().contains('[cloud_firestore/unavailable]');
 
+/// Hvor mange uger fra den aktuelle uge madplanen viser (0 = denne uge).
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
+
+/// Den valgte dag i madplanen (dansk ugedagsnavn). Starter på i dag, så man
+/// ser dagens måltider, når madplanen åbnes.
+final selectedDayProvider =
+    StateProvider<String>((ref) => planDayNames[ref.read(todayProvider).weekday - 1]);
+
+/// I dag (kl. 00:00). Alt der afhænger af "den aktuelle uge" – planen, skrivninger,
+/// overskrift, weekendhjælp – udledes herfra, så de aldrig er uenige. Står appen
+/// åben hen over midnat, kalder [DayRollover] [TodayNotifier.refresh].
+final todayProvider = NotifierProvider<TodayNotifier, DateTime>(TodayNotifier.new);
+
+class TodayNotifier extends Notifier<DateTime> {
+  @override
+  DateTime build() => _read();
+
+  DateTime _read() {
+    final now = ref.read(clockProvider)();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  /// Læser uret igen. Er datoen skiftet, flyttes visningen med: en uge man har
+  /// bladret til forbliver den samme uge, "denne uge" følger med, og valgt dag
+  /// bliver i dag, når man ser den aktuelle uge – ligesom når appen starter.
+  void refresh() {
+    final today = _read();
+    if (today == state) return;
+    final weeks = weeksBetween(state, today);
+    final offset = ref.read(weekOffsetProvider);
+    final newOffset = offset == 0 ? 0 : offset - weeks;
+    if (newOffset != offset) ref.read(weekOffsetProvider.notifier).state = newOffset;
+    if (newOffset == 0) {
+      ref.read(selectedDayProvider.notifier).state = planDayNames[today.weekday - 1];
+    }
+    state = today;
+  }
+}
+
+/// Ugen (id = mandagens dato) hvis weekendhjælp "Planlægger du næste uge?" er
+/// lukket. Kun i hukommelsen: den kommer igen næste weekend.
+final weekendHintDismissedProvider = StateProvider<String?>((ref) => null);
+
+/// Uger (id) hvor tilbuddet om at kopiere forrige uge er lukket.
+final copyOfferDismissedProvider = StateProvider<Set<String>>((ref) => const {});
+
+/// De udfyldte måltider i ugen [weekId].
+class WeekSlots {
+  final String weekId;
+  final List<PlannedSlot> slots;
+  const WeekSlots(this.weekId, this.slots);
+}
+
+/// Ugen før den viste uge. Fejl (fx ingen forbindelse til Firestore) betyder
+/// blot at tilbuddet om at kopiere ikke vises.
+final previousWeekSlotsProvider = StreamProvider.autoDispose<WeekSlots>((ref) {
+  final offset = ref.watch(weekOffsetProvider);
+  ref.watch(todayProvider);
+  ref.watch(householdProvider.select((h) => h.householdId));
+  return ref.watch(mealPlanProvider.notifier).watchWeekSlots(offset - 1);
+});
+
+/// Resultatet af [MealPlanNotifier.copyWeek]. [write] er skrivningen; den
+/// fuldføres først når serveren har svaret, så vent ikke på den i UI'et.
+class WeekCopy {
+  final String weekId;
+  final List<PlannedSlot> slots;
+  final Future<void> write;
+  const WeekCopy(this.weekId, this.slots, this.write);
+}
 
 class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
   final FirebaseFirestore _firestore;
@@ -37,15 +109,9 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
   MealPlanNotifier({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  DateTime _getWeekStart(DateTime date) {
-    // Finder mandagen i den uge, som 'date' tilhører
-    return date.subtract(Duration(days: date.weekday - 1));
-  }
-
-  String _getWeekId(DateTime date) {
-    final start = _getWeekStart(date);
-    return '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
-  }
+  /// Mandagen i den uge der ligger [offset] uger fra den aktuelle.
+  DateTime _weekStartFor(int offset) =>
+      addWeeks(weekStartOf(ref.read(todayProvider)), offset);
 
   @override
   Stream<WeeklyMealPlan> build() {
@@ -54,9 +120,10 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
     // spinner), når opskrifter indlæses eller ændres.
     final householdId = ref.watch(householdProvider).householdId;
     final offset = ref.watch(weekOffsetProvider);
+    ref.watch(todayProvider);
 
-    final weekStart = _getWeekStart(DateTime.now()).add(Duration(days: offset * 7));
-    final weekId = _getWeekId(weekStart);
+    final weekStart = _weekStartFor(offset);
+    final weekId = weekIdOf(weekStart);
 
     if (householdId == null) {
       return Stream.value(WeeklyMealPlan(id: 'empty', weekStart: weekStart, days: {}));
@@ -147,8 +214,97 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
 
   /// Id (mandagens dato) på den uge madplanen viser lige nu.
   String currentWeekId() {
-    final offset = ref.read(weekOffsetProvider);
-    return _getWeekId(_getWeekStart(DateTime.now()).add(Duration(days: offset * 7)));
+    return weekIdOf(_weekStartFor(ref.read(weekOffsetProvider)));
+  }
+
+  /// De udfyldte måltider i ugen [offset] uger fra den aktuelle, live.
+  Stream<WeekSlots> watchWeekSlots(int offset) {
+    final id = weekIdOf(_weekStartFor(offset));
+    final planDoc = _planDoc(id);
+    if (planDoc == null) return Stream.value(WeekSlots(id, const []));
+    return planDoc.snapshots().map((doc) => WeekSlots(id, slotsOfData(doc.data())));
+  }
+
+  /// Kopierer måltiderne [from] (typisk ugen før) til den viste uge. Kun tomme
+  /// pladser udfyldes. Returnerer null hvis den viste uge ikke er indlæst, eller
+  /// der intet er at kopiere (fx fordi et andet medlem har fyldt pladserne).
+  ///
+  /// Online køres det som en transaktion, der læser ugens dokument på serveren
+  /// og kun fylder pladser der er tomme dér, så en forældet lokal kopi aldrig
+  /// får et andet medlems måltid overskrevet. Offline kan en transaktion ikke
+  /// køres; så bruges den lokale kopi og én `set(merge)` lægges i kø. Det er en
+  /// bevidst afvejning: uden forbindelse kan vi ikke se serveren, og den lokale
+  /// kopi er det bedste vi har. Offline kan kaldet vare et par sekunder, før
+  /// transaktionen opgiver.
+  Future<WeekCopy?> copyWeek({required List<PlannedSlot> from}) async {
+    final weekId = currentWeekId();
+    final planDoc = _planDoc(weekId);
+    final plan = state.valueOrNull;
+    // Under ugeskift viser state stadig den forrige uges plan.
+    if (planDoc == null || plan == null || plan.id != weekId) return null;
+
+    try {
+      List<PlannedSlot> copied = const [];
+      await _firestore.runTransaction((tx) async {
+        final data = (await tx.get(planDoc)).data();
+        copied = slotsToCopy(previous: from, current: slotsOfData(data));
+        if (copied.isEmpty) return;
+        tx.set(planDoc, withSlotsSet(data, copied));
+      });
+      if (copied.isEmpty) return null;
+      return WeekCopy(weekId, copied, Future.value());
+    } catch (e) {
+      if (!_isUnavailable(e)) rethrow;
+    }
+
+    final slots = slotsToCopy(previous: from, current: slotsOfPlan(plan));
+    if (slots.isEmpty) return null;
+    final write = planDoc.set(slotsPayload(slots), SetOptions(merge: true));
+    return WeekCopy(weekId, slots, write);
+  }
+
+  /// Fortryd [copyWeek]: rydder præcis de kopierede måltider, men kun dem der
+  /// stadig er som kopieret. Er ingen af dem det, kastes
+  /// [SlotChangedException]. Andre måltider i ugen røres ikke.
+  ///
+  /// [ownWritePending] skal være true, hvis serveren endnu ikke har bekræftet
+  /// kopieringen ([WeekCopy.write]); så tjekkes den lokale kopi i stedet for
+  /// en transaktion mod serveren (se [restoreSlot]).
+  Future<void> undoCopy(WeekCopy copy, {bool ownWritePending = false}) async {
+    final planDoc = _planDoc(copy.weekId);
+    if (planDoc == null) return;
+
+    Future<void> undoFromCache() async {
+      Map<String, dynamic>? cached;
+      try {
+        cached = (await planDoc.get(const GetOptions(source: Source.cache))).data();
+      } catch (_) {
+        cached = null; // ukendt; vi skrev det netop selv, så ryd det
+      }
+      final undo = cached == null
+          ? copy.slots
+          : slotsToUndo(copied: copy.slots, current: slotsOfData(cached));
+      if (undo.isEmpty) throw const SlotChangedException();
+      await planDoc.set(slotsPayload(undo, clear: true), SetOptions(merge: true));
+    }
+
+    if (ownWritePending) return undoFromCache();
+
+    try {
+      await _firestore.runTransaction((tx) async {
+        final data = (await tx.get(planDoc)).data();
+        final undo = slotsToUndo(copied: copy.slots, current: slotsOfData(data));
+        if (undo.isEmpty) throw const SlotChangedException();
+        // Kun de ryddede måltiders egne felter røres.
+        tx.update(planDoc, {
+          for (final s in undo)
+            FieldPath(['days', s.day, s.key]): {'recipeId': null, 'directEntry': null},
+        });
+      });
+    } catch (e) {
+      if (!_isUnavailable(e)) rethrow;
+      await undoFromCache();
+    }
   }
 
   DocumentReference<Map<String, dynamic>>? _planDoc(String weekId) {
@@ -295,5 +451,3 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
 final mealPlanProvider = StreamNotifierProvider<MealPlanNotifier, WeeklyMealPlan>(
   MealPlanNotifier.new,
 );
-
-final selectedDayProvider = StateProvider<String>((ref) => 'Mandag');

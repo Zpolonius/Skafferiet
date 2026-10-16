@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/meal_type.dart';
+import '../../core/services/week_copy.dart';
+import '../../core/services/week_dates.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../grocery/grocery_provider.dart';
 import '../profile/household_provider.dart';
@@ -25,6 +27,9 @@ class MealPlanScreen extends ConsumerWidget {
     final mealPlan = ref.watch(mealPlanProvider);
     final selectedDay = ref.watch(selectedDayProvider);
     final mealTypes = ref.watch(householdProvider.select((h) => h.mealTypes));
+    final offset = ref.watch(weekOffsetProvider);
+    final today = ref.watch(todayProvider);
+    final weekStart = addWeeks(weekStartOf(today), offset);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -74,10 +79,18 @@ class MealPlanScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         const _SearchBar(),
                         const SizedBox(height: 24),
-                        _WeekNavigation(),
+                        _WeekNavigation(weekStart: weekStart, offset: offset, today: today),
+                        if (offset == 0 && today.weekday >= DateTime.saturday)
+                          const _WeekendHint(),
+                        _CopyOffer(
+                          plan: plan,
+                          weekStart: weekStart,
+                          offset: offset,
+                          loading: mealPlan.isLoading,
+                        ),
                         const SizedBox(height: 16),
                         _WeeklyCarousel(
-                          weekStart: mealPlan.value?.weekStart ?? DateTime.now(),
+                          weekStart: weekStart,
                           selectedDay: selectedDay,
                           onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
                         ),
@@ -250,7 +263,7 @@ class _WeeklyCarousel extends StatelessWidget {
         itemBuilder: (context, index) {
           final day = days[index];
           final isSelected = day == selectedDay;
-          final date = weekStart.add(Duration(days: index));
+          final date = daysOfWeek(weekStart)[index];
           
           return GestureDetector(
             onTap: () => onDaySelected(day),
@@ -302,73 +315,365 @@ class _WeeklyCarousel extends StatelessWidget {
   }
 }
 
+/// Overskrift med ugenummer og datoer, "Denne uge"/"Næste uge"/"Sidste uge"-
+/// badge og knapperne til at skifte uge.
 class _WeekNavigation extends ConsumerWidget {
+  final DateTime weekStart;
+  final int offset;
+  final DateTime today;
+
+  const _WeekNavigation({
+    required this.weekStart,
+    required this.offset,
+    required this.today,
+  });
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final offset = ref.watch(weekOffsetProvider);
-    final now = DateTime.now();
-    final weekStart = now.subtract(Duration(days: now.weekday - 1)).add(Duration(days: offset * 7));
-    
-    // Beregn ugenummer (simpel version)
-    final weekNum = ((weekStart.difference(DateTime(weekStart.year, 1, 1)).inDays) / 7).floor() + 1;
+    final badge = weekBadgeLabel(offset);
+    void setOffset(int value) => ref.read(weekOffsetProvider.notifier).state = value;
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Uge $weekNum',
-          style: context.text.titleMedium?.copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: context.colors.primaryContainer,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12, right: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  label: weekSemanticsLabel(weekStart, offset: offset, today: today),
+                  excludeSemantics: true,
+                  child: Text(
+                    weekHeaderLabel(weekStart, today: today),
+                    style: context.text.titleMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.primaryContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (badge != null) _WeekBadge(label: badge, isCurrent: offset == 0),
+                    if (offset != 0)
+                      TextButton(
+                        onPressed: () => setOffset(0),
+                        style: TextButton.styleFrom(
+                          foregroundColor: context.colors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(48, 48),
+                        ),
+                        child: const Text('Gå til denne uge', style: TextStyle(fontSize: 12)),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        Row(
-          children: [
-            Tooltip(
-              message: 'Mine måltider',
-              child: _NavBtn(
-                icon: Icons.tune,
-                onTap: () => MealTypesSheet.show(context),
-              ),
-            ),
-            const SizedBox(width: 16),
-            _NavBtn(
-              icon: Icons.chevron_left,
-              onTap: () => ref.read(weekOffsetProvider.notifier).state--,
-            ),
-            const SizedBox(width: 8),
-            _NavBtn(
-              icon: Icons.chevron_right,
-              onTap: () => ref.read(weekOffsetProvider.notifier).state++,
-            ),
-          ],
+        _NavBtn(
+          icon: Icons.tune,
+          tooltip: 'Mine måltider',
+          onTap: () => MealTypesSheet.show(context),
+        ),
+        const SizedBox(width: 4),
+        _NavBtn(
+          icon: Icons.chevron_left,
+          tooltip: 'Forrige uge',
+          onTap: () => setOffset(offset - 1),
+        ),
+        const SizedBox(width: 4),
+        _NavBtn(
+          icon: Icons.chevron_right,
+          tooltip: 'Næste uge',
+          onTap: () => setOffset(offset + 1),
         ),
       ],
     );
   }
 }
 
-class _NavBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
+class _WeekBadge extends StatelessWidget {
+  final String label;
+  final bool isCurrent;
 
-  const _NavBtn({required this.icon, required this.onTap});
+  const _WeekBadge({required this.label, required this.isCurrent});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: context.colors.outlineVariant),
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isCurrent ? colors.primaryFixed : colors.secondaryFixed,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: context.text.labelSmall?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: isCurrent ? colors.onPrimaryFixedVariant : colors.onSecondaryFixedVariant,
         ),
-        child: Icon(icon, size: 20, color: context.colors.primary),
       ),
     );
+  }
+}
+
+class _NavBtn extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _NavBtn({required this.icon, required this.tooltip, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onTap,
+      icon: Icon(icon, size: 22),
+      style: IconButton.styleFrom(
+        fixedSize: const Size(48, 48),
+        minimumSize: const Size(48, 48),
+        foregroundColor: context.colors.primary,
+        backgroundColor: context.colors.surfaceContainerLowest,
+        side: BorderSide(color: context.colors.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+}
+
+/// Fælles ramme om de to tips over ugestriben.
+class _HintCard extends StatelessWidget {
+  final Widget child;
+  final String closeTooltip;
+  final VoidCallback onClose;
+
+  const _HintCard({super.key, required this.child, required this.closeTooltip, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: context.colors.primaryFixed.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: child,
+            ),
+          ),
+          IconButton(
+            tooltip: closeTooltip,
+            onPressed: onClose,
+            icon: Icon(Icons.close, size: 20, color: context.colors.primary),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lørdag og søndag, når man ser denne uge: de fleste planlægger den kommende
+/// uge i weekenden og ender ellers med at lægge planen i den forkerte uge.
+class _WeekendHint extends ConsumerWidget {
+  const _WeekendHint();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final weekId = weekIdOf(ref.watch(todayProvider));
+    if (ref.watch(weekendHintDismissedProvider) == weekId) return const SizedBox.shrink();
+
+    return _HintCard(
+      key: const Key('weekend-hint'),
+      closeTooltip: 'Skjul',
+      onClose: () => ref.read(weekendHintDismissedProvider.notifier).state = weekId,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Planlægger du næste uge?', style: context.text.titleSmall),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => ref.read(weekOffsetProvider.notifier).state = 1,
+            style: TextButton.styleFrom(
+              foregroundColor: context.colors.primary,
+              padding: EdgeInsets.zero,
+              alignment: Alignment.centerLeft,
+              minimumSize: const Size(48, 48),
+            ),
+            child: const Text('Gå til næste uge'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Står den viste uge tom, mens ugen før har måltider, tilbydes en kopi. Det
+/// redder også dem, der allerede har planlagt i den forkerte uge.
+class _CopyOffer extends ConsumerStatefulWidget {
+  final WeeklyMealPlan plan;
+  final DateTime weekStart;
+  final int offset;
+
+  /// Planen genindlæses (ugeskift, skift af husstand): så er den viste plan ikke
+  /// til at stole på, og tilbuddet skjules.
+  final bool loading;
+
+  const _CopyOffer({
+    required this.plan,
+    required this.weekStart,
+    required this.offset,
+    required this.loading,
+  });
+
+  @override
+  ConsumerState<_CopyOffer> createState() => _CopyOfferState();
+}
+
+class _CopyOfferState extends ConsumerState<_CopyOffer> {
+  /// Kopieringen venter på serveren; et tryk mere i mellemtiden ville se ugen
+  /// som fyldt og erstatte "kopieret"-beskeden og dens Fortryd.
+  bool _copying = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = widget.plan;
+    final weekStart = widget.weekStart;
+    final weekId = weekIdOf(weekStart);
+    final previousStart = addWeeks(weekStart, -1);
+    // Under ugeskift viser både plan og forrige uge kort den forrige visning.
+    if (widget.loading || plan.id != weekId) return const SizedBox.shrink();
+    if (ref.watch(householdProvider.select((h) => h.householdId)) == null) {
+      return const SizedBox.shrink();
+    }
+    if (ref.watch(copyOfferDismissedProvider).contains(weekId)) return const SizedBox.shrink();
+    final previous = ref.watch(previousWeekSlotsProvider).valueOrNull;
+    if (previous == null || previous.weekId != weekIdOf(previousStart)) {
+      return const SizedBox.shrink();
+    }
+    if (previous.slots.isEmpty || slotsOfPlan(plan).isNotEmpty) return const SizedBox.shrink();
+    final hidden = hiddenCount(previous.slots, ref.watch(householdProvider.select((h) => h.mealTypes)));
+
+    return _HintCard(
+      key: const Key('copy-offer'),
+      closeTooltip: 'Skjul forslag',
+      onClose: () => ref.read(copyOfferDismissedProvider.notifier).update((s) => {...s, weekId}),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            copyOfferLabel(
+              offset: widget.offset,
+              fromWeek: isoWeekNumber(previousStart),
+              toWeek: isoWeekNumber(weekStart),
+              count: previous.slots.length,
+              hidden: hidden,
+            ),
+            style: context.text.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: _copying ? null : () => _copy(previous.slots),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            child: const Text('Kopiér'),
+          ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copy(List<PlannedSlot> previous) async {
+    setState(() => _copying = true);
+    try {
+      await _runCopy(previous);
+    } finally {
+      if (mounted) setState(() => _copying = false);
+    }
+  }
+
+  Future<void> _runCopy(List<PlannedSlot> previous) async {
+    final notifier = ref.read(mealPlanProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = context.colors.error;
+
+    SnackBar errorBar(String text, {SnackBarAction? action}) => SnackBar(
+          content: Text(text),
+          backgroundColor: errorColor,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 8),
+          action: action,
+        );
+
+    final visible = ref.read(householdProvider).mealTypes;
+    final WeekCopy? result;
+    try {
+      result = await notifier.copyWeek(from: previous);
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(errorBar('Måltiderne kunne ikke kopieres. Prøv igen.'));
+      return;
+    }
+    if (result == null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Ugen har allerede måltider – intet blev kopieret.'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      return;
+    }
+    final copy = result;
+
+    // Huskes, så Fortryd ved om serveren har nået at bekræfte kopieringen.
+    var confirmed = false;
+    copy.write.then<void>((_) {
+      confirmed = true;
+    }, onError: (Object _) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(errorBar('Måltiderne kunne ikke kopieres. Prøv igen.'));
+    });
+
+    Future<void> undo() async {
+      try {
+        await notifier.undoCopy(copy, ownWritePending: !confirmed);
+      } catch (e) {
+        final changed = SlotChangedException.matches(e);
+        messenger.showSnackBar(errorBar(
+          changed
+              ? 'Måltiderne er ændret i mellemtiden – kunne ikke fortryde.'
+              : 'Kunne ikke fortryde. Prøv igen.',
+          action: changed ? null : SnackBarAction(label: 'Prøv igen', onPressed: undo),
+        ));
+      }
+    }
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(
+            '${mealCountWithHidden(copy.slots.length, hiddenCount(copy.slots, visible))} kopieret'),
+        duration: const Duration(seconds: 6),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(label: 'Fortryd', onPressed: undo),
+      ));
   }
 }
 

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:skafferiet/core/services/week_dates.dart';
 import 'package:skafferiet/core/models/meal_plan.dart';
 import 'package:skafferiet/core/models/recipe.dart';
 import 'package:skafferiet/core/theme/app_theme.dart';
@@ -136,9 +137,7 @@ void main() {
       await _settle(tester);
 
       // Vælg fredag i dagsstrimlen og frokost som måltid.
-      final fri = DateTime.now()
-          .subtract(Duration(days: DateTime.now().weekday - 1))
-          .add(const Duration(days: 4));
+      final fri = daysOfWeek(weekStartOf(DateTime.now()))[4];
       final friCard = inAdd(find.text('${fri.day}')).first;
       await tester.ensureVisible(friCard);
       await tester.pump();

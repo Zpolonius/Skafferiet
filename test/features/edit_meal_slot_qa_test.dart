@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:skafferiet/core/services/week_dates.dart';
 import 'package:skafferiet/core/models/meal_plan.dart';
 import 'package:skafferiet/core/models/recipe.dart';
 import 'package:skafferiet/core/theme/app_theme.dart';
@@ -91,11 +92,7 @@ class _GatedPlan extends MealPlanNotifier {
 }
 
 String _weekId(int offset) {
-  final now = DateTime.now();
-  final start = now
-      .subtract(Duration(days: now.weekday - 1))
-      .add(Duration(days: offset * 7));
-  return '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
+  return weekIdOf(addWeeks(weekStartOf(DateTime.now()), offset));
 }
 
 DocumentReference<Map<String, dynamic>> _doc(

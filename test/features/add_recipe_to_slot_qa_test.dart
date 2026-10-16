@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:skafferiet/core/services/week_dates.dart';
 import 'package:skafferiet/core/models/meal_type.dart';
 import 'package:skafferiet/core/models/recipe.dart';
 import 'package:skafferiet/core/theme/app_theme.dart';
@@ -71,11 +72,7 @@ class _Gated extends MealPlanNotifier {
 }
 
 String _weekId(int offset) {
-  final now = DateTime.now();
-  final s = now
-      .subtract(Duration(days: now.weekday - 1))
-      .add(Duration(days: offset * 7));
-  return '${s.year}-${s.month.toString().padLeft(2, '0')}-${s.day.toString().padLeft(2, '0')}';
+  return weekIdOf(addWeeks(weekStartOf(DateTime.now()), offset));
 }
 
 DocumentReference<Map<String, dynamic>> _doc(FakeFirebaseFirestore fs, int o) =>
@@ -150,9 +147,7 @@ void main() {
     await tester.tap(find.text('Søg opskrifter'));
     await _settle(tester);
     // vælg fredag i dagsstrimlen
-    final fri = DateTime.now()
-        .subtract(Duration(days: DateTime.now().weekday - 1))
-        .add(const Duration(days: 7 + 4));
+    final fri = daysOfWeek(addWeeks(weekStartOf(DateTime.now()), 1))[4];
     await tester.tap(_inAdd(find.text('${fri.day}')).first);
     await _settle(tester);
     await tester.tap(_inAdd(find.text('Pasta pesto')));

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
+import '../../core/services/week_dates.dart';
 import '../recipes/recipes_provider.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import '../profile/household_provider.dart';
@@ -99,9 +100,9 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   }
 
   List<DateTime> _generateWeekDates(int offset) {
-    final now = DateTime.now();
-    final weekStart = now.subtract(Duration(days: now.weekday - 1)).add(Duration(days: offset * 7));
-    return List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    // Samme ugeregning som madplanen selv, så datoerne her passer til ugen.
+    final now = ref.read(todayProvider);
+    return daysOfWeek(addWeeks(weekStartOf(now), offset));
   }
 
   @override
