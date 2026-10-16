@@ -1,5 +1,6 @@
 // Moderation (#52): grænsetilfælde for rapporter, blokeringer og fjernede
-// opskrifter. Den kendte læk i læsereglen for ældre opskrifter er #54.
+// opskrifter. Læsereglens læk for ældre opskrifter (#54) er rettet og
+// testes i recipe_read_leak.test.js.
 const { test, before, beforeEach, after, describe } = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');

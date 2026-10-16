@@ -513,9 +513,12 @@ service cloud.firestore {
       // "householdId == X OR householdId == null" query can be proven safe.
       // Shared recipes (visibility == 'public') are readable by every signed-in
       // user; the Fællesskab query always filters on visibility == 'public'.
+      // The field must exist: a clause for documents *without* householdId
+      // would be true for every document in an unfiltered list query, so any
+      // user could list other households' private recipes (#54). Global
+      // recipes carry an explicit householdId: null.
       allow read: if isSignedIn() && (
         resource.data.get('visibility', 'household') == 'public' ||
-        !('householdId' in resource.data) ||
         resource.data.householdId == null ||
         (
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
