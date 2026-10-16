@@ -9,6 +9,7 @@ import '../../shared/utils/number_format.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
 import '../../core/services/item_history_writer.dart';
+import '../../core/services/week_dates.dart';
 
 /// Tegn i koder: uden 0/O og 1/I, så de er nemme at læse op og skrive af.
 const _codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -668,9 +669,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
       final now = DateTime.now();
       final dayName = danishDays[now.weekday] ?? 'Mandag';
 
-      final weekStart = now.subtract(Duration(days: now.weekday - 1));
-      final weekId =
-          '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+      final weekId = weekIdOf(now);
 
       if (starterRecipe != null) {
         final recipeRef = await _firestore.collection('recipes').add({

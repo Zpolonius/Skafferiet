@@ -183,7 +183,7 @@ export function danishWeekday(date: Date = new Date()): string {
   return DANISH_WEEKDAYS[(date.getDay() + 6) % 7];
 }
 
-/** Mandagen i ugen som `yyyy-MM-dd` — præcis som MealPlanNotifier._getWeekId. */
+/** Mandagen i ugen som `yyyy-MM-dd` — præcis som weekIdOf i lib/core/services/week_dates.dart. */
 export function weekId(date: Date = new Date()): string {
   const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7));
   const p = (x: number) => String(x).padStart(2, '0');

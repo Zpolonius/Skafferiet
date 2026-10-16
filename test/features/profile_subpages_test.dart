@@ -160,6 +160,15 @@ void main() {
       expect(find.textContaining('egen, tomme husstand'), findsOneWidget);
     });
 
+    testWidgets('forklarer madplanens uger (#56)', (tester) async {
+      await pump(tester);
+
+      await tester.tap(find.text('Hvordan virker ugerne i madplanen?'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('fra mandag til søndag'), findsOneWidget);
+      expect(find.textContaining('Gå til næste uge'), findsOneWidget);
+    });
+
     testWidgets('viser appens version', (tester) async {
       await pump(tester);
 

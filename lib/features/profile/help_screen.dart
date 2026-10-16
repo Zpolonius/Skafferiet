@@ -27,6 +27,15 @@ class _Faq {
 
 const _faqs = [
   _Faq(
+    'Hvordan virker ugerne i madplanen?',
+    'Ugen går fra mandag til søndag, og overskriften viser ugenummer og datoer '
+        'samt om du ser denne uge, næste uge eller sidste uge. Brug pilene for '
+        'at skifte uge. Planlægger du i weekenden, så tryk "Gå til næste uge", '
+        'ellers lægges måltiderne i den uge, du ser – også selv om den snart er slut. Er en uge '
+        'tom, mens ugen før har måltider, kan du kopiere dem med "Kopiér". '
+        'Står dine måltider i en anden uge end forventet, så tryk på pilene.',
+  ),
+  _Faq(
     'Hvordan inviterer jeg nogen til min husstand?',
     'Gå til Profil → Husstand & deling. Vælg "Inviter med e-mail" — personen '
         'ser invitationen, når de logger ind med den e-mail — eller "Del '

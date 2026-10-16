@@ -11,6 +11,7 @@ import 'features/meal_plan/meal_plan_screen.dart';
 import 'features/recipes/recipes_screen.dart';
 import 'features/recipes/recipe_detail_screen.dart';
 import 'features/recipes/create_recipe_screen.dart';
+import 'features/meal_plan/day_rollover.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/household_provider.dart';
 import 'features/profile/delete_account_screen.dart';
@@ -291,7 +292,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
     // Skallen vises kun for en logget ind bruger, så det er her de faste
     // varer lægges på listen.
     return Scaffold(
-      body: RecurringAutoAdder(child: navigationShell),
+      body: RecurringAutoAdder(child: DayRollover(child: navigationShell)),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
