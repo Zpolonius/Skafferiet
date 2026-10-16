@@ -7,7 +7,8 @@ import 'ingredient_sheet.dart';
 
 /// "400 g", "1,5 dl" eller bare "fed" hvis der ikke er en mængde.
 String formatIngredientAmount(Ingredient ing) {
-  final qty = ing.quantity > 0 ? formatDanishNumber(ing.quantity, maxDecimals: 2) : '';
+  final qty =
+      ing.quantity > 0 ? formatDanishNumber(ing.quantity, maxDecimals: 2) : '';
   return [qty, ing.unit.trim()].where((s) => s.isNotEmpty).join(' ');
 }
 
@@ -18,10 +19,12 @@ class IngredientListEditor extends StatelessWidget {
   final List<Ingredient> ingredients;
   final ValueChanged<List<Ingredient>> onChanged;
 
-  const IngredientListEditor({super.key, required this.ingredients, required this.onChanged});
+  const IngredientListEditor(
+      {super.key, required this.ingredients, required this.onChanged});
 
   Future<void> _edit(BuildContext context, int index) async {
-    final updated = await showIngredientSheet(context, initial: ingredients[index]);
+    final updated =
+        await showIngredientSheet(context, initial: ingredients[index]);
     if (updated == null) return;
     onChanged([...ingredients]..[index] = updated);
   }
@@ -45,7 +48,8 @@ class IngredientListEditor extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               'Ingen ingredienser endnu.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: colors.onSurfaceVariant),
             ),
           ),
         ...ingredients.asMap().entries.map((entry) {
@@ -55,7 +59,8 @@ class IngredientListEditor extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 8),
             elevation: 0,
             color: colors.surfaceContainerLow,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () => _edit(context, idx),
@@ -79,12 +84,15 @@ class IngredientListEditor extends StatelessWidget {
                     if (ing.nutritionPer100 != null)
                       Tooltip(
                         message: 'Har næring pr. 100 g/ml',
-                        child: Icon(Icons.local_fire_department_outlined, size: 18, color: colors.secondary),
+                        child: Icon(Icons.local_fire_department_outlined,
+                            size: 18, color: colors.secondary),
                       ),
                     IconButton(
                       tooltip: 'Fjern ${ing.name}',
-                      onPressed: () => onChanged([...ingredients]..removeAt(idx)),
-                      icon: Icon(Icons.remove_circle_outline, color: colors.error),
+                      onPressed: () =>
+                          onChanged([...ingredients]..removeAt(idx)),
+                      icon: Icon(Icons.remove_circle_outline,
+                          color: colors.error),
                     ),
                   ],
                 ),
@@ -98,7 +106,8 @@ class IngredientListEditor extends StatelessWidget {
           onPressed: () => _add(context),
           icon: const Icon(Icons.add),
           label: const Text('Tilføj ingrediens'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+          style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48)),
         ),
       ],
     );
@@ -114,7 +123,8 @@ class ServingsStepper extends StatelessWidget {
   final int? value;
   final ValueChanged<int?> onChanged;
 
-  const ServingsStepper({super.key, required this.value, required this.onChanged});
+  const ServingsStepper(
+      {super.key, required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +139,8 @@ class ServingsStepper extends StatelessWidget {
               Text('Portioner', style: theme.textTheme.titleSmall),
               Text(
                 'Bruges til næring pr. portion',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -157,7 +168,8 @@ class ServingsStepper extends StatelessWidget {
         ),
         IconButton.outlined(
           tooltip: 'Flere portioner',
-          onPressed: (v ?? 0) >= maxServings ? null : () => onChanged((v ?? 0) + 1),
+          onPressed:
+              (v ?? 0) >= maxServings ? null : () => onChanged((v ?? 0) + 1),
           icon: const Icon(Icons.add),
         ),
       ],
@@ -282,13 +294,18 @@ class NutritionFields extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _field(theme, 'Kalorier', 'kcal', controllers.kcal, NutritionFormControllers.maxKcal,
+              child: _field(
+                  theme,
+                  'Kalorier',
+                  'kcal',
+                  controllers.kcal,
+                  NutritionFormControllers.maxKcal,
                   perServing?.kcal.roundToDouble()),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _field(
-                  theme, 'Protein', 'g', controllers.protein, NutritionFormControllers.maxGrams, perServing?.protein),
+              child: _field(theme, 'Protein', 'g', controllers.protein,
+                  NutritionFormControllers.maxGrams, perServing?.protein),
             ),
           ],
         ),
@@ -297,12 +314,13 @@ class NutritionFields extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _field(
-                  theme, 'Kulhydrat', 'g', controllers.carbs, NutritionFormControllers.maxGrams, perServing?.carbs),
+              child: _field(theme, 'Kulhydrat', 'g', controllers.carbs,
+                  NutritionFormControllers.maxGrams, perServing?.carbs),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _field(theme, 'Fedt', 'g', controllers.fat, NutritionFormControllers.maxGrams, perServing?.fat),
+              child: _field(theme, 'Fedt', 'g', controllers.fat,
+                  NutritionFormControllers.maxGrams, perServing?.fat),
             ),
           ],
         ),
@@ -310,7 +328,8 @@ class NutritionFields extends StatelessWidget {
     );
   }
 
-  Widget _field(ThemeData theme, String label, String suffix, TextEditingController c, double max, double? calculated) {
+  Widget _field(ThemeData theme, String label, String suffix,
+      TextEditingController c, double max, double? calculated) {
     return TextField(
       key: Key('recipe-nutrition-$label'),
       controller: c,
@@ -321,9 +340,11 @@ class NutritionFields extends StatelessWidget {
         labelText: label,
         suffixText: suffix,
         // Label svæver altid, så den beregnede værdi kan ses som hint.
-        floatingLabelBehavior: calculated != null ? FloatingLabelBehavior.always : null,
+        floatingLabelBehavior:
+            calculated != null ? FloatingLabelBehavior.always : null,
         hintText: calculated != null ? formatDanishNumber(calculated) : null,
-        errorText: showErrors ? NutritionFormControllers.errorFor(c, max) : null,
+        errorText:
+            showErrors ? NutritionFormControllers.errorFor(c, max) : null,
       ),
     );
   }
@@ -344,11 +365,13 @@ class _InfoBanner extends StatelessWidget {
     final String text;
     if (!calculation.hasData) {
       icon = Icons.lightbulb_outline;
-      text = 'Skriv næringen pr. portion her – eller tilføj næring pr. 100 g/ml '
+      text =
+          'Skriv næringen pr. portion her – eller tilføj næring pr. 100 g/ml '
           'på ingredienserne, så regner appen det ud for dig.';
     } else if (servings == null) {
       icon = Icons.info_outline;
-      text = 'Angiv antal portioner ovenfor, så regner appen næringen pr. portion '
+      text =
+          'Angiv antal portioner ovenfor, så regner appen næringen pr. portion '
           'ud fra ingredienserne.';
     } else {
       icon = Icons.calculate_outlined;
@@ -375,7 +398,8 @@ class _InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: colors.onSurfaceVariant),
             ),
           ),
         ],
@@ -593,8 +617,9 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
 // ── Deling ────────────────────────────────────────────────────────────────────
 
 /// Valg om opskriften kun er for husstanden (standard) eller deles med alle
-/// brugere af appen, med en forklaring af hvad det betyder.
-class ShareRecipeSwitch extends StatelessWidget {
+/// brugere af appen. Viser en kort status; "Læs mere" folder forklaringen af,
+/// hvad deling betyder, ud.
+class ShareRecipeSwitch extends StatefulWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -615,15 +640,55 @@ class ShareRecipeSwitch extends StatelessWidget {
   });
 
   @override
+  State<ShareRecipeSwitch> createState() => _ShareRecipeSwitchState();
+}
+
+class _ShareRecipeSwitchState extends State<ShareRecipeSwitch> {
+  bool _expanded = false;
+
+  String get _summary {
+    if (widget.removed) {
+      return 'Opskriften er fjernet fra Fællesskab af en moderator og kan ikke '
+          'deles igen. Den er stadig i jeres husstands opskrifter.';
+    }
+    if (!widget.canShare) {
+      return widget.value
+          ? 'Delt med alle brugere af den, der har lavet opskriften.'
+          : 'Kun den, der har lavet opskriften, kan dele den med alle';
+    }
+    return widget.value
+        ? 'Delt: alle brugere af appen kan se opskriften.'
+        : 'Slået fra: kun din husstand kan se opskriften.';
+  }
+
+  String get _details => widget.canShare
+      ? 'Når opskriften er delt, kan alle brugere af appen se, søge i og gemme '
+          'en kopi af den: titel, billede, ingredienser, fremgangsmåde, næring og '
+          'dit fornavn. Kun jeres husstand kan redigere eller slette den. Du kan '
+          'slå deling fra igen når som helst, men et billedlink, som andre '
+          'allerede har åbnet, kan stadig virke bagefter.'
+      : 'Når opskriften er delt, kan alle brugere af appen se, søge i og gemme '
+          'en kopi af den: titel, billede, ingredienser, fremgangsmåde, næring og '
+          'skaberens fornavn. Kun jeres husstand kan redigere eller slette den. '
+          'Du kan slå deling fra for jeres husstand, men kun skaberen kan dele '
+          'den igen. Et billedlink, som andre allerede har åbnet, kan dog stadig '
+          'virke bagefter.';
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
+    final value = widget.value;
+    final canShare = widget.canShare;
+    final removed = widget.removed;
+    final onChanged = widget.onChanged;
+    final bodyStyle = text.bodySmall?.copyWith(color: colors.onSurfaceVariant);
     return Container(
       decoration: BoxDecoration(
         color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 16),
+      padding: EdgeInsets.fromLTRB(16, 4, 8, removed ? 16 : 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -635,13 +700,16 @@ class ShareRecipeSwitch extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Del med alle brugere',
-                      style: text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: text.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                   Switch(
                     key: const Key('share-recipe-switch'),
                     value: value,
-                    onChanged: removed ? null : ((value || canShare) ? onChanged : null),
+                    onChanged: removed
+                        ? null
+                        : ((value || canShare) ? onChanged : null),
                   ),
                 ],
               ),
@@ -649,29 +717,29 @@ class ShareRecipeSwitch extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Text(
-              removed
-                  ? 'Opskriften er fjernet fra Fællesskab af en moderator og kan ikke '
-                      'deles igen. Den er stadig i jeres husstands opskrifter.'
-                  : !canShare && !value
-                  ? 'Kun den, der har lavet opskriften, kan dele den med alle'
-                  : !canShare
-                  ? 'Delt med alle brugere af den, der har lavet opskriften, under '
-                      'skaberens fornavn. Du kan slå deling fra for jeres husstand, men '
-                      'kun skaberen kan dele den igen.'
-                  : value
-                  ? 'Alle brugere af appen kan se, søge i og gemme en kopi af opskriften: '
-                      'titel, billede, ingredienser, fremgangsmåde, næring og dit fornavn. '
-                      'Kun jeres husstand kan redigere eller slette den. Du kan slå deling '
-                      'fra igen når som helst. Et billedlink, som andre allerede har åbnet, '
-                      'kan dog stadig virke bagefter.'
-                  : 'Slået fra: kun din husstand kan se opskriften. Slå til for at dele den '
-                      'med alle brugere af appen. Så kan de se titel, billede, ingredienser, '
-                      'fremgangsmåde, næring og dit fornavn. Du kan altid slå deling fra igen, '
-                      'men et billedlink, som andre allerede har åbnet, kan stadig virke.',
-              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
+            child: Text(_summary, style: bodyStyle),
           ),
+          if (!removed) ...[
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              alignment: Alignment.topCenter,
+              child: _expanded
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 8, right: 8),
+                      child: Text(_details, style: bodyStyle),
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
+            TextButton(
+              key: const Key('share-recipe-read-more'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+              ),
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(_expanded ? 'Vis mindre' : 'Læs mere'),
+            ),
+          ],
         ],
       ),
     );

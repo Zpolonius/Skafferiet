@@ -46,6 +46,8 @@ void main() {
       'en delt opskrift fortæller ikke-skaberen, at navnet er skaberens',
       (tester) async {
     await tester.pumpWidget(_switch(canShare: false, value: true));
+    await tester.tap(find.text('Læs mere'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('dit fornavn'), findsNothing);
     expect(find.textContaining('skaberens fornavn'), findsOneWidget);
     expect(find.textContaining('Du kan slå deling fra'), findsOneWidget);
@@ -54,6 +56,10 @@ void main() {
   testWidgets('skaberen får at vide, at kun husstanden kan redigere',
       (tester) async {
     await tester.pumpWidget(_switch(canShare: true, value: true));
+    expect(find.textContaining('dit fornavn'), findsNothing,
+        reason: 'kun den korte status vises, til man trykker Læs mere');
+    await tester.tap(find.text('Læs mere'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('dit fornavn'), findsOneWidget);
     expect(find.textContaining('Andre kan ikke redigere'), findsNothing);
     expect(
