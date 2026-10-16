@@ -6,6 +6,7 @@ import '../../core/models/grocery_item.dart';
 import '../../core/models/recurring_item.dart';
 import '../../shared/widgets/add_grocery_item_sheet.dart';
 import '../../shared/widgets/empty_state_widget.dart';
+import '../../shared/widgets/image_viewer.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_grocery_item_dialog.dart';
@@ -496,27 +497,7 @@ class _GroceryItemTile extends ConsumerWidget {
             child: Row(
               children: [
                 // Image or Category Icon
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(12),
-                    image: item.imageUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(item.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: item.imageUrl == null
-                      ? Icon(
-                          _getCategoryIcon(item.category),
-                          color: context.colors.primary,
-                          size: 24,
-                        )
-                      : null,
-                ),
+                _buildLeading(context),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -576,6 +557,74 @@ class _GroceryItemTile extends ConsumerWidget {
                   Icon(Icons.check_circle, color: context.colors.primary),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Miniaturen er sit eget tryk-mål: med billede åbner den fuldskærmsvieweren
+  /// i stedet for at afkrydse varen. I sorteringstilstand er den slået fra.
+  Widget _buildLeading(BuildContext context) {
+    final url = item.imageUrl;
+    final box = Container(
+      key: Key('grocery_image_${item.id}'),
+      width: 48,
+      height: 48,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: context.colors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: url == null
+          ? Icon(
+              _getCategoryIcon(item.category),
+              color: context.colors.primary,
+              size: 24,
+            )
+          : AppNetworkImage(url: url),
+    );
+    if (url == null) return box;
+    if (showDragHandle) return box;
+
+    void open() => showImageViewer(
+          context,
+          url: url,
+          heroTag: 'grocery-image-${item.id}',
+          label: item.name,
+        );
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Vis billede af ${item.name}',
+      onTap: open,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: open,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Hero(tag: 'grocery-image-${item.id}', child: box),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: context.colors.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.colors.outlineVariant),
+                  ),
+                  child: Icon(Icons.zoom_in,
+                      size: 14, color: context.colors.primary),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/item_history.dart';
 import '../../core/models/recurring_item.dart';
+import '../../shared/widgets/image_viewer.dart';
 import 'grocery_defaults.dart';
 import 'grocery_provider.dart';
 import 'item_history_provider.dart';
@@ -151,6 +152,37 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
     }
   }
 
+  /// Billedet vises stort øverst; tryk åbner det i fuld skærm. Ingen Hero her:
+  /// dialogen er ikke en PageRoute, så den ville aldrig flyve. Eget tag, så
+  /// det ikke støder sammen med miniaturen bag dialogen.
+  Widget _buildImage(String url) {
+    void open() => showImageViewer(
+          context,
+          url: url,
+          heroTag: 'grocery-image-dialog-${widget.item.id}',
+          label: widget.item.name,
+        );
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Vis billede af ${widget.item.name}',
+      onTap: open,
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const Key('edit_image'),
+        onTap: open,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: AppNetworkImage(url: url, iconSize: 40),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -176,6 +208,10 @@ class _EditGroceryItemDialogState extends ConsumerState<EditGroceryItemDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (widget.item.imageUrl != null) ...[
+              _buildImage(widget.item.imageUrl!),
+              const SizedBox(height: 16),
+            ],
             TextField(
               key: const Key('edit_name'),
               controller: _nameController,
