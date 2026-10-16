@@ -313,8 +313,11 @@ class MealPlanNotifier extends StreamNotifier<WeeklyMealPlan> {
     return _firestore.collection('households').doc(householdId).collection('meal_plans').doc(weekId);
   }
 
-  Future<void> updateSlot(String day, String slotType, {Recipe? recipe, String? directEntry}) async {
-    final planDoc = _planDoc(currentWeekId());
+  /// [weekId] er ugen der skrives til (se [currentWeekId]); uden den bruges den
+  /// viste uge.
+  Future<void> updateSlot(String day, String slotType,
+      {Recipe? recipe, String? directEntry, String? weekId}) async {
+    final planDoc = _planDoc(weekId ?? currentWeekId());
     if (planDoc == null) return;
     await planDoc.set(_slotPayload(day, slotType, recipe?.id, directEntry), SetOptions(merge: true));
   }

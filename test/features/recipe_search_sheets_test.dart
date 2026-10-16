@@ -72,7 +72,7 @@ class _Plan extends MealPlanNotifier {
 
   @override
   Future<void> updateSlot(String day, String slotType,
-      {Recipe? recipe, String? directEntry}) async {
+      {Recipe? recipe, String? directEntry, String? weekId}) async {
     calls.add('$day|$slotType|${recipe?.id}|$directEntry');
   }
 }

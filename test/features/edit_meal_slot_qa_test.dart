@@ -74,11 +74,12 @@ class _GatedPlan extends MealPlanNotifier {
 
   @override
   Future<void> updateSlot(String day, String slotType,
-      {Recipe? recipe, String? directEntry}) async {
+      {Recipe? recipe, String? directEntry, String? weekId}) async {
     if (gate != null) await gate!.future;
     if (failUpdate != null) throw failUpdate!;
     return super
-        .updateSlot(day, slotType, recipe: recipe, directEntry: directEntry);
+        .updateSlot(day, slotType,
+            recipe: recipe, directEntry: directEntry, weekId: weekId);
   }
 
   @override
