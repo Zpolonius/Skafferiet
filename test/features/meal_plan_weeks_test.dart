@@ -219,6 +219,26 @@ void main() {
     });
   });
 
+  group('valgt dag ved start', () {
+    testWidgets('madplanen åbner på dagens ugedag og viser dens måltider',
+        (tester) async {
+      final env = await _pump(tester, now: _thursday, docs: {
+        '2026-10-12': _plan({
+          'Mandag': {'dinner': 'Mandagsmad'},
+          'Torsdag': {'dinner': 'Tacos'},
+        }),
+      });
+      expect(env.container.read(selectedDayProvider), 'Torsdag');
+      expect(find.text('Tacos'), findsOneWidget);
+      expect(find.text('Mandagsmad'), findsNothing);
+    });
+
+    testWidgets('søndag åbner på søndag', (tester) async {
+      final env = await _pump(tester, now: _sunday);
+      expect(env.container.read(selectedDayProvider), 'Søndag');
+    });
+  });
+
   group('weekendhjælp', () {
     testWidgets('vises lørdag og søndag i denne uge', (tester) async {
       for (final now in [_saturday, _sunday]) {

@@ -35,8 +35,10 @@ bool _isUnavailable(Object error) =>
 /// Hvor mange uger fra den aktuelle uge madplanen viser (0 = denne uge).
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
 
-/// Den valgte dag i madplanen (dansk ugedagsnavn).
-final selectedDayProvider = StateProvider<String>((ref) => 'Mandag');
+/// Den valgte dag i madplanen (dansk ugedagsnavn). Starter på i dag, så man
+/// ser dagens måltider, når madplanen åbnes.
+final selectedDayProvider =
+    StateProvider<String>((ref) => planDayNames[ref.read(todayProvider).weekday - 1]);
 
 /// I dag (kl. 00:00). Alt der afhænger af "den aktuelle uge" – planen, skrivninger,
 /// overskrift, weekendhjælp – udledes herfra, så de aldrig er uenige. Står appen
@@ -54,8 +56,7 @@ class TodayNotifier extends Notifier<DateTime> {
 
   /// Læser uret igen. Er datoen skiftet, flyttes visningen med: en uge man har
   /// bladret til forbliver den samme uge, "denne uge" følger med, og valgt dag
-  /// bliver i dag, når man ser den aktuelle uge. (Ved kold start er valgt dag
-  /// stadig [selectedDayProvider]s standard, mandag, som før #56.)
+  /// bliver i dag, når man ser den aktuelle uge – ligesom når appen starter.
   void refresh() {
     final today = _read();
     if (today == state) return;
