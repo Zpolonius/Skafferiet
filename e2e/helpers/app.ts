@@ -48,11 +48,11 @@ export async function openTab(page: Page, label: string): Promise<void> {
 }
 
 /**
- * Vælger dagen i madplanens ugevælger. Dagene vises som "MAN 12"-kort uden
- * eget navn, så vi finder kortet via de tre første bogstaver og datoen.
+ * Vælger dagen i madplanens ugevælger. Hver dag er en knap med et skærmlæser-
+ * navn som "Mandag 12. oktober" (#63), så vi finder den via dagsnavn og dato.
  */
 export async function selectPlanDay(page: Page, weekdayDa: string, date: Date): Promise<void> {
-  const label = new RegExp(`^${weekdayDa.slice(0, 3)}\\s*${date.getDate()}$`, 'i');
+  const label = new RegExp(`^${weekdayDa} ${date.getDate()}\\.`);
   await page.getByRole('button', { name: label }).first().click();
   await expect(flt(page, `${weekdayDa}ens madplan`)).toBeVisible();
 }
