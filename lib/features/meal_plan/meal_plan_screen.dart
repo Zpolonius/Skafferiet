@@ -251,65 +251,99 @@ class _WeeklyCarousel extends StatelessWidget {
     required this.onDaySelected,
   });
 
+  /// Største bredde pr. dag, så striben ikke bliver grotesk på tablet/web.
+  static const double _maxCellWidth = 64;
+
   @override
   Widget build(BuildContext context) {
     final days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
-    
-    return SizedBox(
-      height: 90,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: days.length,
-        itemBuilder: (context, index) {
-          final day = days[index];
-          final isSelected = day == selectedDay;
-          final date = daysOfWeek(weekStart)[index];
-          
-          return GestureDetector(
-            onTap: () => onDaySelected(day),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 65,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? context.colors.primary : context.colors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isSelected ? context.colors.primary : context.colors.outlineVariant,
-                ),
-                boxShadow: isSelected ? [
-                  BoxShadow(
-                    color: context.colors.primary.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ] : null,
+    final dates = daysOfWeek(weekStart);
+
+    // Alle 7 dage deler bredden ligeligt (ingen vandret scroll). Trykfladen er
+    // hele feltet; selve kortet har en lille luft til naboerne.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxCellWidth * 7),
+        // Mindst 90 høj, men vokser med stor systemtekst; alle felter er lige høje.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 90),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < days.length; index++)
+                  Expanded(child: _dayCell(context, days[index], dates[index])),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dayCell(BuildContext context, String day, DateTime date) {
+    final isSelected = day == selectedDay;
+    final label = '$day ${DateFormat('d. MMMM', 'da_DK').format(date)}';
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      onTap: () => onDaySelected(day),
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onDaySelected(day),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: isSelected ? context.colors.primary : context.colors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? context.colors.primary : context.colors.outlineVariant,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    day.substring(0, 3).toUpperCase(),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isSelected ? context.colors.onPrimary.withValues(alpha: 0.7) : context.colors.outline,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
+              ] : null,
+            ),
+            // Skalerer ned i stedet for at løbe over ved stor systemtekst.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      day.substring(0, 3).toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: isSelected ? context.colors.onPrimary.withValues(alpha: 0.7) : context.colors.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${date.day}',
-                    style: context.text.titleMedium?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
+                    const SizedBox(height: 4),
+                    Text(
+                      '${date.day}',
+                      style: context.text.titleMedium?.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

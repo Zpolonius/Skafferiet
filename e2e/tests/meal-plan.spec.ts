@@ -61,4 +61,23 @@ test.describe('madplan', () => {
     await updateMealSlot(user.householdId, weekday, 'lunch', { directEntry: 'Frokost fra anden enhed' }, now);
     await expect(flt(page, 'Frokost fra anden enhed')).toBeVisible({ timeout: 10_000 });
   });
+
+  // #63: alle 7 dage skal kunne ses uden at scrolle sidelæns.
+  test('alle ugens dage er synlige uden at scrolle, og søndag kan vælges (#63)', async ({ page }) => {
+    const { now } = await pinClock(page);
+    const user = await seedHousehold();
+    await seedMealPlan(user.householdId, { Søndag: { dinner: { directEntry: 'Søndagssteg' } } }, now);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page, user);
+    await openTab(page, 'Madplan');
+
+    for (const day of ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag']) {
+      await expect(page.getByRole('button', { name: new RegExp(`^${day} \\d+\\. `) }).first()).toBeInViewport();
+    }
+
+    const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) + 6);
+    await selectPlanDay(page, 'Søndag', sunday);
+    await expect(flt(page, 'Søndagssteg')).toBeVisible();
+  });
 });
