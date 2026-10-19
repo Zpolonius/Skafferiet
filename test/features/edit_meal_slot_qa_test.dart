@@ -176,6 +176,14 @@ Future<void> _settle(WidgetTester tester) async {
 Finder _inSheet(Finder f) =>
     find.descendant(of: find.byType(EditMealSlotSheet), matching: f);
 
+/// Teksten i dagens måltidskort (aftensmad), uden "Ugens aftensmad"-oversigten:
+/// finder præcis ét match, så testen stadig fanger dobbelte kort.
+Finder _dayCard(String text) => find.descendant(
+    of: find.byKey(const ValueKey('slot-card-dinner')), matching: find.text(text));
+
+Finder _overviewText(String text) => find.descendant(
+    of: find.byKey(const ValueKey('week-dinner-overview')), matching: find.text(text));
+
 void main() {
   setUpAll(() => initializeDateFormatting('da_DK', null));
 
@@ -185,8 +193,9 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'gone', 'directEntry': null}
     });
-    expect(find.text('Opskriften findes ikke længere'), findsOneWidget);
-    await tester.tap(find.text('Opskriften findes ikke længere'));
+    expect(_dayCard('Opskriften findes ikke længere'), findsOneWidget);
+    expect(_overviewText('Opskriften findes ikke længere'), findsOneWidget);
+    await tester.tap(_dayCard('Opskriften findes ikke længere'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -196,7 +205,8 @@ void main() {
     await _settle(tester);
     expect(await _slot(env.fs, 0, 'Tirsdag'),
         {'recipeId': 'gone', 'directEntry': null});
-    expect(find.text('Opskriften findes ikke længere'), findsOneWidget);
+    expect(_dayCard('Opskriften findes ikke længere'), findsOneWidget);
+    expect(_overviewText('Opskriften findes ikke længere'), findsOneWidget);
   });
 
   testWidgets(
@@ -205,7 +215,7 @@ void main() {
     final env = await _pump(tester, weekOffset: 1, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -224,7 +234,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': null, 'directEntry': 'Sushi'}
     });
-    await tester.tap(find.text('Sushi'));
+    await tester.tap(_dayCard('Sushi'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -252,7 +262,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     env.plan.gate = Completer<void>();
     env.plan.failUpdate = Exception('permission-denied');
@@ -293,7 +303,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     env.plan.failUpdate = Exception('x');
     await tester.tap(find.text('Fjern fra madplanen'));
@@ -307,7 +317,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -323,7 +333,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     // Andet medlem skifter til eget måltid.
     await _doc(env.fs, 0).set({
@@ -349,7 +359,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -376,7 +386,7 @@ void main() {
     });
     // Kortet bag viser en neutral henter-tilstand, ikke "Tilføj aftensmad".
     expect(find.text('Tilføj aftensmad'), findsNothing);
-    await tester.tap(find.text('Henter opskrift…'));
+    await tester.tap(_dayCard('Henter opskrift…'));
     await _settle(tester);
     expect(_inSheet(find.text('Henter opskrift…')), findsOneWidget);
     recipes.add([_lasagne]);
@@ -398,7 +408,7 @@ void main() {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
     expect(find.text('Henter opskrift…'), findsNothing);
-    await tester.tap(find.text('Opskriften kunne ikke hentes'));
+    await tester.tap(_dayCard('Opskriften kunne ikke hentes'));
     await _settle(tester);
     expect(_inSheet(find.text('Opskriften kunne ikke hentes')), findsOneWidget);
     await tester.tap(find.text('Skift'));
@@ -422,7 +432,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Skift'));
     await _settle(tester);
@@ -455,7 +465,7 @@ void main() {
     await _pump(tester, recipes: Stream.value(const []), dinners: {
       'Tirsdag': {'recipeId': null, 'directEntry': 'Sushi'}
     });
-    await tester.tap(find.text('Sushi'));
+    await tester.tap(_dayCard('Sushi'));
     await _settle(tester);
     await tester.tap(find.text('Skift'));
     await _settle(tester);
@@ -500,7 +510,7 @@ void main() {
     await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -527,7 +537,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -550,7 +560,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await _doc(env.fs, 0).set({
       'days': {
@@ -569,7 +579,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await _doc(env.fs, 0).set({
       'days': {
@@ -588,7 +598,7 @@ void main() {
     final env = await _pump(tester, dinners: {
       'Tirsdag': {'recipeId': 'r1', 'directEntry': null}
     });
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Skift'));
     await _settle(tester);
