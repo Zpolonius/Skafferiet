@@ -80,4 +80,27 @@ test.describe('madplan', () => {
     await selectPlanDay(page, 'Søndag', sunday);
     await expect(flt(page, 'Søndagssteg')).toBeVisible();
   });
+
+  // #27: ugens aftensmad skal kunne ses uden at trykke på hver dag.
+  test('ugens aftensmad vises i oversigten uden at vælge dagen (#27)', async ({ page }) => {
+    const { now } = await pinClock(page);
+    const user = await seedHousehold();
+    await seedMealPlan(user.householdId, { Søndag: { dinner: { directEntry: 'Søndagssteg oversigt' } } }, now);
+
+    await login(page, user);
+    await openTab(page, 'Madplan');
+
+    // Ingen selectPlanDay: oversigten står under dagens måltider, så der scrolles til den.
+    // Striben og oversigtens række har samme label ("Søndag 18. oktober, aftensmad: ...").
+    const label = /^Søndag \d+\. \p{L}+, aftensmad: Søndagssteg oversigt$/u;
+    const buttons = page.getByRole('button', { name: label });
+    await expect(buttons).toHaveCount(2);
+    await expect(buttons.first()).toBeVisible(); // stribens felt
+    const row = buttons.last(); // oversigtens række
+    await row.scrollIntoViewIfNeeded();
+    await expect(flt(page, 'Ugens aftensmad')).toBeVisible();
+    await expect(row).toBeVisible();
+    // Dage uden aftensmad er markeret.
+    await expect(flt(page, 'Ikke planlagt')).toBeVisible();
+  });
 });

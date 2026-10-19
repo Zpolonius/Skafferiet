@@ -48,6 +48,11 @@ class MealPlanScreen extends ConsumerWidget {
           data: (plan) {
             final dailyPlan = plan.days[selectedDay] ?? DailyPlan.empty();
             final calories = dailyPlan.totalCaloriesFor(mealTypes);
+            // Aftensmad pr. dag til prikkerne og ugeoversigten. null = brugeren
+            // har valgt ikke at se aftensmad, så vises hverken prik eller oversigt.
+            final dinners = mealTypes.contains(MealType.dinner)
+                ? _dinnerTitles(plan, ref: ref)
+                : null;
             return CustomScrollView(
               slivers: [
                 SliverPadding(
@@ -92,6 +97,7 @@ class MealPlanScreen extends ConsumerWidget {
                         _WeeklyCarousel(
                           weekStart: weekStart,
                           selectedDay: selectedDay,
+                          dinners: dinners,
                           onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
                         ),
                         const SizedBox(height: 24),
@@ -170,10 +176,19 @@ class MealPlanScreen extends ConsumerWidget {
                     delegate: SliverChildListDelegate([
                       for (final type in mealTypes)
                         _MealSection(
+                          key: ValueKey('slot-card-${type.key}'),
                           title: type.label,
                           icon: type.icon,
                           slot: dailyPlan.slot(type),
                           onTap: () => _showEditSlot(context, selectedDay, type, dailyPlan.slot(type)),
+                        ),
+                      if (dinners != null)
+                        _WeekDinnerOverview(
+                          key: const ValueKey('week-dinner-overview'),
+                          weekStart: weekStart,
+                          dinners: dinners,
+                          selectedDay: selectedDay,
+                          onDaySelected: (day) => ref.read(selectedDayProvider.notifier).state = day,
                         ),
                       const SizedBox(height: 100),
                     ]),
@@ -243,11 +258,16 @@ class _SearchBar extends ConsumerWidget {
 class _WeeklyCarousel extends StatelessWidget {
   final DateTime weekStart;
   final String selectedDay;
+
+  /// Aftensmadens titel pr. ugedag (null = ikke planlagt). Selve map'et er null,
+  /// når brugeren har skjult aftensmad: så vises ingen prikker.
+  final Map<String, String?>? dinners;
   final ValueChanged<String> onDaySelected;
 
   const _WeeklyCarousel({
     required this.weekStart,
     required this.selectedDay,
+    this.dinners,
     required this.onDaySelected,
   });
 
@@ -284,7 +304,11 @@ class _WeeklyCarousel extends StatelessWidget {
 
   Widget _dayCell(BuildContext context, String day, DateTime date) {
     final isSelected = day == selectedDay;
-    final label = '$day ${DateFormat('d. MMMM', 'da_DK').format(date)}';
+    var label = '$day ${DateFormat('d. MMMM', 'da_DK').format(date)}';
+    final dinner = dinners?[day];
+    if (dinners != null) {
+      label += dinner == null ? ', ingen aftensmad planlagt' : ', aftensmad: $dinner';
+    }
 
     return Semantics(
       button: true,
@@ -338,10 +362,160 @@ class _WeeklyCarousel extends StatelessWidget {
                         color: isSelected ? context.colors.onPrimary : context.colors.onSurface,
                       ),
                     ),
+                    if (dinners != null) ...[
+                      const SizedBox(height: 6),
+                      _DinnerMarker(day: day, planned: dinner != null, onSelected: isSelected),
+                    ],
                   ],
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Titlen på en dags aftensmad, eller null når der ikke er planlagt noget.
+/// En slettet eller endnu ikke indlæst opskrift tæller som planlagt og får
+/// samme tekst som dagskortet.
+String? _dinnerTitle(MealSlot slot, {required bool recipesFailed}) {
+  if (slot.recipe != null) return slot.recipe!.title;
+  if (slot.directEntry != null) return slot.directEntry;
+  if (slot.missingRecipe) return 'Opskriften findes ikke længere';
+  if (slot.recipeId != null) {
+    return recipesFailed ? 'Opskriften kunne ikke hentes' : 'Henter opskrift…';
+  }
+  return null;
+}
+
+/// Aftensmad for hver ugedag. Opskriftslisten overvåges kun, når en dag har en
+/// opskrift der ikke er løst endnu (som dagskortet), så ellers koster det intet.
+Map<String, String?> _dinnerTitles(WeeklyMealPlan plan, {required WidgetRef ref}) {
+  bool unresolved(MealSlot s) =>
+      s.recipe == null && s.directEntry == null && !s.missingRecipe && s.recipeId != null;
+  final dinnerOf = {
+    for (final day in planDayNames) day: (plan.days[day] ?? DailyPlan.empty()).dinner,
+  };
+  final failed = dinnerOf.values.any(unresolved) &&
+      ref.watch(recipesProvider.select((r) => r.hasError));
+  return {
+    for (final e in dinnerOf.entries) e.key: _dinnerTitle(e.value, recipesFailed: failed),
+  };
+}
+
+/// Prik (aftensmad planlagt) eller tom ring (ikke planlagt) under datoen.
+class _DinnerMarker extends StatelessWidget {
+  final String day;
+  final bool planned;
+  final bool onSelected;
+
+  const _DinnerMarker({required this.day, required this.planned, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    // På det valgte (grønne) felt skal markøren være lys, ellers mørk.
+    final color = onSelected ? context.colors.onPrimary : context.colors.primary;
+    return Container(
+      key: ValueKey(planned ? 'dinner-dot-$day' : 'dinner-ring-$day'),
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: planned ? color : null,
+        border: planned
+            ? null
+            : Border.all(
+                color: onSelected ? context.colors.onPrimary : context.colors.outline,
+                width: 1.5,
+              ),
+      ),
+    );
+  }
+}
+
+/// "Ugens aftensmad": én række pr. dag, så man ser hele ugen uden at trykke.
+class _WeekDinnerOverview extends StatelessWidget {
+  final DateTime weekStart;
+  final Map<String, String?> dinners;
+  final String selectedDay;
+  final ValueChanged<String> onDaySelected;
+
+  const _WeekDinnerOverview({
+    super.key,
+    required this.weekStart,
+    required this.dinners,
+    required this.selectedDay,
+    required this.onDaySelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dates = daysOfWeek(weekStart);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 24, bottom: 8),
+          child: Text('Ugens aftensmad', style: context.text.titleMedium),
+        ),
+        for (var i = 0; i < planDayNames.length; i++)
+          _row(context, planDayNames[i], dates[i]),
+      ],
+    );
+  }
+
+  Widget _row(BuildContext context, String day, DateTime date) {
+    final title = dinners[day];
+    final isSelected = day == selectedDay;
+    final dayText = '${day.substring(0, 3)} ${DateFormat('d. MMM', 'da_DK').format(date)}';
+    // Fuldt dagsnavn og dato som i striben, så skærmlæseren ikke siger "Søn".
+    final fullDate = '$day ${DateFormat('d. MMMM', 'da_DK').format(date)}';
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: title == null
+          ? '$fullDate, ingen aftensmad planlagt'
+          : '$fullDate, aftensmad: $title',
+      onTap: () => onDaySelected(day),
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => onDaySelected(day),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? context.colors.primaryFixed.withValues(alpha: 0.5) : null,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(
+                  dayText,
+                  style: context.text.labelLarge?.copyWith(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: context.colors.onSurface,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  title ?? 'Ikke planlagt',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: title == null ? context.colors.onSurfaceVariant : context.colors.onSurface,
+                    fontStyle: title == null ? FontStyle.italic : null,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -718,6 +892,7 @@ class _MealSection extends StatelessWidget {
   final VoidCallback onTap;
 
   const _MealSection({
+    super.key,
     required this.title,
     required this.icon,
     required this.slot,
