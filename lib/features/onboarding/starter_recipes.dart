@@ -31,7 +31,7 @@ final List<Recipe> starterRecipes = [
     time: '25 min',
     category: RecipeCategory.aftensmad,
     ingredients: [
-      Ingredient(name: 'Kyllingebryst', quantity: 450, unit: 'g', category: 'Kød'),
+      Ingredient(name: 'Kyllingebryst', quantity: 450, unit: 'g', category: 'Kød & Fisk'),
       Ingredient(name: 'Karrypasta / karry', quantity: 2, unit: 'spsk', category: 'Kolonial'),
       Ingredient(name: 'Kokosmælk', quantity: 1, unit: 'dåse', category: 'Kolonial'),
       Ingredient(name: 'Jasminris', quantity: 300, unit: 'g', category: 'Kolonial'),
@@ -53,7 +53,7 @@ final List<Recipe> starterRecipes = [
     time: '30 min',
     category: RecipeCategory.aftensmad,
     ingredients: [
-      Ingredient(name: 'Laksefilet', quantity: 4, unit: 'stk', category: 'Fisk'),
+      Ingredient(name: 'Laksefilet', quantity: 4, unit: 'stk', category: 'Kød & Fisk'),
       Ingredient(name: 'Gulerødder', quantity: 500, unit: 'g', category: 'Frugt & Grønt'),
       Ingredient(name: 'Små kartofler', quantity: 500, unit: 'g', category: 'Frugt & Grønt'),
       Ingredient(name: 'Olivenolie', quantity: 2, unit: 'spsk', category: 'Kolonial'),

@@ -14,10 +14,10 @@ test.describe('varehistorik og forslag (#28)', () => {
     await login(page, user);
     await openTab(page, 'Indkøb');
 
-    // 1. Tilføj "Hakket oksekød" i kategorien "Kød".
+    // 1. Tilføj "Hakket oksekød" i kategorien "Kød & Fisk".
     await page.getByRole('button', { name: 'Tilføj vare', exact: true }).click();
     await typeInto(page, NAME_FIELD, 'Hakket oksekød');
-    await page.getByRole('button', { name: 'Kød', exact: true }).click();
+    await page.getByRole('button', { name: 'Kød & Fisk', exact: true }).click();
     await page.getByRole('button', { name: 'Tilføj til liste', exact: true }).click();
     await expect(flt(page, 'Hakket oksekød')).toBeVisible();
 
@@ -29,7 +29,7 @@ test.describe('varehistorik og forslag (#28)', () => {
     expect(await readCollection(`households/${user.householdId}/grocery_list`)).toHaveLength(0);
     const history = await readCollection(`households/${user.householdId}/item_history`);
     expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({ id: 'hakket oksekød', name: 'Hakket oksekød', category: 'Kød', useCount: 1 });
+    expect(history[0]).toMatchObject({ id: 'hakket oksekød', name: 'Hakket oksekød', category: 'Kød & Fisk', useCount: 1 });
 
     // 3. Skriv "hak": forslaget vises, og et tryk udfylder navn og kategori.
     await page.getByRole('button', { name: 'Tilføj vare', exact: true }).click();
@@ -45,7 +45,7 @@ test.describe('varehistorik og forslag (#28)', () => {
     await expect(flt(page, 'Hakket oksekød')).toBeVisible();
     await expect
       .poll(async () => (await readCollection(`households/${user.householdId}/grocery_list`)).map((g) => [g.name, g.category]))
-      .toEqual([['Hakket oksekød', 'Kød']]);
+      .toEqual([['Hakket oksekød', 'Kød & Fisk']]);
     await expect
       .poll(async () => (await readCollection(`households/${user.householdId}/item_history`))[0]?.useCount)
       .toBe(2);

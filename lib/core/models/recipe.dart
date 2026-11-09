@@ -1,3 +1,5 @@
+import '../../features/grocery/grocery_defaults.dart';
+
 enum RecipeCategory { morgenmad, frokost, aftensmad, snack }
 
 /// Hvem der kan se en opskrift. Manglende felt i databasen = [household].
@@ -129,7 +131,7 @@ class Ingredient {
       name: map['name'] ?? '',
       quantity: (map['quantity'] as num?)?.toDouble() ?? 0,
       unit: map['unit'] ?? '',
-      category: map['category'] ?? 'Andet',
+      category: normalizeGroceryCategory(map['category'] as String?),
       nutritionPer100: Nutrition.fromMap(map['nutrition']),
     );
   }

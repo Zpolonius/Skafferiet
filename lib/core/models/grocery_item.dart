@@ -1,3 +1,5 @@
+import '../../features/grocery/grocery_defaults.dart';
+
 class GroceryItem {
   static const sourceManual = 'manual';
   static const sourceMealPlan = 'meal_plan';
@@ -80,7 +82,7 @@ class GroceryItem {
     return GroceryItem(
       id: id,
       name: map['name'] ?? '',
-      category: map['category'] ?? 'Andet',
+      category: normalizeGroceryCategory(map['category'] as String?),
       quantity: map['quantity'] ?? '',
       unit: map['unit'],
       imageUrl: map['imageUrl'],

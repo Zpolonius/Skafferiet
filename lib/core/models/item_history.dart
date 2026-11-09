@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../features/grocery/grocery_defaults.dart';
 
 /// Grænser for en historikpost. Samme som for indkøbsvarer og faste varer, og
 /// de skal holdes i trit med `firestore.rules` (`item_history`).
@@ -51,12 +52,11 @@ class ItemHistoryEntry {
     this.lastUsed,
   });
 
-  /// `null` hvis dokumentet mangler navn eller kategori (så ignoreres det).
+  /// `null` hvis dokumentet mangler navn (så ignoreres det).
   static ItemHistoryEntry? fromMap(String key, Map<String, dynamic> map) {
     final name = map['name'];
-    final category = map['category'];
     if (name is! String || name.trim().isEmpty) return null;
-    if (category is! String || category.trim().isEmpty) return null;
+    final category = normalizeGroceryCategory(map['category'] as String?);
     final unit = map['unit'];
     final quantity = map['quantity'];
     final lastUsed = map['lastUsed'];

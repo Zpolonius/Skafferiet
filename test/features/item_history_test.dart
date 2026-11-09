@@ -215,7 +215,7 @@ void main() {
       expect(find.byKey(const ValueKey('suggestion_hakket oksekød')),
           findsNothing);
       final chip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Kød'));
+          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Kød & Fisk'));
       expect(chip.selected, isTrue);
     });
 

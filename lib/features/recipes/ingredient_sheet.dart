@@ -4,6 +4,7 @@ import '../../core/models/recipe.dart';
 import '../../core/models/recipe_units.dart';
 import '../../shared/utils/number_format.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
+import '../grocery/grocery_defaults.dart';
 
 /// Åbner bottom sheet til at tilføje eller rette en ingrediens.
 /// Returnerer den nye/rettede ingrediens, eller null hvis brugeren fortryder.
@@ -37,6 +38,8 @@ class _IngredientSheetState extends State<IngredientSheet> {
 
   String _selectedUnit = 'g';
   bool _isCustomUnit = false;
+  late String _selectedCategory;
+  late final List<String> _categories;
   bool _showNutrition = false;
   bool _submitted = false;
 
@@ -48,6 +51,11 @@ class _IngredientSheetState extends State<IngredientSheet> {
     final ing = widget.initial;
     final n = ing?.nutritionPer100;
     String fmt(double? v) => v == null ? '' : formatDanishNumber(v);
+
+    _selectedCategory = normalizeGroceryCategory(ing?.category);
+    _categories = defaultGroceryCategories.contains(_selectedCategory)
+        ? defaultGroceryCategories
+        : [...defaultGroceryCategories, _selectedCategory];
 
     _nameController = TextEditingController(text: ing?.name ?? '');
     _quantityController = TextEditingController(
@@ -150,7 +158,7 @@ class _IngredientSheetState extends State<IngredientSheet> {
         name: _nameController.text.trim(),
         quantity: parseDanishNumber(_quantityController.text) ?? 0,
         unit: _unit,
-        category: widget.initial?.category ?? 'Andet',
+        category: _selectedCategory,
         nutritionPer100: nutrition,
       ),
     );
@@ -262,6 +270,20 @@ class _IngredientSheetState extends State<IngredientSheet> {
             ],
             const SizedBox(height: 24),
             _buildNutritionSection(theme),
+            const SizedBox(height: 20),
+            Text('Kategori', style: theme.textTheme.labelSmall),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._categories.map((c) => ChoiceChip(
+                      label: Text(c),
+                      selected: _selectedCategory == c,
+                      onSelected: (_) => setState(() => _selectedCategory = c),
+                    )),
+              ],
+            ),
             const SizedBox(height: 32),
             FilledButton(
               key: const Key('ingredient-submit'),
