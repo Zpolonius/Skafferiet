@@ -104,13 +104,46 @@ class _Plan extends MealPlanNotifier {
   }
 }
 
-Future<_Plan> _pump(WidgetTester tester, String day) async {
+/// Som [_Plan], men fjerner faktisk aftensmaden i planen, så skærmen opdateres.
+class _LivePlan extends _Plan {
+  final controller = StreamController<WeeklyMealPlan>();
+  late WeeklyMealPlan current;
+
+  @override
+  Stream<WeeklyMealPlan> build() {
+    current = WeeklyMealPlan(id: 'w', weekStart: DateTime(2026, 9, 28), days: {
+      'Tirsdag': DailyPlan(
+        breakfast: MealSlot(),
+        lunch: MealSlot(),
+        dinner: MealSlot(recipe: _lasagne),
+        snack: MealSlot(),
+      ),
+    });
+    controller.add(current);
+    ref.onDispose(controller.close);
+    return controller.stream;
+  }
+
+  @override
+  Future<void> updateSlot(String day, String slotType,
+      {Recipe? recipe, String? directEntry, String? weekId}) async {
+    await super.updateSlot(day, slotType, recipe: recipe, directEntry: directEntry);
+    if (recipe == null && directEntry == null) {
+      controller.add(WeeklyMealPlan(id: 'w', weekStart: current.weekStart, days: {
+        day: DailyPlan(
+            breakfast: MealSlot(), lunch: MealSlot(), dinner: MealSlot(), snack: MealSlot()),
+      }));
+    }
+  }
+}
+
+Future<_Plan> _pump(WidgetTester tester, String day, {_Plan? withPlan}) async {
   final user = _User();
   when(() => user.displayName).thenReturn('Mette');
   when(() => user.photoURL).thenReturn(null);
   await tester.binding.setSurfaceSize(const Size(390, 1400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  final plan = _Plan();
+  final plan = withPlan ?? _Plan();
   final router = GoRouter(routes: [
     GoRoute(path: '/', builder: (_, __) => const MealPlanScreen()),
     GoRoute(
@@ -138,13 +171,21 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
+/// Teksten i dagens måltidskort (aftensmad), uden "Ugens aftensmad"-oversigten:
+/// finder præcis ét match, så testen stadig fanger dobbelte kort.
+Finder _dayCard(String text) => find.descendant(
+    of: find.byKey(const ValueKey('slot-card-dinner')), matching: find.text(text));
+
+Finder _overviewText(String text) => find.descendant(
+    of: find.byKey(const ValueKey('week-dinner-overview')), matching: find.text(text));
+
 void main() {
   setUpAll(() => initializeDateFormatting('da_DK', null));
 
   testWidgets('tryk på udfyldt slot åbner redigeringsark med nuværende måltid',
       (tester) async {
     await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     expect(find.text('Fjern fra madplanen'), findsOneWidget);
     expect(find.text('Skift'), findsOneWidget);
@@ -161,10 +202,28 @@ void main() {
     expect(find.text('Eget måltid'), findsOneWidget);
   });
 
+  testWidgets('når aftensmaden fjernes, bliver prikken til en ring og oversigten til "Ikke planlagt"',
+      (tester) async {
+    await _pump(tester, 'Tirsdag', withPlan: _LivePlan());
+    expect(find.byKey(const ValueKey('dinner-dot-Tirsdag')), findsOneWidget);
+    expect(_overviewText('Lasagne'), findsOneWidget);
+    expect(find.text('Ikke planlagt'), findsNWidgets(6));
+
+    await tester.tap(_dayCard('Lasagne'));
+    await _settle(tester);
+    await tester.tap(find.text('Fjern fra madplanen'));
+    await _settle(tester);
+
+    expect(find.byKey(const ValueKey('dinner-dot-Tirsdag')), findsNothing);
+    expect(find.byKey(const ValueKey('dinner-ring-Tirsdag')), findsOneWidget);
+    expect(find.text('Lasagne'), findsNothing);
+    expect(find.text('Ikke planlagt'), findsNWidgets(7));
+  });
+
   testWidgets('Fjern fra madplanen rydder med nøglen, lukker og viser Fortryd',
       (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -175,7 +234,7 @@ void main() {
 
   testWidgets('Fortryd gendanner id på slettet opskrift', (tester) async {
     final plan = await _pump(tester, 'Mandag');
-    await tester.tap(find.text('Opskriften findes ikke længere'));
+    await tester.tap(_dayCard('Opskriften findes ikke længere'));
     await _settle(tester);
     expect(find.text('Se opskrift'), findsNothing);
     await tester.tap(find.text('Fjern fra madplanen'));
@@ -190,7 +249,7 @@ void main() {
 
   testWidgets('Fortryd gendanner eget måltid', (tester) async {
     final plan = await _pump(tester, 'Onsdag');
-    await tester.tap(find.text('Sushi'));
+    await tester.tap(_dayCard('Sushi'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -201,7 +260,7 @@ void main() {
 
   testWidgets('Se opskrift åbner /recipes/<id>', (tester) async {
     await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Se opskrift'));
     await _settle(tester);
@@ -211,7 +270,7 @@ void main() {
   testWidgets('Skift til anden opskrift (med filter) gemmer kun opskriften',
       (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Skift'));
     await _settle(tester);
@@ -234,7 +293,7 @@ void main() {
 
   testWidgets('Skift til eget måltid gemmer kun teksten', (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Skift'));
     await _settle(tester);
@@ -254,7 +313,7 @@ void main() {
   testWidgets('skrivefejl holder arket åbent med dansk fejl', (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
     plan.failWith = Exception('permission-denied');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -265,7 +324,7 @@ void main() {
   testWidgets('SnackBar efter Fjern siger "Aftensmad fjernet fra tirsdag"',
       (tester) async {
     await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -304,7 +363,7 @@ void main() {
       (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
     plan.hang = Completer<void>();
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -326,7 +385,7 @@ void main() {
       (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
     plan.hang = Completer<void>();
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await tester.pump(const Duration(milliseconds: 1300));
@@ -342,7 +401,7 @@ void main() {
   testWidgets('Fortryd efter bekræftet sletning bruger transaktionen',
       (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);
@@ -355,7 +414,7 @@ void main() {
       (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
     plan.hang = Completer<void>();
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Skift'));
     await _settle(tester);
@@ -381,7 +440,7 @@ void main() {
   testWidgets('Fortryd der fejler kan prøves igen', (tester) async {
     final plan = await _pump(tester, 'Tirsdag');
     plan.restoreFailures = 1;
-    await tester.tap(find.text('Lasagne'));
+    await tester.tap(_dayCard('Lasagne'));
     await _settle(tester);
     await tester.tap(find.text('Fjern fra madplanen'));
     await _settle(tester);

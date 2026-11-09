@@ -108,6 +108,11 @@ Future<void> _settle(WidgetTester t) async {
   }
 }
 
+/// Teksten i dagens måltidskort (aftensmad), uden "Ugens aftensmad"-oversigten:
+/// finder præcis ét match, så testen stadig fanger dobbelte kort.
+Finder _dayCard(String text) => find.descendant(
+    of: find.byKey(const ValueKey('slot-card-dinner')), matching: find.text(text));
+
 void main() {
   setUpAll(() => initializeDateFormatting('da_DK', null));
 
@@ -172,7 +177,7 @@ void main() {
     testWidgets('ingen træffere: Skriv som eget måltid skifter til Eget måltid',
         (tester) async {
       final plan = await _pump(tester, 'Tirsdag');
-      await tester.tap(find.text('Lasagne'));
+      await tester.tap(_dayCard('Lasagne'));
       await _settle(tester);
       await tester.tap(find.text('Skift'));
       await _settle(tester);
@@ -195,7 +200,7 @@ void main() {
     testWidgets('ingrediens-søgning i Skift viser nuværende med flueben',
         (tester) async {
       final plan = await _pump(tester, 'Tirsdag');
-      await tester.tap(find.text('Lasagne'));
+      await tester.tap(_dayCard('Lasagne'));
       await _settle(tester);
       await tester.tap(find.text('Skift'));
       await _settle(tester);
