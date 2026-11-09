@@ -1,3 +1,4 @@
+import '../../features/grocery/grocery_defaults.dart';
 import '../services/recurring_schedule.dart';
 import 'grocery_item.dart';
 import 'recurrence.dart';
@@ -115,7 +116,7 @@ class RecurringItem {
       name: name,
       quantity: map['quantity'] is String ? map['quantity'] : '1',
       unit: map['unit'] is String ? map['unit'] : null,
-      category: map['category'] is String ? map['category'] : 'Andet',
+      category: normalizeGroceryCategory(map['category'] as String?),
       imageUrl: map['imageUrl'] is String ? map['imageUrl'] : null,
       recurrence: recurrence,
       nextDate: nextDate,

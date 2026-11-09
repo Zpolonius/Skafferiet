@@ -106,7 +106,7 @@ test.describe('hurtig-tilføj på indkøbslisten (#33)', () => {
           .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
       )
       .toEqual([
-        ['Hakket oksekød', 'Kød', '500', 'g'],
+        ['Hakket oksekød', 'Kød & Fisk', '500', 'g'],
         ['Smør', 'Mejeri', '1', 'pk'],
       ]);
     await expect

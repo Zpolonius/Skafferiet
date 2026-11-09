@@ -154,7 +154,7 @@ void main() {
     await submit(tester, 'HAKKET oksekød');
     final item = (await stored()).single;
     expect(item['name'], 'Hakket oksekød');
-    expect(item['category'], 'Kød');
+    expect(item['category'], 'Kød & Fisk');
     expect((item['quantity'], item['unit']), ('500', 'g'));
   });
 

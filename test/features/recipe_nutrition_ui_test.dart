@@ -115,7 +115,7 @@ void main() {
 
       expect(result!.unit, 'stk');
       expect(result!.nutritionPer100, isNull);
-      expect(result!.category, 'Grønt', reason: 'kategori bevares ved redigering');
+      expect(result!.category, 'Frugt & Grønt', reason: 'kategori bevares ved redigering');
     });
 
     testWidgets('egen enhed via "+ Anden"', (tester) async {

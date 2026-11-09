@@ -10,6 +10,7 @@ import '../../shared/widgets/image_viewer.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_grocery_item_dialog.dart';
+import 'grocery_defaults.dart';
 import 'grocery_provider.dart';
 import 'grocery_quantity_label.dart';
 import 'quick_add_field.dart';
@@ -37,7 +38,7 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
         child: items.when(
           data: (itemsList) {
             final uniqueCategories =
-                itemsList.map((i) => i.category).toSet().toList()..sort();
+                sortGroceryCategories(itemsList.map((i) => i.category).toSet());
 
             final filtered = _selectedCategory == null
                 ? itemsList
@@ -308,12 +309,12 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
       List<GroceryItem> items) {
     final Map<String, List<GroceryItem>> categories = {};
     for (final item in items) {
-      if (!categories.containsKey(item.category)) {
-        categories[item.category] = [];
-      }
-      categories[item.category]!.add(item);
+      categories.putIfAbsent(item.category, () => []).add(item);
     }
-    return categories;
+    final sortedKeys = sortGroceryCategories(categories.keys);
+    return {
+      for (final key in sortedKeys) key: categories[key]!,
+    };
   }
 
   void _showAddItemSheet(BuildContext context) {
@@ -637,22 +638,7 @@ class _GroceryItemTile extends ConsumerWidget {
     );
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Frugt & Grønt':
-        return Icons.apple;
-      case 'Mejeri':
-        return Icons.egg_alt;
-      case 'Kød & Fisk':
-        return Icons.restaurant;
-      case 'Frost':
-        return Icons.ac_unit;
-      case 'Drikkevarer':
-        return Icons.local_drink;
-      default:
-        return Icons.shopping_basket;
-    }
-  }
+  IconData _getCategoryIcon(String category) => categoryIconFor(category);
 }
 
 /// Viser mængden og enheden på en vare, fx "500 g". Den er kun til at læse:

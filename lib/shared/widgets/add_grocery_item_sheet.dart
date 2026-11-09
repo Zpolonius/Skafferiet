@@ -49,7 +49,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
       TextEditingController(text: widget.initialQuantity ?? '1');
   final _customCategoryController = TextEditingController();
 
-  late String _selectedCategory = widget.initialCategory ?? 'Grønt';
+  late String _selectedCategory = widget.initialCategory ?? 'Frugt & Grønt';
   late String _selectedUnit = widget.initialUnit ?? 'stk';
   bool _isAddingCustomCategory = false;
   String? _imageUrl;
