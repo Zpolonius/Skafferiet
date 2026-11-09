@@ -53,7 +53,8 @@ class MealPlanScreen extends ConsumerWidget {
             final dinners = mealTypes.contains(MealType.dinner)
                 ? _dinnerTitles(plan, ref: ref)
                 : null;
-            return CustomScrollView(
+            final content = CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
@@ -180,7 +181,15 @@ class MealPlanScreen extends ConsumerWidget {
                           title: type.label,
                           icon: type.icon,
                           slot: dailyPlan.slot(type),
-                          onTap: () => _showEditSlot(context, selectedDay, type, dailyPlan.slot(type)),
+                          onTap: (slot) => _showEditSlot(context, selectedDay, type, slot),
+                          onDismiss: () => _removeMealSlot(
+                            context,
+                            ref,
+                            day: selectedDay,
+                            mealType: type,
+                            slot: dailyPlan.slot(type),
+                            weekId: plan.id,
+                          ),
                         ),
                       if (dinners != null)
                         _WeekDinnerOverview(
@@ -195,6 +204,19 @@ class MealPlanScreen extends ConsumerWidget {
                   ),
                 ),
               ],
+            );
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(mealPlanProvider);
+                try {
+                  await ref.read(mealPlanProvider.future);
+                } catch (_) {}
+              },
+              child: _DayContentGesture(
+                onSwipeLeft: () => _onSwipeLeft(ref),
+                onSwipeRight: () => _onSwipeRight(ref),
+                child: content,
+              ),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -215,6 +237,48 @@ class MealPlanScreen extends ConsumerWidget {
       builder: (context) => filled
           ? EditMealSlotSheet(day: day, mealType: type, slot: slot)
           : AddCustomMealSheet(initialDay: day, initialCategory: type.label),
+    );
+  }
+
+  void _onSwipeLeft(WidgetRef ref) {
+    final currentDay = ref.read(selectedDayProvider);
+    final idx = planDayNames.indexOf(currentDay);
+    if (idx == -1) return;
+    if (idx < planDayNames.length - 1) {
+      ref.read(selectedDayProvider.notifier).state = planDayNames[idx + 1];
+    } else {
+      ref.read(weekOffsetProvider.notifier).state = ref.read(weekOffsetProvider) + 1;
+      ref.read(selectedDayProvider.notifier).state = planDayNames[0];
+    }
+  }
+
+  void _onSwipeRight(WidgetRef ref) {
+    final currentDay = ref.read(selectedDayProvider);
+    final idx = planDayNames.indexOf(currentDay);
+    if (idx == -1) return;
+    if (idx > 0) {
+      ref.read(selectedDayProvider.notifier).state = planDayNames[idx - 1];
+    } else {
+      ref.read(weekOffsetProvider.notifier).state = ref.read(weekOffsetProvider) - 1;
+      ref.read(selectedDayProvider.notifier).state = planDayNames[planDayNames.length - 1];
+    }
+  }
+
+  void _removeMealSlot(
+    BuildContext context,
+    WidgetRef ref, {
+    required String day,
+    required MealType mealType,
+    required MealSlot slot,
+    required String weekId,
+  }) {
+    removeMealSlotWithUndo(
+      context: context,
+      ref: ref,
+      day: day,
+      mealType: mealType,
+      previous: slot,
+      weekId: weekId,
     );
   }
 
@@ -281,20 +345,26 @@ class _WeeklyCarousel extends StatelessWidget {
 
     // Alle 7 dage deler bredden ligeligt (ingen vandret scroll). Trykfladen er
     // hele feltet; selve kortet har en lille luft til naboerne.
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _maxCellWidth * 7),
-        // Mindst 90 høj, men vokser med stor systemtekst; alle felter er lige høje.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart: (_) {},
+      onHorizontalDragUpdate: (_) {},
+      onHorizontalDragEnd: (_) {},
+      child: Align(
+        alignment: Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 90),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var index = 0; index < days.length; index++)
-                  Expanded(child: _dayCell(context, days[index], dates[index])),
-              ],
+          constraints: const BoxConstraints(maxWidth: _maxCellWidth * 7),
+          // Mindst 90 høj, men vokser med stor systemtekst; alle felter er lige høje.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 90),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var index = 0; index < days.length; index++)
+                    Expanded(child: _dayCell(context, days[index], dates[index])),
+                ],
+              ),
             ),
           ),
         ),
@@ -885,11 +955,51 @@ class _CopyOfferState extends ConsumerState<_CopyOffer> {
   }
 }
 
-class _MealSection extends StatelessWidget {
+class _DayContentGesture extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onSwipeLeft;
+  final VoidCallback onSwipeRight;
+
+  const _DayContentGesture({
+    required this.child,
+    required this.onSwipeLeft,
+    required this.onSwipeRight,
+  });
+
+  @override
+  State<_DayContentGesture> createState() => _DayContentGestureState();
+}
+
+class _DayContentGestureState extends State<_DayContentGesture> {
+  double _dragDelta = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: (_) => _dragDelta = 0,
+      onHorizontalDragUpdate: (details) => _dragDelta += details.primaryDelta ?? 0,
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -100 || _dragDelta < -60) {
+          widget.onSwipeLeft();
+        } else if (velocity > 100 || _dragDelta > 60) {
+          widget.onSwipeRight();
+        }
+        _dragDelta = 0;
+      },
+      onHorizontalDragCancel: () => _dragDelta = 0,
+      child: widget.child,
+    );
+  }
+}
+
+class _MealSection extends StatefulWidget {
   final String title;
   final IconData icon;
   final MealSlot slot;
-  final VoidCallback onTap;
+  final ValueChanged<MealSlot> onTap;
+  final VoidCallback? onDismiss;
 
   const _MealSection({
     super.key,
@@ -897,27 +1007,39 @@ class _MealSection extends StatelessWidget {
     required this.icon,
     required this.slot,
     required this.onTap,
+    this.onDismiss,
   });
 
   @override
+  State<_MealSection> createState() => _MealSectionState();
+}
+
+class _MealSectionState extends State<_MealSection> {
+  bool _dismissed = false;
+
+  @override
+  void didUpdateWidget(covariant _MealSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.slot != widget.slot) {
+      _dismissed = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: context.colors.outline),
-              const SizedBox(width: 8),
-              Text(title, style: Theme.of(context).textTheme.labelSmall),
-            ],
-          ),
-        ),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: slot.recipe != null
+    final slot = widget.slot;
+    final filled = !_dismissed &&
+        (slot.recipe != null ||
+            slot.directEntry != null ||
+            slot.missingRecipe ||
+            slot.recipeId != null);
+
+    final card = InkWell(
+      onTap: () => widget.onTap(_dismissed ? MealSlot() : slot),
+      borderRadius: BorderRadius.circular(16),
+      child: _dismissed
+          ? _EmptySlotCard(title: widget.title)
+          : slot.recipe != null
               ? _FilledSlotCard(recipe: slot.recipe!)
               : slot.directEntry != null
                   ? _DirectEntryCard(text: slot.directEntry!)
@@ -925,8 +1047,53 @@ class _MealSection extends StatelessWidget {
                       ? const _MissingRecipeCard()
                       : slot.recipeId != null
                           ? const _PendingRecipeCard()
-                          : _EmptySlotCard(title: title),
+                          : _EmptySlotCard(title: widget.title),
+    );
+
+    final slotWidget = (filled && widget.onDismiss != null)
+        ? Dismissible(
+            key: ValueKey('dismiss-${widget.title}-${slot.recipeId ?? slot.directEntry ?? ''}'),
+            direction: DismissDirection.horizontal,
+            background: Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 20),
+              decoration: BoxDecoration(
+                color: context.colors.errorContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.delete_outline, color: context.colors.onErrorContainer),
+            ),
+            secondaryBackground: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                color: context.colors.errorContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.delete_outline, color: context.colors.onErrorContainer),
+            ),
+            onDismissed: (_) {
+              setState(() => _dismissed = true);
+              widget.onDismiss!();
+            },
+            child: card,
+          )
+        : card;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Icon(widget.icon, size: 18, color: context.colors.outline),
+              const SizedBox(width: 8),
+              Text(widget.title, style: Theme.of(context).textTheme.labelSmall),
+            ],
+          ),
         ),
+        slotWidget,
       ],
     );
   }

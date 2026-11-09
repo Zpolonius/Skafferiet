@@ -11,6 +11,68 @@ import 'meal_plan_provider.dart';
 import 'recipe_picker.dart';
 import 'slot_write.dart';
 
+/// Sletter et måltid og viser en SnackBar med mulighed for at fortryde.
+Future<void> removeMealSlotWithUndo({
+  required BuildContext context,
+  required WidgetRef ref,
+  required String day,
+  required MealType mealType,
+  required MealSlot previous,
+  required String weekId,
+  Future<bool> Function(Future<void> write)? runWrite,
+}) async {
+  final notifier = ref.read(mealPlanProvider.notifier);
+  final messenger = ScaffoldMessenger.of(context);
+  final errorColor = context.colors.error;
+  final key = mealType.key;
+  final label = mealType.label;
+
+  var removeConfirmed = false;
+  final removeWrite = notifier.updateSlot(day, key, weekId: weekId);
+  removeWrite.then<void>((_) {
+    removeConfirmed = true;
+  }, onError: (Object _) {});
+
+  if (runWrite != null) {
+    final ok = await runWrite(removeWrite);
+    if (!ok) return;
+  }
+
+  Future<void> restore() async {
+    try {
+      await notifier.restoreSlot(
+        day,
+        key,
+        previous,
+        weekId: weekId,
+        ownRemovePending: !removeConfirmed,
+      );
+    } catch (e) {
+      final changed = SlotChangedException.matches(e);
+      messenger.showSnackBar(SnackBar(
+        content: Text(changed
+            ? 'Måltidet er ændret i mellemtiden – kunne ikke fortryde.'
+            : 'Kunne ikke fortryde. Prøv igen.'),
+        backgroundColor: errorColor,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 8),
+        action: changed
+            ? null
+            : SnackBarAction(label: 'Prøv igen', onPressed: restore),
+      ));
+    }
+  }
+
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text('$label fjernet fra ${day.toLowerCase()}'),
+      duration: const Duration(seconds: 6),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(label: 'Fortryd', onPressed: restore),
+    ));
+}
+
 /// Åbnes når man trykker på et udfyldt måltid i madplanen: viser det nuværende
 /// måltid og lader brugeren se opskriften, skifte måltid eller fjerne det.
 class EditMealSlotSheet extends ConsumerStatefulWidget {
@@ -112,55 +174,20 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
   }
 
   Future<void> _remove() async {
-    final notifier = ref.read(mealPlanProvider.notifier);
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    final errorColor = context.colors.error;
-    final day = widget.day;
-    final key = widget.mealType.key;
-    final previous = _live;
-    final weekId = _weekId;
-    final label = widget.mealType.label;
-
-    // Huskes, så Fortryd ved om serveren har nået at bekræfte sletningen.
-    var removeConfirmed = false;
-    final removeWrite = notifier.updateSlot(day, key);
-    removeWrite.then<void>((_) {
-      removeConfirmed = true;
-    }, onError: (Object _) {});
-
-    final ok = await _run(removeWrite);
-    if (!ok) return;
-    if (mounted) navigator.pop();
-
-    Future<void> restore() async {
-      try {
-        await notifier.restoreSlot(day, key, previous,
-            weekId: weekId, ownRemovePending: !removeConfirmed);
-      } catch (e) {
-        final changed = SlotChangedException.matches(e);
-        messenger.showSnackBar(SnackBar(
-          content: Text(changed
-              ? 'Måltidet er ændret i mellemtiden – kunne ikke fortryde.'
-              : 'Kunne ikke fortryde. Prøv igen.'),
-          backgroundColor: errorColor,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 8),
-          action: changed
-              ? null
-              : SnackBarAction(label: 'Prøv igen', onPressed: restore),
-        ));
-      }
-    }
-
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text('$label fjernet fra ${day.toLowerCase()}'),
-        duration: const Duration(seconds: 6),
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(label: 'Fortryd', onPressed: restore),
-      ));
+    await removeMealSlotWithUndo(
+      context: context,
+      ref: ref,
+      day: widget.day,
+      mealType: widget.mealType,
+      previous: _live,
+      weekId: _weekId,
+      runWrite: (write) async {
+        final ok = await _run(write);
+        if (ok && mounted) navigator.pop();
+        return ok;
+      },
+    );
   }
 
   /// Gemmer enten en opskrift eller en tekst — aldrig begge.
