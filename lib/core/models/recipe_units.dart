@@ -49,3 +49,39 @@ double? toGramsOrMl(double quantity, String unit) {
   final factor = _weightFactors[u] ?? _volumeFactors[u];
   return factor == null ? null : quantity * factor;
 }
+
+/// Enheden med store/små bogstaver og mellemrum fjernet, som den står i
+/// [recipeUnits]: "G " -> "g". Ukendte enheder beholdes, som de er skrevet.
+String canonicalUnit(String unit) {
+  final trimmed = unit.trim();
+  for (final u in recipeUnits) {
+    if (u.toLowerCase() == trimmed.toLowerCase()) return u;
+  }
+  return trimmed;
+}
+
+// Oplæsning for skærmlæsere: (ental, flertal). Forkortelser som "tsk" og
+// "spsk" læses ikke som bogstaver.
+const Map<String, (String, String)> _spokenUnits = {
+  'g': ('gram', 'gram'),
+  'kg': ('kilogram', 'kilogram'),
+  'ml': ('milliliter', 'milliliter'),
+  'cl': ('centiliter', 'centiliter'),
+  'dl': ('deciliter', 'deciliter'),
+  'l': ('liter', 'liter'),
+  'tsk': ('teskefuld', 'teskefulde'),
+  'spsk': ('spiseskefuld', 'spiseskefulde'),
+  'pk': ('pakke', 'pakker'),
+  'bdt': ('bundt', 'bundter'),
+  'dåse': ('dåse', 'dåser'),
+  'potte': ('potte', 'potter'),
+};
+
+/// Enheden skrevet ud til oplæsning: "g" -> "gram", "tsk" -> "teskefulde" (ved
+/// flertal). Enheder uden navn her, fx "stk" eller "fed", læses som de står.
+String unitSpokenName(String unit, {required bool plural}) {
+  final canonical = canonicalUnit(unit);
+  final names = _spokenUnits[canonical.toLowerCase()];
+  if (names == null) return canonical;
+  return plural ? names.$2 : names.$1;
+}

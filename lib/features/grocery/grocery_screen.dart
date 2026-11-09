@@ -11,6 +11,7 @@ import '../../shared/widgets/profile_avatar.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import 'edit_grocery_item_dialog.dart';
 import 'grocery_provider.dart';
+import 'grocery_quantity_label.dart';
 import 'quick_add_field.dart';
 import 'recurring/recurring_item_sheet.dart';
 import 'recurring/recurring_items_provider.dart';
@@ -452,6 +453,7 @@ class _GroceryItemTile extends ConsumerWidget {
         ? null
         : ref.watch(recurringItemsProvider.select((items) =>
             items.valueOrNull?.where((r) => r.id == recurringId).firstOrNull));
+    final quantityLabel = groceryQuantityLabel(item.quantity, item.unit);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -546,15 +548,19 @@ class _GroceryItemTile extends ConsumerWidget {
                     child: Icon(Icons.drag_indicator,
                         color: context.colors.outline, size: 22),
                   )
-                else if (!item.isChecked)
-                  _QuantityPicker(
-                    quantity: item.quantity,
-                    onChanged: (val) => ref
-                        .read(groceryListProvider.notifier)
-                        .updateQuantity(item.id, val),
-                  )
-                else
-                  Icon(Icons.check_circle, color: context.colors.primary),
+                else ...[
+                  // Afkrydsede varer beholder mængden, dæmpet.
+                  if (quantityLabel != null)
+                    _QuantityChip(
+                      key: Key('grocery_quantity_${item.id}'),
+                      label: quantityLabel,
+                      dimmed: item.isChecked,
+                    ),
+                  if (item.isChecked) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.check_circle, color: context.colors.primary),
+                  ],
+                ],
               ],
             ),
           ),
@@ -649,26 +655,43 @@ class _GroceryItemTile extends ConsumerWidget {
   }
 }
 
-class _QuantityPicker extends StatelessWidget {
-  final String quantity;
-  final ValueChanged<String> onChanged;
+/// Viser mængden og enheden på en vare, fx "500 g". Den er kun til at læse:
+/// mængden ændres i redigeringsdialogen.
+class _QuantityChip extends StatelessWidget {
+  final GroceryQuantityLabel label;
+  final bool dimmed;
 
-  const _QuantityPicker({required this.quantity, required this.onChanged});
+  const _QuantityChip({
+    super.key,
+    required this.label,
+    required this.dimmed,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.colors.primaryFixed,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        quantity,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: context.colors.primary,
-              fontWeight: FontWeight.bold,
-            ),
+    final color = dimmed ? context.colors.outline : context.colors.primary;
+    return Semantics(
+      label: label.spoken,
+      excludeSemantics: true,
+      child: Container(
+        // Fast maks. bredde, så en lang enhed ikke skubber varens navn væk.
+        constraints: const BoxConstraints(maxWidth: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: dimmed
+              ? context.colors.surfaceContainerHigh
+              : context.colors.primaryFixed,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label.text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
       ),
     );
   }
