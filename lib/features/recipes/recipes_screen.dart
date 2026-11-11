@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'community_recipes_provider.dart';
 import '../moderation/moderation_provider.dart';
-import 'recipe_detail_screen.dart' show SharedBadge;
+import '../profile/household_provider.dart';
+import 'recipe_detail_screen.dart' show SharedBadge, addRecipeIngredientsToShoppingList;
 import 'recipe_search.dart';
 import 'recipes_provider.dart';
 import '../../core/services/recipe_sharing.dart';
 import '../../core/models/recipe.dart';
+import '../../shared/widgets/add_to_meal_plan_sheet.dart';
+import '../../shared/widgets/app_bottom_sheet.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import '../../core/theme/theme_context.dart';
@@ -96,6 +99,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
     final notifier = ref.read(communityRecipesProvider.notifier);
     final results = _communityResults(s);
     final filtering = searchQuery.trim().isNotEmpty || selectedCategory != null;
+    final householdId = ref.watch(householdProvider.select((h) => h.householdId));
 
     if (results.isEmpty) {
       if (s.isLoading) {
@@ -157,8 +161,11 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final recipe = results[index];
-              return GestureDetector(
+              final foreign = recipe.householdId != null && recipe.householdId != householdId;
+              return InkWell(
                 onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
+                onLongPress: () => _showRecipeQuickActions(context, recipe, foreign: foreign),
+                borderRadius: BorderRadius.circular(16),
                 child: _RecipeCard(recipe: recipe, showAuthor: true),
               );
             },
@@ -202,14 +209,27 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   Widget build(BuildContext context) {
     final community = _scope == RecipeScope.community;
     final recipes = ref.watch(recipesProvider);
+    final householdId = ref.watch(householdProvider.select((h) => h.householdId));
     ref.listen(focusRecipeSearchProvider, (_, requested) {
       if (requested) _focusSearchIfRequested();
     });
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
+        child: RefreshIndicator(
+          onRefresh: () async {
+            if (_scope == RecipeScope.community) {
+              await ref.read(communityRecipesProvider.notifier).reload();
+            } else {
+              ref.invalidate(recipesProvider);
+              try {
+                await ref.read(recipesProvider.future);
+              } catch (_) {}
+            }
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
               sliver: SliverToBoxAdapter(
@@ -322,8 +342,11 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final recipe = results[index];
-                        return GestureDetector(
+                        final foreign = recipe.householdId != null && recipe.householdId != householdId;
+                        return InkWell(
                           onTap: () => GoRouter.of(context).push('/recipes/${recipe.id}'),
+                          onLongPress: () => _showRecipeQuickActions(context, recipe, foreign: foreign),
+                          borderRadius: BorderRadius.circular(16),
                           child: _RecipeCard(recipe: recipe, isFeatured: index == 0),
                         );
                       },
@@ -343,11 +366,107 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
           ],
         ),
       ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/recipes/create'),
         label: const Text('Opret opskrift'),
         icon: const Icon(Icons.add),
       ),
+    );
+  }
+
+  void _showRecipeQuickActions(
+    BuildContext context,
+    Recipe recipe, {
+    required bool foreign,
+  }) {
+    showAppBottomSheet(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text(
+                    recipe.title,
+                    style: sheetContext.text.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Divider(height: 1),
+                InkWell(
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    showAppBottomSheet(
+                      context: context,
+                      builder: (context) => AddToMealPlanSheet(
+                        recipe: recipe,
+                        resolveRecipe: foreign
+                            ? (r) => ref.read(recipesProvider.notifier).copyToHousehold(r)
+                            : null,
+                      ),
+                    );
+                  },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_month_outlined, color: sheetContext.colors.primary, size: 22),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              'Tilføj til madplan',
+                              style: sheetContext.text.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: sheetContext.colors.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    addRecipeIngredientsToShoppingList(context, ref, recipe);
+                  },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_shopping_cart, color: sheetContext.colors.primary, size: 22),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              'Tilføj til indkøb',
+                              style: sheetContext.text.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: sheetContext.colors.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

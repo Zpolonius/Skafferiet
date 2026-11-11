@@ -20,6 +20,35 @@ import 'recipe_form_widgets.dart';
 import '../../shared/utils/number_format.dart';
 import '../../core/theme/theme_context.dart';
 
+/// Tilføjer opskriftens ingredienser til indkøbslisten og viser en SnackBar.
+void addRecipeIngredientsToShoppingList(
+  BuildContext context,
+  WidgetRef ref,
+  Recipe recipe,
+) {
+  for (final ing in recipe.ingredients) {
+    ref.read(groceryListProvider.notifier).addItem(
+          GroceryItem(
+            id: const Uuid().v4(),
+            name: ing.name,
+            category: ing.category,
+            quantity: formatQuantity(ing.quantity),
+            unit: ing.unit,
+            source: 'recipe',
+            createdAt: DateTime.now(),
+          ),
+        );
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('${recipe.ingredients.length} ingredienser tilføjet til indkøbslisten'),
+      backgroundColor: context.colors.primary,
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
 class RecipeDetailScreen extends ConsumerWidget {
   final String recipeId;
 
@@ -295,27 +324,7 @@ class RecipeDetailScreen extends ConsumerWidget {
   }
 
   void _addIngredientsToList(BuildContext context, WidgetRef ref, dynamic recipe) {
-    for (final ing in recipe.ingredients) {
-      ref.read(groceryListProvider.notifier).addItem(
-        GroceryItem(
-          id: const Uuid().v4(),
-          name: ing.name,
-          category: ing.category,
-          quantity: formatQuantity(ing.quantity),
-          unit: ing.unit,
-          source: 'recipe',
-          createdAt: DateTime.now(),
-        ),
-      );
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${recipe.ingredients.length} ingredienser tilføjet til indkøbslisten'),
-        backgroundColor: context.colors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    addRecipeIngredientsToShoppingList(context, ref, recipe);
   }
 
   void _showAddToMealPlan(BuildContext context, WidgetRef ref, Recipe recipe,

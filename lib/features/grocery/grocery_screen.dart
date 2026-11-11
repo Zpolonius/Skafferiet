@@ -50,8 +50,16 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                 ? <String, List<GroceryItem>>{}
                 : _groupItemsByCategory(filtered);
 
-            return CustomScrollView(
-              slivers: [
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(groceryListProvider);
+                try {
+                  await ref.read(groceryListProvider.future);
+                } catch (_) {}
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                   sliver: SliverToBoxAdapter(
@@ -291,7 +299,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                   ],
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
-            );
+            ),
+          );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Fejl: $err')),
