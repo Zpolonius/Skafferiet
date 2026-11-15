@@ -1,3 +1,5 @@
+import '../../shared/utils/number_format.dart';
+
 /// Standardenheder der vises som valg, når man tilføjer en ingrediens.
 /// Dækker også de enheder, start-opskrifterne bruger.
 const List<String> recipeUnits = [
@@ -58,6 +60,37 @@ String canonicalUnit(String unit) {
     if (u.toLowerCase() == trimmed.toLowerCase()) return u;
   }
   return trimmed;
+}
+
+final _amountPattern = RegExp(r'^(\d+(?:[.,]\d+)?)\s*(.*)$');
+
+/// Mængdeteksten fra et frit felt ("400g", "1,5 kg", "2 store", "efter smag")
+/// som mængde og enhed til en [Ingredient].
+///
+/// * Tallet læses med [parseDanishNumber] (komma eller punktum).
+/// * Kendte enheder skrives som i [recipeUnits] ("400 G" -> 400 g); et tal
+///   uden enhed bliver "stk"; en anden kort enhed ("2 store") beholdes.
+/// * Uden et læsbart tal større end 0 er mængden 0 (= ingen mængde, som i
+///   opskriftsformularen) og enheden tom; teksten kommer så i [note], så den
+///   ikke går tabt. Er enheden for lang, bliver den "stk" og teksten en note.
+({double quantity, String unit, String? note}) parseIngredientAmount(
+    String input) {
+  final text = input.trim().replaceAll(RegExp(r'\s+'), ' ');
+  final m = _amountPattern.firstMatch(text);
+  final number = m == null ? null : parseDanishNumber(m.group(1)!);
+  if (m == null || number == null || number <= 0) {
+    return (quantity: 0, unit: '', note: text.isEmpty ? null : text);
+  }
+  final rest = m.group(2)!.trim();
+  if (rest.isEmpty) return (quantity: number, unit: 'stk', note: null);
+  final known = canonicalUnit(rest);
+  if (recipeUnits.contains(known) || canConvertUnit(known)) {
+    return (quantity: number, unit: known.toLowerCase(), note: null);
+  }
+  if (rest.length <= maxCustomUnitLength) {
+    return (quantity: number, unit: rest, note: null);
+  }
+  return (quantity: number, unit: 'stk', note: rest);
 }
 
 // Oplæsning for skærmlæsere: (ental, flertal). Forkortelser som "tsk" og
