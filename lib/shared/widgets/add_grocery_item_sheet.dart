@@ -11,6 +11,7 @@ import '../../features/auth/auth_provider.dart';
 import '../../features/grocery/grocery_defaults.dart';
 import '../../features/grocery/grocery_provider.dart';
 import '../../features/grocery/item_history_provider.dart';
+import '../../features/grocery/suggestion_removal.dart';
 import '../../features/grocery/recurring/recurrence_picker.dart';
 import '../../features/grocery/recurring/recurring_items_provider.dart';
 import '../../features/grocery/recurring/recurring_items_service.dart';
@@ -19,6 +20,7 @@ import '../utils/danish_dates.dart';
 import '../utils/image_upload_service.dart';
 import 'app_bottom_sheet.dart';
 import 'item_suggestion_list.dart';
+import 'sheet_snack_bar_host.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/theme_context.dart';
 
@@ -48,6 +50,7 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
   late final _quantityController =
       TextEditingController(text: widget.initialQuantity ?? '1');
   final _customCategoryController = TextEditingController();
+  final _snackHost = SheetSnackBarHost();
 
   late String _selectedCategory = widget.initialCategory ?? 'Frugt & Grønt';
   late String _selectedUnit = widget.initialUnit ?? 'stk';
@@ -65,8 +68,29 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
   final categories = defaultGroceryCategories;
   final units = defaultGroceryUnits;
 
+  /// Rodens messenger, fanget mens arket er åbent: bruges når arket er lukket,
+  /// men serveren svarer, eller når en SnackBar flyttes ud af arket.
+  ScaffoldMessengerState? _rootMessenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _rootMessenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Efter første frame, så overlayet kan lægges ind uden at ændre widget-
+    // træet midt i en build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _snackHost.attach(context);
+    });
+  }
+
   @override
   void dispose() {
+    _snackHost.dispose();
     _nameController.dispose();
     _quantityController.dispose();
     _customCategoryController.dispose();
@@ -313,8 +337,15 @@ class _AddGroceryItemSheetState extends ConsumerState<AddGroceryItemSheet> {
               ItemSuggestionList(
                 suggestions: suggestions,
                 onPick: _applySuggestion,
-                onRemove: (e) =>
-                    ref.read(itemHistoryProvider.notifier).remove(e.key),
+                onRemove: (e) => removeSuggestionWithUndo(
+                  messenger: () => _snackHost.messenger,
+                  fallback: () => _rootMessenger,
+                  onShown: (c, move) =>
+                      _snackHost.track(c, onDispose: move),
+                  notifier: ref.read(itemHistoryProvider.notifier),
+                  entry: e,
+                  errorColor: context.colors.error,
+                ),
               ),
             ],
             const SizedBox(height: 16),

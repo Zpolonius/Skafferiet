@@ -490,6 +490,8 @@ class _ErrorRepo implements ItemHistoryRepository {
       Stream.error(Exception('offline'));
   @override
   Future<void> remove(String householdId, String key) async {}
+  @override
+  Future<void> restore(String householdId, ItemHistoryEntry entry) async {}
 }
 
 class _FailingGroceryList extends GroceryListNotifier {

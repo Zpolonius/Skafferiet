@@ -5,7 +5,7 @@ const { test, before, beforeEach, after, describe } = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, writeBatch, serverTimestamp, increment } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp, increment, Timestamp } = require('firebase/firestore');
 
 let env;
 const db = (uid) => env.authenticatedContext(uid).firestore();
@@ -97,5 +97,38 @@ describe('probe: merge og increment', () => {
   test('negativ useCount afvises', async () => {
     const s = db('bob');
     await assertFails(setDoc(doc(s, 'households/HH/item_history/neg'), { name: 'N', category: 'K', useCount: -1, lastUsed: serverTimestamp() }));
+  });
+});
+
+// Fortryd af "Fjern forslag" (#47): ItemHistoryRepository.restore skriver
+// posten tilbage med den ORIGINALE lastUsed (et klient-tidsstempel).
+describe('Fortryd: genskab en fjernet historikpost', () => {
+  const orig = new Date('2026-05-01T12:00:00Z');
+  test('create med de seks felter, null unit/quantity og originalt tidsstempel', async () => {
+    const s = db('bob');
+    await assertSucceeds(setDoc(doc(s, 'households/HH/item_history/kaffe'), {
+      name: 'Kaffe', category: 'Kolonial', unit: null, quantity: null, useCount: 7, lastUsed: Timestamp.fromDate(orig),
+    }));
+    const d = (await getDoc(doc(s, 'households/HH/item_history/kaffe'))).data();
+    if (d.useCount !== 7 || d.lastUsed.toMillis() !== orig.getTime()) throw new Error('forkert indhold');
+  });
+  test('create med ekstra gammelt felt afvises (derfor skrives kun de seks felter)', async () => {
+    await assertFails(setDoc(doc(db('bob'), 'households/HH/item_history/kaffe'), {
+      name: 'Kaffe', category: 'Kolonial', unit: null, quantity: null, useCount: 7, lastUsed: Timestamp.fromDate(orig), legacy: 'x',
+    }));
+  });
+  test('update af en nyere post: kun useCount tælles op (increment) accepteres', async () => {
+    const s = db('bob');
+    await setDoc(doc(s, 'households/HH/item_history/kaffe'), {
+      name: 'Kaffe', category: 'Kolonial', unit: 'g', quantity: '500', useCount: 1, lastUsed: Timestamp.fromDate(new Date('2026-06-01')),
+    });
+    await assertSucceeds(updateDoc(doc(s, 'households/HH/item_history/kaffe'), { useCount: increment(7) }));
+    const d = (await getDoc(doc(s, 'households/HH/item_history/kaffe'))).data();
+    if (d.useCount !== 8 || d.lastUsed.toMillis() !== new Date('2026-06-01').getTime()) throw new Error('forkert indhold');
+  });
+  test('en ikke-medlem kan ikke genskabe', async () => {
+    await assertFails(setDoc(doc(db('eve'), 'households/HH/item_history/kaffe'), {
+      name: 'Kaffe', category: 'Kolonial', unit: null, quantity: null, useCount: 7, lastUsed: Timestamp.fromDate(orig),
+    }));
   });
 });
