@@ -14,6 +14,7 @@ import '../../shared/widgets/app_bottom_sheet.dart';
 import '../../shared/widgets/item_suggestion_list.dart';
 import 'grocery_provider.dart';
 import 'item_history_provider.dart';
+import 'suggestion_removal.dart';
 
 /// Feltet øverst på indkøbslisten: skriv en vare og tryk Enter, så ligger den
 /// på listen med det samme – og feltet er klar til den næste. "2 l mælk"
@@ -39,6 +40,13 @@ class _QuickAddFieldState extends ConsumerState<QuickAddField> {
 
   List<ItemHistoryEntry> get _history =>
       ref.read(itemHistoryProvider).valueOrNull ?? const [];
+
+  /// Fanger messengeren nu, så et sent svar ikke slår op i en afmonteret
+  /// kontekst.
+  ScaffoldMessengerState? Function() _messengerGetter() {
+    final m = ScaffoldMessenger.maybeOf(context);
+    return () => m;
+  }
 
   void _clearAndKeepFocus() {
     _controller.clear();
@@ -186,8 +194,12 @@ class _QuickAddFieldState extends ConsumerState<QuickAddField> {
                       quantity: parsed.quantity,
                       unit: parsed.unit,
                     )),
-                    onRemove: (e) =>
-                        ref.read(itemHistoryProvider.notifier).remove(e.key),
+                    onRemove: (e) => removeSuggestionWithUndo(
+                      messenger: _messengerGetter(),
+                      notifier: ref.read(itemHistoryProvider.notifier),
+                      entry: e,
+                      errorColor: context.colors.error,
+                    ),
                   ),
                 ),
         ),

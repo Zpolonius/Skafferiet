@@ -62,6 +62,10 @@ class _CountingRepo implements ItemHistoryRepository {
   @override
   Future<void> remove(String householdId, String key) =>
       inner.remove(householdId, key);
+
+  @override
+  Future<void> restore(String householdId, ItemHistoryEntry entry) =>
+      inner.restore(householdId, entry);
 }
 
 /// Giver data, og så en fejl (fx permission-denied).
@@ -71,6 +75,8 @@ class _DataThenErrorRepo implements ItemHistoryRepository {
   Stream<List<ItemHistoryEntry>> watch(String householdId) => controller.stream;
   @override
   Future<void> remove(String householdId, String key) async {}
+  @override
+  Future<void> restore(String householdId, ItemHistoryEntry entry) async {}
 }
 
 bool _semanticsHasLabel(WidgetTester tester, String label) {
