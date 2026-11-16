@@ -10,6 +10,7 @@ import '../board/board_preview_card.dart';
 import '../profile/household_provider.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/meal_type.dart';
+import '../../core/services/meal_plan_dates.dart';
 import '../../shared/widgets/profile_avatar.dart';
 import 'package:gap/gap.dart';
 import '../../core/theme/theme_context.dart';
@@ -48,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
                   const Gap(32),
                   _buildSectionHeader(context, 'Dagens Plan', 'Se hele ugen', () => context.go('/meal-plan')),
                   const Gap(16),
-                  _buildDailyPlan(mealPlan, mealTypes),
+                  _buildDailyPlan(mealPlan, mealTypes, dayNameOf(ref.watch(todayProvider))),
                   const Gap(32),
                   _buildShoppingPreview(context, groceryList),
                   const Gap(40),
@@ -183,15 +184,12 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDailyPlan(AsyncValue<WeeklyMealPlan> planAsync, List<MealType> mealTypes) {
+  Widget _buildDailyPlan(
+      AsyncValue<WeeklyMealPlan> planAsync, List<MealType> mealTypes, String todayName) {
     return planAsync.when(
       skipLoadingOnReload: true,
       data: (plan) {
-        final rawDayName = DateFormat('EEEE', 'da_DK').format(DateTime.now());
-        final dayName = rawDayName.isNotEmpty
-            ? '${rawDayName[0].toUpperCase()}${rawDayName.substring(1)}'
-            : rawDayName;
-        final day = plan.days[dayName];
+        final day = plan.days[todayName];
         
         return Column(
           children: [

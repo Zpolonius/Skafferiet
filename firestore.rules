@@ -138,6 +138,13 @@ service cloud.firestore {
                 d.shoppingWeekday >= 1 && d.shoppingWeekday <= 7);
       }
 
+      // Optional day the meal plan starts on: missing, null, or 1 (Monday) … 7 (Sunday).
+      function validMealPlanStartWeekday(d) {
+        return d.get('mealPlanStartWeekday', null) == null ||
+               (d.mealPlanStartWeekday is int &&
+                d.mealPlanStartWeekday >= 1 && d.mealPlanStartWeekday <= 7);
+      }
+
       function validHousehold(d) {
         return d.name is string && d.name.size() > 0 && d.name.size() <= 100 &&
                d.members is list && d.members.size() <= 20 &&
@@ -146,7 +153,8 @@ service cloud.firestore {
                d.get('childrenCount', 0) is int &&
                d.get('childrenCount', 0) >= 0 && d.get('childrenCount', 0) <= 50 &&
                d.get('preferences', []) is list && d.get('preferences', []).size() <= 20 &&
-               validShoppingWeekday(d);
+               validShoppingWeekday(d) &&
+               validMealPlanStartWeekday(d);
       }
 
       // The admin may rename, remove members and hand over admin, but never
@@ -164,7 +172,7 @@ service cloud.firestore {
       function memberSettingsUpdate() {
         return callerIsMember() &&
                changedKeys().hasOnly(['name', 'adultsCount', 'childrenCount', 'preferences',
-                                      'shoppingWeekday']);
+                                      'shoppingWeekday', 'mealPlanStartWeekday']);
       }
 
       // Any member may remove themselves — and only themselves. The admin
@@ -223,7 +231,8 @@ service cloud.firestore {
                        request.resource.data.admin == request.auth.uid &&
                        request.resource.data.keys().hasOnly(
                          ['name', 'members', 'admin', 'adultsCount', 'childrenCount',
-                          'preferences', 'shoppingWeekday', 'createdAt']) &&
+                          'preferences', 'shoppingWeekday', 'mealPlanStartWeekday',
+                          'createdAt']) &&
                        validHousehold(request.resource.data);
 
       allow update: if validHousehold(request.resource.data) &&

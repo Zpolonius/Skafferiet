@@ -120,7 +120,8 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
   @override
   void initState() {
     super.initState();
-    _weekId = ref.read(mealPlanProvider.notifier).currentWeekId();
+    // Mandags-dokumentet dagen ligger i (ved søndagsstart to forskellige).
+    _weekId = ref.read(mealPlanProvider.notifier).weekIdForDay(widget.day);
   }
 
   /// Seneste kendte indhold i pladsen (opdateres i build fra planen).
@@ -196,9 +197,10 @@ class _EditMealSlotSheetState extends ConsumerState<EditMealSlotSheet> {
     final notifier = ref.read(mealPlanProvider.notifier);
     final navigator = Navigator.of(context);
     final ok = await _run(recipe != null
-        ? notifier.updateSlot(widget.day, widget.mealType.key, recipe: recipe)
+        ? notifier.updateSlot(widget.day, widget.mealType.key,
+            recipe: recipe, weekId: _weekId)
         : notifier.updateSlot(widget.day, widget.mealType.key,
-            directEntry: text!.trim()));
+            directEntry: text!.trim(), weekId: _weekId));
     if (ok && mounted) navigator.pop();
   }
 

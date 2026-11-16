@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
+import '../../core/services/meal_plan_dates.dart';
 import '../../core/services/week_dates.dart';
 import 'app_bottom_sheet.dart';
 import '../../features/meal_plan/meal_plan_provider.dart';
@@ -27,13 +28,15 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
   MealType? selectedSlot;
   bool _saving = false;
 
-  /// Mandagen i den uge der gemmes i. Starter på den uge madplanen viser, men
+  /// Første dag i den plan-uge der gemmes i. Starter på den uge madplanen viser, men
   /// ændres kun her – madplanens egen uge røres ikke. Gemmes som dato (ikke som
   /// offset fra i dag), så ugen ikke hopper, hvis midnat passerer mens arket er åbent.
   late DateTime _weekStart =
-      addWeeks(weekStartOf(ref.read(todayProvider)), ref.read(weekOffsetProvider));
+      planWeekStart(ref.read(todayProvider), ref.read(planStartWeekdayProvider),
+          ref.read(weekOffsetProvider));
 
-  final days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+  /// Dagene i plan-ugens rækkefølge (første dag = husstandens startdag).
+  List<String> get days => planWeekDayNames(ref.read(planStartWeekdayProvider));
 
   Future<void> _confirm() async {
     if (_saving) return;
@@ -48,13 +51,15 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
     final slot = selectedSlot!;
     try {
       final recipe = await widget.resolveRecipe?.call(widget.recipe) ?? widget.recipe;
-      await mealPlan.updateSlot(day, slot.key, recipe: recipe, weekId: weekIdOf(weekStart));
+      // Datoen afgør hvilket mandags-dokument måltidet lægges i.
+      final loc = locate(daysOfPlanWeek(weekStart).firstWhere((d) => dayNameOf(d) == day));
+      await mealPlan.updateSlot(loc.dayName, slot.key, recipe: recipe, weekId: loc.weekId);
       if (mounted) navigator.pop();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             '${widget.recipe.title} tilføjet til ${day.toLowerCase()} '
-            'i uge ${isoWeekNumber(weekStart)} (${slot.label})',
+            'i uge ${planWeekNumber(weekStart)} (${slot.label})',
           ),
           backgroundColor: colors.primary,
           behavior: SnackBarBehavior.floating,
@@ -76,7 +81,7 @@ class _AddToMealPlanSheetState extends ConsumerState<AddToMealPlanSheet> {
   Widget build(BuildContext context) {
     final slots = ref.watch(householdProvider.select((h) => h.mealTypes));
     final today = ref.watch(todayProvider);
-    final offset = weeksBetween(today, _weekStart);
+    final offset = planWeeksBetween(today, _weekStart, ref.watch(planStartWeekdayProvider));
     return Container(
       padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + sheetBottomInset(context)),
       decoration: BoxDecoration(

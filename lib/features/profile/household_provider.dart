@@ -9,7 +9,7 @@ import '../../shared/utils/number_format.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe.dart';
 import '../../core/services/item_history_writer.dart';
-import '../../core/services/week_dates.dart';
+import '../../core/services/meal_plan_dates.dart';
 
 /// Tegn i koder: uden 0/O og 1/I, så de er nemme at læse op og skrive af.
 const _codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -63,6 +63,13 @@ class HouseholdState {
   /// hvis den ikke er valgt endnu.
   final int? shoppingWeekday;
 
+  /// Ugedagen madplanen starter på (1 = mandag … 7 = søndag), eller `null` hvis
+  /// den ikke er valgt (så er det mandag). Gælder hele husstanden.
+  final int? mealPlanStartWeekday;
+
+  /// Den effektive startdag: mandag når intet er valgt.
+  int get planStartWeekday => mealPlanStartWeekday ?? DateTime.monday;
+
   /// De måltider den indloggede bruger vil se i madplanen. Gemmes på
   /// brugerprofilen (`users/{uid}.mealTypes`), ikke på husstanden, så hvert
   /// medlem kan fravælge fx frokost uden at det påvirker de andre.
@@ -84,6 +91,7 @@ class HouseholdState {
     this.childrenCount = 2,
     this.preferences = const [],
     this.shoppingWeekday,
+    this.mealPlanStartWeekday,
     this.mealTypes = MealType.values,
   });
 
@@ -106,6 +114,8 @@ class HouseholdState {
     List<String>? preferences,
     int? shoppingWeekday,
     bool clearShoppingWeekday = false,
+    int? mealPlanStartWeekday,
+    bool clearMealPlanStartWeekday = false,
     List<MealType>? mealTypes,
   }) {
     return HouseholdState(
@@ -126,6 +136,9 @@ class HouseholdState {
       shoppingWeekday: clearShoppingWeekday
           ? null
           : (shoppingWeekday ?? this.shoppingWeekday),
+      mealPlanStartWeekday: clearMealPlanStartWeekday
+          ? null
+          : (mealPlanStartWeekday ?? this.mealPlanStartWeekday),
       mealTypes: mealTypes ?? this.mealTypes,
     );
   }
@@ -313,6 +326,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         final data = doc.data()!;
         final memberUids = List<String>.from(data['members'] ?? []);
         final shoppingWeekday = _parseWeekday(data['shoppingWeekday']);
+        final mealPlanStartWeekday = _parseWeekday(data['mealPlanStartWeekday']);
 
         // Hent navne og billeder for alle medlemmer
         final details = await _fetchMemberDetails(memberUids);
@@ -333,6 +347,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
           // Nulstilles eksplicit, så en tidligere husstands dag ikke hænger ved.
           shoppingWeekday: shoppingWeekday,
           clearShoppingWeekday: shoppingWeekday == null,
+          mealPlanStartWeekday: mealPlanStartWeekday,
+          clearMealPlanStartWeekday: mealPlanStartWeekday == null,
           hasCompletedOnboarding: _hasCompletedOnboarding,
           mealTypes: _mealTypes,
           isLoading: false,
@@ -656,20 +672,10 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'hasCompletedOnboarding': true,
       }, SetOptions(merge: true));
 
-      // Dagens ugedag på dansk
-      const danishDays = {
-        DateTime.monday: 'Mandag',
-        DateTime.tuesday: 'Tirsdag',
-        DateTime.wednesday: 'Onsdag',
-        DateTime.thursday: 'Torsdag',
-        DateTime.friday: 'Fredag',
-        DateTime.saturday: 'Lørdag',
-        DateTime.sunday: 'Søndag',
-      };
-      final now = DateTime.now();
-      final dayName = danishDays[now.weekday] ?? 'Mandag';
-
-      final weekId = weekIdOf(now);
+      // Dagens dokument og dagsnavn i madplanen.
+      final loc = locate(DateTime.now());
+      final dayName = loc.dayName;
+      final weekId = loc.weekId;
 
       if (starterRecipe != null) {
         final recipeRef = await _firestore.collection('recipes').add({
@@ -921,6 +927,7 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
     required int adultsCount,
     required int childrenCount,
     required List<String> preferences,
+    int? mealPlanStartWeekday,
   }) async {
     final hId = state.householdId;
     if (hId == null) return 'Du er ikke medlem af en husstand.';
@@ -929,6 +936,8 @@ class HouseholdNotifier extends StateNotifier<HouseholdState> {
         'adultsCount': adultsCount,
         'childrenCount': childrenCount,
         'preferences': preferences,
+        // Skrives kun når den er valgt; ellers røres feltet ikke.
+        if (mealPlanStartWeekday != null) 'mealPlanStartWeekday': mealPlanStartWeekday,
       });
       return null;
     } catch (e) {

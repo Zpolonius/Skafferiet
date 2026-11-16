@@ -75,6 +75,9 @@ class _MissingRecipePlan extends StreamNotifier<WeeklyMealPlan>
   String currentWeekId() => '2026-09-28';
 
   @override
+  String weekIdForDay(String day) => '2026-09-28';
+
+  @override
   Stream<WeeklyMealPlan> build() => Stream.value(WeeklyMealPlan(
         id: 'w',
         weekStart: DateTime(2026, 9, 28),

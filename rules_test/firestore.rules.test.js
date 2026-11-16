@@ -690,6 +690,39 @@ describe('fast genkøb', () => {
     await assertFails(updateDoc(doc(db('eve'), 'households/HH_A'), { shoppingWeekday: 2 }));
   });
 
+  // ── Madplanens startdag (#37): mealPlanStartWeekday ──
+  test('madplanens startdag: 1–7 og null accepteres ved medlemsopdatering', async () => {
+    for (const v of [1, 4, 7, null]) {
+      await assertSucceeds(updateDoc(doc(db('bob'), 'households/HH_A'), { mealPlanStartWeekday: v }));
+    }
+  });
+
+  test('madplanens startdag: 0, 8, tekst og kommatal afvises', async () => {
+    for (const v of [0, 8, -1, 'søndag', '7', 7.5, true]) {
+      await assertFails(updateDoc(doc(db('bob'), 'households/HH_A'), { mealPlanStartWeekday: v }));
+    }
+  });
+
+  test('madplanens startdag: et ikke-medlem kan ikke sætte den', async () => {
+    await assertFails(updateDoc(doc(db('eve'), 'households/HH_A'), { mealPlanStartWeekday: 7 }));
+    await assertFails(updateDoc(doc(db('carol'), 'households/HH_A'), { mealPlanStartWeekday: 7 }));
+  });
+
+  test('madplanens startdag: en ny husstand kan oprettes med eller uden den', async () => {
+    await assertSucceeds(setDoc(doc(db('carol'), 'households/SK-CAROL2'), {
+      name: 'Carols', members: ['carol'], admin: 'carol', mealPlanStartWeekday: 7,
+    }));
+    await assertSucceeds(setDoc(doc(db('carol'), 'households/SK-CAROL3'), {
+      name: 'Carols', members: ['carol'], admin: 'carol',
+    }));
+    await assertSucceeds(setDoc(doc(db('carol'), 'households/SK-CAROL4'), {
+      name: 'Carols', members: ['carol'], admin: 'carol', mealPlanStartWeekday: null,
+    }));
+    await assertFails(setDoc(doc(db('carol'), 'households/SK-CAROL5'), {
+      name: 'Carols', members: ['carol'], admin: 'carol', mealPlanStartWeekday: 8,
+    }));
+  });
+
   test('medlemmer opretter genkøbs-varer; eve kan hverken læse eller oprette', async () => {
     await assertSucceeds(setDoc(doc(db('bob'), 'households/HH_A/recurring_items/r2'), item('bob')));
     await assertFails(getDocs(collection(db('eve'), 'households/HH_A/recurring_items')));

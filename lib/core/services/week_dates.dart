@@ -8,6 +8,8 @@
 /// 23 eller 25 timer langt (#39).
 library;
 
+import 'meal_plan_dates.dart';
+
 const _shortMonths = [
   'jan.', 'feb.', 'mar.', 'apr.', 'maj', 'jun.', //
   'jul.', 'aug.', 'sep.', 'okt.', 'nov.', 'dec.',
@@ -98,7 +100,7 @@ String weekRangeLabel(DateTime weekStart, {required DateTime today}) {
 
 /// Overskriften over madplanen, fx "Uge 42 · 12.–18. okt.".
 String weekHeaderLabel(DateTime weekStart, {required DateTime today}) =>
-    'Uge ${isoWeekNumber(weekStart)} · ${weekRangeLabel(weekStart, today: today)}';
+    'Uge ${planWeekNumber(weekStart)} · ${weekRangeLabel(weekStart, today: today)}';
 
 /// Badge ved siden af overskriften: "Denne uge", "Næste uge", "Sidste uge" –
 /// ellers null. [offset] er antal uger fra den aktuelle uge.
@@ -123,5 +125,5 @@ String weekSemanticsLabel(DateTime weekStart,
   final from = full(first, month: spansMonths || spansYears, year: spansYears);
   final to = full(last, month: true, year: showYear);
   final badge = weekBadgeLabel(offset)?.toLowerCase();
-  return 'Uge ${isoWeekNumber(weekStart)}, $from til $to${badge == null ? '' : ', $badge'}';
+  return 'Uge ${planWeekNumber(weekStart)}, $from til $to${badge == null ? '' : ', $badge'}';
 }
