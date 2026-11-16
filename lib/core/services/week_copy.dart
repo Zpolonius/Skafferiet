@@ -8,10 +8,10 @@ library;
 
 import '../models/meal_plan.dart';
 import '../models/meal_type.dart';
+import 'meal_plan_dates.dart';
 
-const planDayNames = [
-  'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag', //
-];
+export 'meal_plan_dates.dart' show planDayNames;
+
 
 class PlannedSlot {
   final String day;

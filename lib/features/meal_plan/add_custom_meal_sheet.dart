@@ -4,7 +4,7 @@ import '../../core/models/meal_plan.dart';
 import '../../core/models/meal_type.dart';
 import '../../core/models/recipe_units.dart';
 import '../../core/models/recipe.dart';
-import '../../core/services/week_dates.dart';
+import '../../core/services/meal_plan_dates.dart';
 import '../recipes/recipes_provider.dart';
 import '../../shared/widgets/app_bottom_sheet.dart';
 import '../profile/household_provider.dart';
@@ -74,7 +74,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     final offset = ref.read(weekOffsetProvider);
     _weekDates = _generateWeekDates(offset);
 
-    // Brug initialDay hvis den findes, ellers mandag
+    // Brug initialDay hvis den findes, ellers plan-ugens første dag
     if (widget.initialDay != null) {
       final index = _getDayIndex(widget.initialDay!);
       _selectedDate = _weekDates[index];
@@ -120,7 +120,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
   List<DateTime> _generateWeekDates(int offset) {
     // Samme ugeregning som madplanen selv, så datoerne her passer til ugen.
     final now = ref.read(todayProvider);
-    return daysOfWeek(addWeeks(weekStartOf(now), offset));
+    return daysOfPlanWeek(planWeekStart(now, ref.read(planStartWeekdayProvider), offset));
   }
 
   @override
@@ -773,10 +773,10 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     if (_saving) return;
     if (!await _confirmReplace(recipe: recipe)) return;
     final notifier = ref.read(mealPlanProvider.notifier);
-    final day = _getDayName(_selectedDate);
+    final loc = locate(_selectedDate);
     final slot = _slotKey;
     await _write(
-      () => notifier.updateSlot(day, slot, recipe: recipe),
+      () => notifier.updateSlot(loc.dayName, slot, recipe: recipe, weekId: loc.weekId),
       lateErrorText: 'Opskriften kunne ikke gemmes i madplanen.',
       errorText:
           'Kunne ikke gemme opskriften. Tjek din forbindelse og prøv igen.',
@@ -795,7 +795,7 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
 
     final mealPlan = ref.read(mealPlanProvider.notifier);
     final recipes = ref.read(recipesProvider.notifier);
-    final day = _getDayName(_selectedDate);
+    final loc = locate(_selectedDate);
     final slot = _slotKey;
     final newRecipe = _saveAsRecipe
         ? Recipe(
@@ -810,7 +810,8 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
 
     await _write(
       () async {
-        await mealPlan.updateSlot(day, slot, directEntry: title);
+        await mealPlan.updateSlot(loc.dayName, slot,
+            directEntry: title, weekId: loc.weekId);
         if (newRecipe != null) await recipes.addRecipe(newRecipe);
       },
       lateErrorText: 'Måltidet kunne ikke gemmes i madplanen.',
@@ -819,31 +820,10 @@ class _AddCustomMealSheetState extends ConsumerState<AddCustomMealSheet> {
     );
   }
 
-  int _getDayIndex(String day) {
-    final days = [
-      'Mandag',
-      'Tirsdag',
-      'Onsdag',
-      'Torsdag',
-      'Fredag',
-      'Lørdag',
-      'Søndag'
-    ];
-    return days.indexOf(day).clamp(0, 6);
-  }
+  int _getDayIndex(String day) =>
+      _weekDates.indexWhere((d) => dayNameOf(d) == day).clamp(0, 6);
 
-  String _getDayName(DateTime date) {
-    final days = [
-      'Søndag',
-      'Mandag',
-      'Tirsdag',
-      'Onsdag',
-      'Torsdag',
-      'Fredag',
-      'Lørdag'
-    ];
-    return days[date.weekday % 7];
-  }
+  String _getDayName(DateTime date) => dayNameOf(date);
 }
 
 /// Ingredienserne fra "Eget måltid" som rigtige [Ingredient]er til "Gem som

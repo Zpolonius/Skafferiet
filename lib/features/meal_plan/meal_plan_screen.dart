@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/grocery_item.dart';
 import '../../core/models/meal_plan.dart';
 import '../../core/models/meal_type.dart';
+import '../../core/services/meal_plan_dates.dart';
 import '../../core/services/week_copy.dart';
 import '../../core/services/week_dates.dart';
 import '../../shared/widgets/profile_avatar.dart';
@@ -29,7 +30,8 @@ class MealPlanScreen extends ConsumerWidget {
     final mealTypes = ref.watch(householdProvider.select((h) => h.mealTypes));
     final offset = ref.watch(weekOffsetProvider);
     final today = ref.watch(todayProvider);
-    final weekStart = addWeeks(weekStartOf(today), offset);
+    final startWeekday = ref.watch(planStartWeekdayProvider);
+    final weekStart = planWeekStart(today, startWeekday, offset);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -86,7 +88,8 @@ class MealPlanScreen extends ConsumerWidget {
                         const _SearchBar(),
                         const SizedBox(height: 24),
                         _WeekNavigation(weekStart: weekStart, offset: offset, today: today),
-                        if (offset == 0 && today.weekday >= DateTime.saturday)
+                        // De to sidste dage i plan-ugen (lørdag og søndag ved mandagsstart).
+                        if (offset == 0 && (today.weekday - startWeekday + 7) % 7 >= 5)
                           const _WeekendHint(),
                         _CopyOffer(
                           plan: plan,
@@ -188,7 +191,7 @@ class MealPlanScreen extends ConsumerWidget {
                             day: selectedDay,
                             mealType: type,
                             slot: dailyPlan.slot(type),
-                            weekId: plan.id,
+                            weekId: locate(_dateOfDay(weekStart, selectedDay)).weekId,
                           ),
                         ),
                       if (dinners != null)
@@ -240,27 +243,33 @@ class MealPlanScreen extends ConsumerWidget {
     );
   }
 
+  /// Dagene i plan-ugens rækkefølge (første dag = husstandens startdag).
+  List<String> _orderedDays(WidgetRef ref) =>
+      planWeekDayNames(ref.read(planStartWeekdayProvider));
+
   void _onSwipeLeft(WidgetRef ref) {
+    final order = _orderedDays(ref);
     final currentDay = ref.read(selectedDayProvider);
-    final idx = planDayNames.indexOf(currentDay);
+    final idx = order.indexOf(currentDay);
     if (idx == -1) return;
-    if (idx < planDayNames.length - 1) {
-      ref.read(selectedDayProvider.notifier).state = planDayNames[idx + 1];
+    if (idx < order.length - 1) {
+      ref.read(selectedDayProvider.notifier).state = order[idx + 1];
     } else {
       ref.read(weekOffsetProvider.notifier).state = ref.read(weekOffsetProvider) + 1;
-      ref.read(selectedDayProvider.notifier).state = planDayNames[0];
+      ref.read(selectedDayProvider.notifier).state = order[0];
     }
   }
 
   void _onSwipeRight(WidgetRef ref) {
+    final order = _orderedDays(ref);
     final currentDay = ref.read(selectedDayProvider);
-    final idx = planDayNames.indexOf(currentDay);
+    final idx = order.indexOf(currentDay);
     if (idx == -1) return;
     if (idx > 0) {
-      ref.read(selectedDayProvider.notifier).state = planDayNames[idx - 1];
+      ref.read(selectedDayProvider.notifier).state = order[idx - 1];
     } else {
       ref.read(weekOffsetProvider.notifier).state = ref.read(weekOffsetProvider) - 1;
-      ref.read(selectedDayProvider.notifier).state = planDayNames[planDayNames.length - 1];
+      ref.read(selectedDayProvider.notifier).state = order[order.length - 1];
     }
   }
 
@@ -296,6 +305,10 @@ class MealPlanScreen extends ConsumerWidget {
     }
   }
 }
+
+/// Datoen for [dayName] i plan-ugen der starter [weekStart].
+DateTime _dateOfDay(DateTime weekStart, String dayName) => daysOfPlanWeek(weekStart)
+    .firstWhere((d) => dayNameOf(d) == dayName, orElse: () => weekStart);
 
 /// Ser ud som et søgefelt, men åbner Opskrifter med markøren i søgefeltet dér.
 /// Så findes søgningen ét sted, og fra en opskrift kan man lægge den i madplanen.
@@ -340,8 +353,8 @@ class _WeeklyCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
-    final dates = daysOfWeek(weekStart);
+    final dates = daysOfPlanWeek(weekStart);
+    final days = [for (final d in dates) dayNameOf(d)];
 
     // Alle 7 dage deler bredden ligeligt (ingen vandret scroll). Trykfladen er
     // hele feltet; selve kortet har en lille luft til naboerne.
@@ -522,7 +535,7 @@ class _WeekDinnerOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dates = daysOfWeek(weekStart);
+    final dates = daysOfPlanWeek(weekStart);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -530,8 +543,7 @@ class _WeekDinnerOverview extends StatelessWidget {
           padding: const EdgeInsets.only(top: 24, bottom: 8),
           child: Text('Ugens aftensmad', style: context.text.titleMedium),
         ),
-        for (var i = 0; i < planDayNames.length; i++)
-          _row(context, planDayNames[i], dates[i]),
+        for (final date in dates) _row(context, dayNameOf(date), date),
       ],
     );
   }
@@ -766,14 +778,15 @@ class _HintCard extends StatelessWidget {
   }
 }
 
-/// Lørdag og søndag, når man ser denne uge: de fleste planlægger den kommende
+/// Plan-ugens to sidste dage (lørdag og søndag ved mandagsstart), når man ser denne uge: de fleste planlægger den kommende
 /// uge i weekenden og ender ellers med at lægge planen i den forkerte uge.
 class _WeekendHint extends ConsumerWidget {
   const _WeekendHint();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final weekId = weekIdOf(ref.watch(todayProvider));
+    final weekId = dateKey(planWeekStartOf(
+        ref.watch(todayProvider), ref.watch(planStartWeekdayProvider)));
     if (ref.watch(weekendHintDismissedProvider) == weekId) return const SizedBox.shrink();
 
     return _HintCard(
@@ -832,7 +845,7 @@ class _CopyOfferState extends ConsumerState<_CopyOffer> {
   Widget build(BuildContext context) {
     final plan = widget.plan;
     final weekStart = widget.weekStart;
-    final weekId = weekIdOf(weekStart);
+    final weekId = dateKey(weekStart);
     final previousStart = addWeeks(weekStart, -1);
     // Under ugeskift viser både plan og forrige uge kort den forrige visning.
     if (widget.loading || plan.id != weekId) return const SizedBox.shrink();
@@ -841,7 +854,7 @@ class _CopyOfferState extends ConsumerState<_CopyOffer> {
     }
     if (ref.watch(copyOfferDismissedProvider).contains(weekId)) return const SizedBox.shrink();
     final previous = ref.watch(previousWeekSlotsProvider).valueOrNull;
-    if (previous == null || previous.weekId != weekIdOf(previousStart)) {
+    if (previous == null || previous.weekId != dateKey(previousStart)) {
       return const SizedBox.shrink();
     }
     if (previous.slots.isEmpty || slotsOfPlan(plan).isNotEmpty) return const SizedBox.shrink();
@@ -857,8 +870,8 @@ class _CopyOfferState extends ConsumerState<_CopyOffer> {
           Text(
             copyOfferLabel(
               offset: widget.offset,
-              fromWeek: isoWeekNumber(previousStart),
-              toWeek: isoWeekNumber(weekStart),
+              fromWeek: planWeekNumber(previousStart),
+              toWeek: planWeekNumber(weekStart),
               count: previous.slots.length,
               hidden: hidden,
             ),
